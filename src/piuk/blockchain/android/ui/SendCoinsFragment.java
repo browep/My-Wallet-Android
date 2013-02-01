@@ -47,10 +47,12 @@ import com.google.bitcoin.core.Address;
 import com.google.bitcoin.core.AddressFormatException;
 import com.google.bitcoin.core.ECKey;
 import com.google.bitcoin.core.Transaction;
+import com.google.bitcoin.core.Wallet;
 import com.google.bitcoin.core.Wallet.BalanceType;
 
 import piuk.MyRemoteWallet;
 import piuk.MyRemoteWallet.SendProgress;
+import piuk.MyWallet;
 import piuk.blockchain.R;
 import piuk.blockchain.android.AddressBookProvider;
 import piuk.blockchain.android.Constants;
@@ -140,13 +142,19 @@ public final class SendCoinsFragment extends Fragment
 			public void onClick(final View v) {
 				WalletApplication application = (WalletApplication) activity.getApplication();
 
+				MyRemoteWallet wallet = application.getRemoteWallet();
+
 				//Don't allow deposits into new wallets
-				if (application.getRemoteWallet().isNew())
+				if (wallet == null || wallet.isNew() || wallet.getActiveAddresses().length == 0)
 					return;
+								
+				String address = wallet.getActiveAddresses()[0];
 
-				ECKey key = application.getWallet().keychain.get(0);
-
-				Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://blockchain.info/deposit?address="+key.toAddress(Constants.NETWORK_PARAMETERS)));
+				String sharedKey = wallet.getSharedKey();
+				
+				String guid = wallet.getGUID();
+				
+				Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://blockchain.info/deposit?address="+address+"&guid="+guid+"&sharedKey="+sharedKey));
 
 				startActivity(browserIntent);
 			}
