@@ -268,7 +268,11 @@ public class MyWallet {
 				encoded_key.setTag((int)(long)tag);
 			}
 
-			wallet.addKey(encoded_key);
+			try {
+				wallet.addKey(encoded_key);
+			} catch (IllegalArgumentException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 
