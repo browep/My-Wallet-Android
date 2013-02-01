@@ -246,6 +246,9 @@ public class MyBlockChain extends BlockChain implements WebSocketEventHandler {
 			if (op.equals("block")) {
 				Map<String, Object> x = (Map<String, Object>) top.get("x");
 
+				if (x == null)
+					return;
+				
 				Sha256Hash hash = new Sha256Hash(Hex.decode((String)x.get("hash")));
 				int blockIndex = ((Number)x.get("blockIndex")).intValue();
 				int blockHeight = ((Number)x.get("height")).intValue();
