@@ -23,19 +23,17 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.Window;
 import android.webkit.WebView;
-import piuk.blockchain.R;
+import piuk.blockchain.android.R;
 import piuk.blockchain.android.util.ActionBarFragment;
 
 /**
  * @author Andreas Schildbach
  */
-public final class RequestCoinsActivity extends AbstractWalletActivity
-{
+public final class RequestCoinsActivity extends AbstractWalletActivity {
 	private static final int DIALOG_HELP = 0;
 
 	@Override
-	protected void onCreate(final Bundle savedInstanceState)
-	{
+	protected void onCreate(final Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
 		setContentView(R.layout.request_coins_content);
@@ -44,44 +42,39 @@ public final class RequestCoinsActivity extends AbstractWalletActivity
 
 		actionBar.setPrimaryTitle(R.string.request_coins_activity_title);
 
-		actionBar.setBack(new OnClickListener()
-		{
-			public void onClick(final View v)
-			{
+		actionBar.setBack(new OnClickListener() {
+			public void onClick(final View v) {
 				finish();
 			}
 		});
 
-		actionBar.addButton(R.drawable.ic_action_help).setOnClickListener(new OnClickListener()
-		{
-			public void onClick(final View v)
-			{
-				showDialog(DIALOG_HELP);
-			}
-		});
+		actionBar.addButton(R.drawable.ic_action_help).setOnClickListener(
+				new OnClickListener() {
+					public void onClick(final View v) {
+						showDialog(DIALOG_HELP);
+					}
+				});
 	}
 
 	@Override
-	protected void onResume()
-	{
+	protected void onResume() {
 		super.onResume();
 
 		getWalletApplication().connect();
 	}
 
 	@Override
-	protected void onPause()
-	{
+	protected void onPause() {
 		super.onPause();
 
 		getWalletApplication().diconnectSoon();
 	}
 
 	@Override
-	protected Dialog onCreateDialog(final int id)
-	{
+	protected Dialog onCreateDialog(final int id) {
 		final WebView webView = new WebView(this);
-		webView.loadUrl("file:///android_asset/help_request_coins" + languagePrefix() + ".html");
+		webView.loadUrl("file:///android_asset/help_request_coins"
+				+ languagePrefix() + ".html");
 
 		final Dialog dialog = new Dialog(this);
 		dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);

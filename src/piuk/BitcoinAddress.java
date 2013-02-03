@@ -29,7 +29,7 @@ public class BitcoinAddress implements Serializable {
 	private final short version;
 	private transient String _toStringCache;
 
-	public BitcoinAddress(String humanReadable) throws AddressFormatException {		
+	public BitcoinAddress(String humanReadable) throws AddressFormatException {
 		byte[] tmp = Base58.decodeChecked(humanReadable);
 
 		version = (short) (tmp[0] & 0xFF);
@@ -38,7 +38,7 @@ public class BitcoinAddress implements Serializable {
 
 		System.arraycopy(tmp, 1, bytes, 0, tmp.length - 1);
 
-		this.hash160  = new Hash(bytes);
+		this.hash160 = new Hash(bytes);
 	}
 
 	@Override
@@ -53,16 +53,16 @@ public class BitcoinAddress implements Serializable {
 			System.arraycopy(hash160.getBytes(), 0, addressBytes, 1, length);
 			byte[] check = Utils.doubleDigest(addressBytes, 0, length + 1);
 			System.arraycopy(check, 0, addressBytes, length + 1, 4);
-			
+
 			_toStringCache = Base58.encode(addressBytes);
 		}
-		
+
 		return _toStringCache;
 	}
 
-	//from pubKey
-	public BitcoinAddress(byte[] pubKey) {		
-		this.hash160  = new Hash(Utils.sha256hash160(pubKey));
+	// from pubKey
+	public BitcoinAddress(byte[] pubKey) {
+		this.hash160 = new Hash(Utils.sha256hash160(pubKey));
 		this.version = 0;
 	}
 
@@ -77,7 +77,8 @@ public class BitcoinAddress implements Serializable {
 			return 0;
 	}
 
-	public BitcoinAddress(Hash hash, short version) throws AddressFormatException {
+	public BitcoinAddress(Hash hash, short version)
+			throws AddressFormatException {
 		this.hash160 = hash;
 		this.version = version;
 	}

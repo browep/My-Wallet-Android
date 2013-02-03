@@ -25,52 +25,43 @@ import java.util.Date;
 /**
  * @author Andreas Schildbach
  */
-public class Iso8601Format extends SimpleDateFormat
-{
+public class Iso8601Format extends SimpleDateFormat {
 	private static final long serialVersionUID = 1L;
 
-	private Iso8601Format(String formatString)
-	{
+	private Iso8601Format(String formatString) {
 		super(formatString);
 	}
 
-	public static DateFormat newTimeFormat()
-	{
+	public static DateFormat newTimeFormat() {
 		return new Iso8601Format("HH:mm:ss");
 	}
 
-	public static DateFormat newDateFormat()
-	{
+	public static DateFormat newDateFormat() {
 		return new Iso8601Format("yyyy-MM-dd");
 	}
 
-	public static DateFormat newDateTimeFormat()
-	{
+	public static DateFormat newDateTimeFormat() {
 		return new Iso8601Format("yyyy-MM-dd HH:mm:ss");
 	}
 
-	public static String formatDateTime(final Date date)
-	{
+	public static String formatDateTime(final Date date) {
 		return newDateTimeFormat().format(date);
 	}
 
-	public static Date parseDateTime(final String source) throws ParseException
-	{
+	public static Date parseDateTime(final String source) throws ParseException {
 		return newDateTimeFormat().parse(source);
 	}
 
-	public static DateFormat newDateTimeFormatT()
-	{
+	public static DateFormat newDateTimeFormatT() {
 		return new Iso8601Format("yyyy-MM-dd'T'HH:mm:ss'Z'");
 	}
 
-	public static String formatDateTimeT(final Date date)
-	{
+	public static String formatDateTimeT(final Date date) {
 		return newDateTimeFormatT().format(date);
 	}
 
-	public static Date parseDateTimeT(final String source) throws ParseException
-	{
+	public static Date parseDateTimeT(final String source)
+			throws ParseException {
 		return newDateTimeFormatT().parse(source);
 	}
 }

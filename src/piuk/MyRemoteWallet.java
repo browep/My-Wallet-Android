@@ -22,12 +22,16 @@ import android.util.Pair;
 import org.spongycastle.util.encoders.Hex;
 import com.google.bitcoin.core.*;
 import com.google.bitcoin.core.Transaction.SigHash;
+import com.google.bitcoin.core.WalletTransaction.Pool;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.json.simple.JSONValue;
 import piuk.MyBlockChain.MyBlock;
 import piuk.blockchain.android.Constants;
+import piuk.blockchain.android.ui.SendCoinsFragment;
+import piuk.blockchain.android.ui.SendCoinsFragment.FeePolicy;
 
 import java.io.DataOutputStream;
 import java.math.BigInteger;
@@ -41,7 +45,7 @@ import java.util.*;
 @SuppressWarnings("unchecked")
 public class MyRemoteWallet extends MyWallet {
 	public static final String WebROOT = "https://blockchain.info/";
-	RemoteBitcoinJWallet _wallet;
+	final RemoteBitcoinJWallet _wallet;
 	String _checksum;
 	boolean _isNew = false;
 	StoredBlock _multiAddrBlock;
@@ -116,6 +120,8 @@ public class MyRemoteWallet extends MyWallet {
 	private static String fetchURL(String URL) throws Exception {
 		URL url = new URL(URL);
 
+		System.out.println("URL " + url);
+		
 		HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 
 		try {
@@ -183,7 +189,8 @@ public class MyRemoteWallet extends MyWallet {
 
 		if (_wallet != null && success) {
 			addKeysTobitoinJWallet(_wallet);
-			_wallet.invokeOnKeyAdded(key);
+			
+			EventListeners.invokeWalletDidChange();
 		}
 
 		return success;
@@ -243,10 +250,10 @@ public class MyRemoteWallet extends MyWallet {
 
 		List<Map<String, Object>> transactions = (List<Map<String, Object>>) top.get("txs");
 
-		WalletTransaction newestTransaction = null;
+		Transaction newestTransaction = null;
 		if (transactions != null) {
 			for (Map<String, Object> transactionDict : transactions) {
-				WalletTransaction tx = MyTransaction.fromJSONDict(transactionDict);
+				Transaction tx = MyTransaction.fromJSONDict(transactionDict);
 
 				if (tx == null)
 					continue;
@@ -254,7 +261,7 @@ public class MyRemoteWallet extends MyWallet {
 				if (newestTransaction == null)
 					newestTransaction = tx;
 
-				_wallet.addWalletTransaction(tx);
+				_wallet.addWalletTransaction(Pool.SPENT, tx);
 			}
 		}
 
@@ -262,10 +269,10 @@ public class MyRemoteWallet extends MyWallet {
 
 		if (_wallet.getTransactionsByTime() != null && _wallet.getTransactionsByTime().size() > 0) {
 			if (newBalance.compareTo(previousBalance) != 0) {
-				if (newestTransaction.getTransaction().getValue(getBitcoinJWallet()).compareTo(BigInteger.ZERO) > 0)
-					_wallet.invokeOnCoinsReceived(newestTransaction.getTransaction(), previousBalance, newBalance);
+				if (newestTransaction.getValue(getBitcoinJWallet()).compareTo(BigInteger.ZERO) > 0)
+					EventListeners.invokeOnCoinsReceived(newestTransaction, previousBalance, newBalance);
 				else
-					_wallet.invokeOnCoinsSent(newestTransaction.getTransaction(), previousBalance, newBalance);
+					EventListeners.invokeOnCoinsSent(newestTransaction, previousBalance, newBalance);
 			}
 		}
 	}
@@ -298,7 +305,7 @@ public class MyRemoteWallet extends MyWallet {
 
 	public interface SendProgress {
 		//Return false to cancel
-		public boolean onReady(Transaction tx, BigInteger fee, long priority);
+		public boolean onReady(Transaction tx, BigInteger fee, SendCoinsFragment.FeePolicy feePolicy, long priority);
 		public void onSend(Transaction tx, String message);
 
 		//Return true to cancel the transaction or false to continue without it
@@ -308,7 +315,7 @@ public class MyRemoteWallet extends MyWallet {
 		public void onProgress(String message);
 	}
 
-	public void sendCoinsAsync(final String toAddress, final BigInteger amount, final BigInteger fee, final SendProgress progress) {
+	public void sendCoinsAsync(final String toAddress, final BigInteger amount, final FeePolicy feePolicy, final BigInteger fee, final SendProgress progress) {
 
 		new Thread() {
 			@Override
@@ -365,7 +372,7 @@ public class MyRemoteWallet extends MyWallet {
 
 					//If returns false user cancelled
 					//Probably because they want to recreate the transaction with different fees
-					if (!progress.onReady(tx, fee, priority))
+					if (!progress.onReady(tx, fee, feePolicy, priority))
 						return;
 
 					progress.onProgress("Signing Inputs");
@@ -536,14 +543,9 @@ public class MyRemoteWallet extends MyWallet {
 
         String method = _isNew ? "insert" : "update";
 
-        if (!_isNew)
-        {
-            System.out.println("Not new");
-        }
-
         if (kaptcha == null && _isNew)
         {
-            throw new Exception("Must provide a change to insert wallet");
+            throw new Exception("Must provide a kaptcha to insert wallet");
         }
         else if (kaptcha == null)
         {
@@ -606,6 +608,10 @@ public class MyRemoteWallet extends MyWallet {
 		return payload;
 	}
 
+	public static class NotModfiedException extends Exception {
+		private static final long serialVersionUID = 1L;
+	}
+	
 	public static String getWalletPayload(String guid, String sharedKey, String checkSumString) throws Exception {
 		String payload = fetchURL(WebROOT + "wallet/wallet.aes.json?guid="+guid+"&sharedKey="+sharedKey+"&checksum="+checkSumString);
 
@@ -614,7 +620,7 @@ public class MyRemoteWallet extends MyWallet {
 		}
 
 		if (payload.equals("Not modified")) {
-			return null;
+			throw new NotModfiedException();
 		}
 
 		return payload;

@@ -45,7 +45,8 @@ import com.google.bitcoin.core.Transaction;
 import com.google.bitcoin.core.TransactionConfidence.ConfidenceType;
 import com.google.bitcoin.core.Wallet;
 
-import piuk.blockchain.R;
+import piuk.MyTransaction;
+import piuk.blockchain.android.R;
 import piuk.blockchain.android.AddressBookProvider;
 import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.WalletApplication;
@@ -84,6 +85,7 @@ public final class TransactionFragment extends Fragment
 
 	public void update(final Transaction tx)
 	{
+		
 		final Wallet wallet = ((WalletApplication) activity.getApplication()).getWallet();
 
 		final byte[] serializedTx = tx.unsafeBitcoinSerialize();
@@ -152,7 +154,12 @@ public final class TransactionFragment extends Fragment
 		final TextView viewFromLabel = (TextView) view.findViewById(R.id.transaction_fragment_from_label);
 		if (from != null)
 		{
-			final String label = AddressBookProvider.resolveLabel(contentResolver, from.toString());
+			String label = null;
+			if (tx instanceof MyTransaction && ((MyTransaction)tx).getTag() != null)
+				label = ((MyTransaction)tx).getTag();
+			else
+				label = AddressBookProvider.resolveLabel(contentResolver, from.toString());
+
 			final StringBuilder builder = new StringBuilder();
 
 			if (fromMine)
@@ -188,7 +195,14 @@ public final class TransactionFragment extends Fragment
 		final TextView viewToLabel = (TextView) view.findViewById(R.id.transaction_fragment_to_label);
 		if (to != null)
 		{
-			final String label = AddressBookProvider.resolveLabel(contentResolver, to.toString());
+
+			String label = null;
+			if (tx instanceof MyTransaction && ((MyTransaction)tx).getTag() != null)
+				label = ((MyTransaction)tx).getTag();
+			else
+				label = AddressBookProvider.resolveLabel(contentResolver, from.toString());
+
+
 			final StringBuilder builder = new StringBuilder();
 
 			if (toMine)

@@ -1,6 +1,7 @@
 package piuk;
 
 import java.math.BigInteger;
+import java.util.Arrays;
 
 import piuk.blockchain.android.Constants;
 
@@ -100,9 +101,17 @@ public class MyECKey extends ECKey {
 
 		return null;
 	}
+	
+    @Override
+    public boolean equals(Object o) {
+    	if (o instanceof MyECKey)
+    		return this.base58.equals(((MyECKey)o).base58);
+    	
+    	return false;
+    }
 
     @Override
     public int hashCode() {
-        return getInternalKey().hashCode();
+        return base58.hashCode();
     }
 }

@@ -22,12 +22,11 @@ import android.support.v4.view.ViewPager;
 /**
  * @author Andreas Schildbach
  */
-public final class WalletArchivedAddressesFragment extends WalletAddressesFragment
-{
-    // added to avoid android instantiation exception
-    public WalletArchivedAddressesFragment()
-    {
-    }
+public final class WalletArchivedAddressesFragment extends
+		WalletAddressesFragment {
+	// added to avoid android instantiation exception
+	public WalletArchivedAddressesFragment() {
+	}
 
 	public WalletArchivedAddressesFragment(int tag_filter, ViewPager pagerView) {
 		super(tag_filter, pagerView);

@@ -28,7 +28,10 @@ public class Hash implements Serializable {
 	private static final long serialVersionUID = 1L;
 	private final byte[] hash;
 
-	public Hash() { this.hash = null; }
+	public Hash() {
+		this.hash = null;
+	}
+
 	public Hash(String hex) {
 		this.hash = Hex.decode(hex);
 	}
@@ -52,7 +55,7 @@ public class Hash implements Serializable {
 			if (b == 0)
 				n += 8;
 			else {
-				n += Math.max(0, Integer.numberOfLeadingZeros(b) - (3*8));
+				n += Math.max(0, Integer.numberOfLeadingZeros(b) - (3 * 8));
 				break;
 			}
 		}
@@ -65,7 +68,8 @@ public class Hash implements Serializable {
 			return true;
 
 		for (byte b : hash) {
-			if (b != 0) return false;
+			if (b != 0)
+				return false;
 		}
 
 		return true;

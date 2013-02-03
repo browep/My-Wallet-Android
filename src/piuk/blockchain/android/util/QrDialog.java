@@ -23,15 +23,13 @@ import android.graphics.Bitmap;
 import android.view.View;
 import android.view.Window;
 import android.widget.ImageView;
-import piuk.blockchain.R;
+import piuk.blockchain.android.R;
 
 /**
  * @author Andreas Schildbach
  */
-public class QrDialog extends Dialog
-{
-	public QrDialog(final Context context, final Bitmap qrCodeBitmap)
-	{
+public class QrDialog extends Dialog {
+	public QrDialog(final Context context, final Bitmap qrCodeBitmap) {
 		super(context);
 
 		requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -40,10 +38,8 @@ public class QrDialog extends Dialog
 		imageView.setImageBitmap(qrCodeBitmap);
 		setCanceledOnTouchOutside(true);
 
-		imageView.setOnClickListener(new View.OnClickListener()
-		{
-			public void onClick(final View v)
-			{
+		imageView.setOnClickListener(new View.OnClickListener() {
+			public void onClick(final View v) {
 				dismiss();
 			}
 		});

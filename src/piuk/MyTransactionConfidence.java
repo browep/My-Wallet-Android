@@ -9,32 +9,33 @@ public class MyTransactionConfidence extends TransactionConfidence {
 	int height;
 	boolean double_spend;
 
-	public MyTransactionConfidence(Transaction tx, int height, boolean double_spend) {
+	public MyTransactionConfidence(Transaction tx, int height,
+			boolean double_spend) {
 		super(tx);
 
 		this.height = height;
 		this.double_spend = double_spend;
 	}
 
-    @Override
+	@Override
 	public synchronized int getAppearedAtChainHeight() {
-    	return height;
-    }
+		return height;
+	}
 
-    @Override
+	@Override
 	public synchronized void setAppearedAtChainHeight(int appearedAtChainHeight) {
-    	this.height = appearedAtChainHeight;
-    }
+		this.height = appearedAtChainHeight;
+	}
 
-    @Override
+	@Override
 	public synchronized ConfidenceType getConfidenceType() {
-        if (height == 0)
-        	return ConfidenceType.NOT_SEEN_IN_CHAIN;
-        else if (double_spend)
-	        	return ConfidenceType.DEAD; // OVERRIDDEN_BY_DOUBLE_SPEND
-        else if (height > 0)
-        	return ConfidenceType.BUILDING;
-        else
-        	return ConfidenceType.UNKNOWN;
-    }
+		if (height == 0)
+			return ConfidenceType.NOT_SEEN_IN_CHAIN;
+		else if (double_spend)
+			return ConfidenceType.DEAD; // OVERRIDDEN_BY_DOUBLE_SPEND
+		else if (height > 0)
+			return ConfidenceType.BUILDING;
+		else
+			return ConfidenceType.UNKNOWN;
+	}
 }

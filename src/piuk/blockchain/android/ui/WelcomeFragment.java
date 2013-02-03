@@ -17,6 +17,8 @@
 
 package piuk.blockchain.android.ui;
 
+import java.lang.ref.WeakReference;
+
 import android.app.AlertDialog;
 import android.app.AlertDialog.Builder;
 import android.app.Dialog;
@@ -31,78 +33,107 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.TextView;
-import piuk.blockchain.R;
+import piuk.blockchain.android.R;
 import piuk.blockchain.android.WalletApplication;
 
 /**
  * @author Andreas Schildbach
  */
-public final class WelcomeFragment extends DialogFragment
-{
+public final class WelcomeFragment extends DialogFragment {
+	private static WeakReference<WelcomeFragment> fragmentRef = null;
 	private static final String FRAGMENT_TAG = WelcomeFragment.class.getName();
 
-	public static DialogFragment show(final FragmentManager fm)
-	{	
+	public static void hide() {
+		if (fragmentRef != null && fragmentRef.get() != null && fragmentRef.get().isVisible()) {
+			 fragmentRef.get().dismiss();
+		}
+	}
+	
+	public static void show(final FragmentManager fm, WalletApplication application) {
+	
 		try {
-			FragmentTransaction ft = fm.beginTransaction();
+			final DialogFragment prev = (DialogFragment) fm.findFragmentById(R.layout.welcome_dialog);
 
+			final FragmentTransaction ft = fm.beginTransaction();
+
+			if (prev != null) {
+				prev.dismiss();
+				ft.remove(prev);
+			}
+
+			ft.addToBackStack(null);
+			
 			final DialogFragment newFragment = instance();
 
 			newFragment.show(ft, FRAGMENT_TAG);
 
-			return newFragment;
-	
+			if (application.getRemoteWallet().isNew()) {
+				newFragment.setCancelable(false);
+			} else {
+				newFragment.setCancelable(!application.hasDecryptionError);
+			}
+
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		
-		return null;
+
 	}
 
-	private static WelcomeFragment instance()
-	{
+	private static WelcomeFragment instance() {
 		final WelcomeFragment fragment = new WelcomeFragment();
+
+		fragmentRef = new WeakReference<WelcomeFragment>(fragment);
 
 		return fragment;
 	}
 
-
 	@Override
-	public Dialog onCreateDialog(final Bundle savedInstanceState)
-	{
+	public Dialog onCreateDialog(final Bundle savedInstanceState) {
 		final FragmentActivity activity = getActivity();
 		final LayoutInflater inflater = LayoutInflater.from(activity);
 
-		final Builder dialog = new AlertDialog.Builder(activity).setTitle(R.string.welcome_title);
+		final Builder dialog = new AlertDialog.Builder(activity)
+				.setTitle(R.string.welcome_title);
 
 		final View view = inflater.inflate(R.layout.welcome_dialog, null);
 
 		dialog.setView(view);
 
-		final Button pairDeviceButton = (Button) view.findViewById(R.id.pair_device_button);
-		final Button newAccountButton = (Button) view.findViewById(R.id.new_account_button);
-		final TextView welcomeText = (TextView) view.findViewById(R.id.welcome_text);
+		final Button pairDeviceButton = (Button) view
+				.findViewById(R.id.pair_device_button);
+		final Button newAccountButton = (Button) view
+				.findViewById(R.id.new_account_button);
+		final TextView welcomeText = (TextView) view
+				.findViewById(R.id.welcome_text);
 
-		final WalletApplication application = (WalletApplication) getActivity().getApplication();
+		final WalletApplication application = (WalletApplication) getActivity()
+				.getApplication();
 
 		if (application.getRemoteWallet().isNew()) {
 			welcomeText.setText(R.string.welcome_text_no_account);
 
+			System.out.println("application.getRemoteWallet().isNew() "
+					+ application.getRemoteWallet().isNew());
+
 			dialog.setCancelable(false);
 		} else {
-			dialog.setCancelable(true);
+			System.out.println("application.hasDecryptionError "
+					+ application.hasDecryptionError);
+
+			dialog.setCancelable(!application.hasDecryptionError);
 
 			welcomeText.setText(R.string.welcome_text_has_account);
 		}
 
 		pairDeviceButton.setOnClickListener(new OnClickListener() {
-			public void onClick(View v) {	
+			public void onClick(View v) {
 				try {
 					dismiss();
 
 					System.out.println("Start activity");
 
-					startActivity(new Intent(getActivity(), PairWalletActivity.class));
+					startActivity(new Intent(getActivity(),
+							PairWalletActivity.class));
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -118,7 +149,7 @@ public final class WelcomeFragment extends DialogFragment
 					try {
 						dismiss();
 
-						NewAccountFragment.show(getFragmentManager());
+						NewAccountFragment.show(getFragmentManager(), application);
 					} catch (Exception e) {
 						e.printStackTrace();
 					}

@@ -7,8 +7,8 @@ import java.util.List;
 
 //TODO remove
 public class BitcoinScript {
-	final List<byte[]> chunks; 
-	final byte[] program; 
+	final List<byte[]> chunks;
+	final byte[] program;
 	int cursor;
 
 	public static final int ScriptOutTypeStrange = 0;
@@ -22,141 +22,140 @@ public class BitcoinScript {
 
 	// push value
 
-	public static final int OP_0         = 0;
-	public static final int OP_FALSE     = 0;
+	public static final int OP_0 = 0;
+	public static final int OP_FALSE = 0;
 	public static final int OP_PUSHDATA1 = 76;
 	public static final int OP_PUSHDATA2 = 77;
 	public static final int OP_PUSHDATA4 = 78;
-	public static final int OP_1NEGATE   = 79;
-	public static final int OP_RESERVED  = 80;
-	public static final int OP_1      	  = 81;
-	public static final int OP_2         = 82;
-	public static final int OP_3         = 83;
-	public static final int OP_4         = 84;
-	public static final int OP_5         = 85;
-	public static final int OP_6         = 86;
-	public static final int OP_7         = 87;
-	public static final int OP_8         = 88;
-	public static final int OP_9         = 89;
-	public static final int OP_10        = 90;
-	public static final int OP_11        = 91;
-	public static final int OP_12        = 92;
-	public static final int OP_13        = 93;
-	public static final int OP_14        = 94;
-	public static final int OP_15        = 95;
-	public static final int OP_16        = 96;
+	public static final int OP_1NEGATE = 79;
+	public static final int OP_RESERVED = 80;
+	public static final int OP_1 = 81;
+	public static final int OP_2 = 82;
+	public static final int OP_3 = 83;
+	public static final int OP_4 = 84;
+	public static final int OP_5 = 85;
+	public static final int OP_6 = 86;
+	public static final int OP_7 = 87;
+	public static final int OP_8 = 88;
+	public static final int OP_9 = 89;
+	public static final int OP_10 = 90;
+	public static final int OP_11 = 91;
+	public static final int OP_12 = 92;
+	public static final int OP_13 = 93;
+	public static final int OP_14 = 94;
+	public static final int OP_15 = 95;
+	public static final int OP_16 = 96;
 
 	// control
-	public static final int OP_NOP       = 97;
-	public static final int OP_VER       = 98;
-	public static final int OP_IF        = 99;
-	public static final int OP_NOTIF     = 100;
-	public static final int OP_VERIF     = 101;
-	public static final int OP_VERNOTIF  = 102;
-	public static final int OP_ELSE      = 103;
-	public static final int OP_ENDIF     = 104;
-	public static final int OP_VERIFY    = 105;
-	public static final int OP_RETURN    = 106;
+	public static final int OP_NOP = 97;
+	public static final int OP_VER = 98;
+	public static final int OP_IF = 99;
+	public static final int OP_NOTIF = 100;
+	public static final int OP_VERIF = 101;
+	public static final int OP_VERNOTIF = 102;
+	public static final int OP_ELSE = 103;
+	public static final int OP_ENDIF = 104;
+	public static final int OP_VERIFY = 105;
+	public static final int OP_RETURN = 106;
 
 	// stack ops
-	public static final int OP_TOALTSTACK   = 107;
+	public static final int OP_TOALTSTACK = 107;
 	public static final int OP_FROMALTSTACK = 108;
-	public static final int OP_2DROP        = 109;
-	public static final int OP_2DUP         = 110;
-	public static final int OP_3DUP         = 111;
-	public static final int OP_2OVER        = 112;
-	public static final int OP_2ROT         = 113;
-	public static final int OP_2SWAP        = 114;
-	public static final int OP_IFDUP        = 115;
-	public static final int OP_DEPTH        = 116;
-	public static final int OP_DROP         = 117;
-	public static final int OP_DUP          = 118;
-	public static final int OP_NIP          = 119;
-	public static final int OP_OVER         = 120;
-	public static final int OP_PICK         = 121;
-	public static final int OP_ROLL         = 122;
-	public static final int OP_ROT          = 123;
-	public static final int OP_SWAP         = 124;
-	public static final int OP_TUCK         = 125;
+	public static final int OP_2DROP = 109;
+	public static final int OP_2DUP = 110;
+	public static final int OP_3DUP = 111;
+	public static final int OP_2OVER = 112;
+	public static final int OP_2ROT = 113;
+	public static final int OP_2SWAP = 114;
+	public static final int OP_IFDUP = 115;
+	public static final int OP_DEPTH = 116;
+	public static final int OP_DROP = 117;
+	public static final int OP_DUP = 118;
+	public static final int OP_NIP = 119;
+	public static final int OP_OVER = 120;
+	public static final int OP_PICK = 121;
+	public static final int OP_ROLL = 122;
+	public static final int OP_ROT = 123;
+	public static final int OP_SWAP = 124;
+	public static final int OP_TUCK = 125;
 
 	// splice ops
-	public static final int OP_CAT          = 126;
-	public static final int OP_SUBSTR       = 127;
-	public static final int OP_LEFT         = 128;
-	public static final int OP_RIGHT        = 129;
-	public static final int OP_SIZE         = 130;
+	public static final int OP_CAT = 126;
+	public static final int OP_SUBSTR = 127;
+	public static final int OP_LEFT = 128;
+	public static final int OP_RIGHT = 129;
+	public static final int OP_SIZE = 130;
 
 	// bit logic
-	public static final int OP_INVERT       = 131;
-	public static final int OP_AND          = 132;
-	public static final int OP_OR           = 133;
-	public static final int OP_XOR          = 134;
-	public static final int OP_EQUAL        = 135;
-	public static final int OP_EQUALVERIFY  = 136;
-	public static final int OP_RESERVED1    = 137;
-	public static final int OP_RESERVED2    = 138;
+	public static final int OP_INVERT = 131;
+	public static final int OP_AND = 132;
+	public static final int OP_OR = 133;
+	public static final int OP_XOR = 134;
+	public static final int OP_EQUAL = 135;
+	public static final int OP_EQUALVERIFY = 136;
+	public static final int OP_RESERVED1 = 137;
+	public static final int OP_RESERVED2 = 138;
 
 	// numeric
-	public static final int OP_1ADD         = 139;
-	public static final int OP_1SUB         = 140;
-	public static final int OP_2MUL         = 141;
-	public static final int OP_2DIV         = 142;
-	public static final int OP_NEGATE       = 143;
-	public static final int OP_ABS          = 144;
-	public static final int OP_NOT          = 145;
-	public static final int OP_0NOTEQUAL    = 146;
+	public static final int OP_1ADD = 139;
+	public static final int OP_1SUB = 140;
+	public static final int OP_2MUL = 141;
+	public static final int OP_2DIV = 142;
+	public static final int OP_NEGATE = 143;
+	public static final int OP_ABS = 144;
+	public static final int OP_NOT = 145;
+	public static final int OP_0NOTEQUAL = 146;
 
-	public static final int OP_ADD          = 147;
-	public static final int OP_SUB          = 148;
-	public static final int OP_MUL          = 149;
-	public static final int OP_DIV          = 150;
-	public static final int OP_MOD          = 151;
-	public static final int OP_LSHIFT       = 152;
-	public static final int OP_RSHIFT       = 153;
+	public static final int OP_ADD = 147;
+	public static final int OP_SUB = 148;
+	public static final int OP_MUL = 149;
+	public static final int OP_DIV = 150;
+	public static final int OP_MOD = 151;
+	public static final int OP_LSHIFT = 152;
+	public static final int OP_RSHIFT = 153;
 
-	public static final int OP_BOOLAND             = 154;
-	public static final int OP_BOOLOR              = 155;
-	public static final int OP_NUMEQUAL            = 156;
-	public static final int OP_NUMEQUALVERIFY      = 157;
-	public static final int OP_NUMNOTEQUAL         = 158;
-	public static final int OP_LESSTHAN            = 159;
-	public static final int OP_GREATERTHAN         = 160;
-	public static final int OP_LESSTHANOREQUAL     = 161;
-	public static final int OP_GREATERTHANOREQUAL  = 162;
-	public static final int OP_MIN                 = 163;
-	public static final int OP_MAX                 = 164;
+	public static final int OP_BOOLAND = 154;
+	public static final int OP_BOOLOR = 155;
+	public static final int OP_NUMEQUAL = 156;
+	public static final int OP_NUMEQUALVERIFY = 157;
+	public static final int OP_NUMNOTEQUAL = 158;
+	public static final int OP_LESSTHAN = 159;
+	public static final int OP_GREATERTHAN = 160;
+	public static final int OP_LESSTHANOREQUAL = 161;
+	public static final int OP_GREATERTHANOREQUAL = 162;
+	public static final int OP_MIN = 163;
+	public static final int OP_MAX = 164;
 
-	public static final int OP_WITHIN              = 165;
+	public static final int OP_WITHIN = 165;
 
 	// crypto
-	public static final int OP_RIPEMD160           = 166;
-	public static final int OP_SHA1                = 167;
-	public static final int OP_SHA256              = 168;
-	public static final int OP_HASH160             = 169;
-	public static final int OP_HASH256             = 170;
-	public static final int OP_CODESEPARATOR       = 171;
-	public static final int OP_CHECKSIG            = 172;
-	public static final int OP_CHECKSIGVERIFY      = 173;
-	public static final int OP_CHECKMULTISIG       = 174;
+	public static final int OP_RIPEMD160 = 166;
+	public static final int OP_SHA1 = 167;
+	public static final int OP_SHA256 = 168;
+	public static final int OP_HASH160 = 169;
+	public static final int OP_HASH256 = 170;
+	public static final int OP_CODESEPARATOR = 171;
+	public static final int OP_CHECKSIG = 172;
+	public static final int OP_CHECKSIGVERIFY = 173;
+	public static final int OP_CHECKMULTISIG = 174;
 	public static final int OP_CHECKMULTISIGVERIFY = 175;
 
 	// expansion
-	public static final int OP_NOP1  = 176;
-	public static final int OP_NOP2  = 177;
-	public static final int OP_NOP3  = 178;
-	public static final int OP_NOP4  = 179;
-	public static final int OP_NOP5  = 180;
-	public static final int OP_NOP6  = 181;
-	public static final int OP_NOP7  = 182;
-	public static final int OP_NOP8  = 183;
-	public static final int OP_NOP9  = 184;
+	public static final int OP_NOP1 = 176;
+	public static final int OP_NOP2 = 177;
+	public static final int OP_NOP3 = 178;
+	public static final int OP_NOP4 = 179;
+	public static final int OP_NOP5 = 180;
+	public static final int OP_NOP6 = 181;
+	public static final int OP_NOP7 = 182;
+	public static final int OP_NOP8 = 183;
+	public static final int OP_NOP9 = 184;
 	public static final int OP_NOP10 = 185;
 
 	// template matching params
-	public static final int OP_PUBKEYHASH    = 253;
-	public static final int OP_PUBKEY        = 254;
+	public static final int OP_PUBKEYHASH = 253;
+	public static final int OP_PUBKEY = 254;
 	public static final int OP_INVALIDOPCODE = 255;
-
 
 	public static String[] op_names = new String[256];
 
@@ -286,7 +285,7 @@ public class BitcoinScript {
 		op_names[OP_PUBKEYHASH] = "OP_PUBKEYHASH";
 		op_names[OP_PUBKEY] = "OP_PUBKEY";
 		op_names[OP_INVALIDOPCODE] = "OP_INVALIDOPCODE";
-	} 
+	}
 
 	private byte[] getData(int len) throws Exception {
 		try {
@@ -295,7 +294,8 @@ public class BitcoinScript {
 			cursor += len;
 			return buf;
 		} catch (ArrayIndexOutOfBoundsException e) {
-			// We want running out of data in the array to be treated as a handleable script parsing exception,
+			// We want running out of data in the array to be treated as a
+			// handleable script parsing exception,
 			// not something that abnormally terminates the app.
 			throw new Exception("Failed read of " + len + " bytes", e);
 		}
@@ -317,8 +317,7 @@ public class BitcoinScript {
 		bytes.add((byte) op0);
 	};
 
-	public static void writeBytes(List<Byte> bytes, byte[] data)
-	{
+	public static void writeBytes(List<Byte> bytes, byte[] data) {
 
 		if (data.length < OP_PUSHDATA1) {
 			bytes.add((byte) data.length);
@@ -342,8 +341,9 @@ public class BitcoinScript {
 		}
 	};
 
-	public static BitcoinScript createSimpleOutBitoinScript(BitcoinAddress address) throws Exception {
-		//Now create the redemption script
+	public static BitcoinScript createSimpleOutBitoinScript(
+			BitcoinAddress address) throws Exception {
+		// Now create the redemption script
 		List<Byte> bytes = new ArrayList<Byte>();
 
 		if (address.getVersion() == 0) {
@@ -361,18 +361,20 @@ public class BitcoinScript {
 
 			return new BitcoinScript(bytes);
 		} else {
-			throw new Exception("Bitcoin address version " + address.getVersion() + " not supported yet");
-		}	
+			throw new Exception("Bitcoin address version "
+					+ address.getVersion() + " not supported yet");
+		}
 	}
 
-	public  BitcoinScript(List<Byte> bytes) throws Exception {
+	public BitcoinScript(List<Byte> bytes) throws Exception {
 		byte[] scriptBytes = new byte[bytes.size()];
 		for (int ii = 0; ii < scriptBytes.length; ++ii) {
 			scriptBytes[ii] = bytes.get(ii);
-		} 
+		}
 
 		this.program = scriptBytes;
-		this.chunks = new ArrayList<byte[]>();  // Arbitrary choice of initial size.
+		this.chunks = new ArrayList<byte[]>(); // Arbitrary choice of initial
+												// size.
 
 		init();
 	}
@@ -381,12 +383,13 @@ public class BitcoinScript {
 		cursor = 0;
 		int length = program.length;
 
-		while (cursor <  length) {
+		while (cursor < length) {
 			int opcode = readByte();
 
 			if (opcode > 0 && opcode < OP_PUSHDATA1) {
-				// Read some bytes of data, where how many is the opcode value itself.
-				chunks.add(getData(opcode));  // opcode == len here.
+				// Read some bytes of data, where how many is the opcode value
+				// itself.
+				chunks.add(getData(opcode)); // opcode == len here.
 			} else if (opcode == OP_PUSHDATA1) {
 				int len = readByte();
 				chunks.add(getData(len));
@@ -397,8 +400,8 @@ public class BitcoinScript {
 			} else if (opcode == OP_PUSHDATA4) {
 				// Read a uint32, then read that many bytes of data.
 				throw new Exception("PUSHDATA4: Unimplemented");
-			} else {				
-				chunks.add(new byte[]{(byte) opcode});
+			} else {
+				chunks.add(new byte[] { (byte) opcode });
 			}
 		}
 	}
@@ -406,21 +409,23 @@ public class BitcoinScript {
 	public BitcoinScript(byte[] bytes) throws Exception {
 
 		this.program = bytes;
-		this.chunks = new ArrayList<byte[]>();  // Arbitrary choice of initial size.
+		this.chunks = new ArrayList<byte[]>(); // Arbitrary choice of initial
+												// size.
 
 		init();
 	}
 
 	public byte[] getProgram() {
-		return program; 
+		return program;
 	}
 
 	public int getInType() {
-		
+
 		System.out.println("Chunks " + this.chunks.size());
-		
+
 		if (this.chunks.size() == 1) {
-			// Direct IP to IP transactions only have the public key in their scriptSig.
+			// Direct IP to IP transactions only have the public key in their
+			// scriptSig.
 			return ScriptInTypeAddress;
 		} else if (this.chunks.size() == 2 && this.chunks.get(0).length > 1) {
 			return ScriptInTypePubKey;
@@ -435,28 +440,30 @@ public class BitcoinScript {
 
 	public int getOutType() {
 		try {
-			if (this.chunks.size() > 3 && unsignedByteToInt(this.program[this.program.length-1]) == OP_CHECKMULTISIG) {
+			if (this.chunks.size() > 3
+					&& unsignedByteToInt(this.program[this.program.length - 1]) == OP_CHECKMULTISIG) {
 				// Transfer to Bitcoin address
 				return ScriptOutTypeMultiSig;
 
-			} else if (this.program.length == 25 &&
-					unsignedByteToInt(this.program[0]) == OP_DUP &&
-					unsignedByteToInt(this.program[1]) == OP_HASH160 &&
-					this.program[2] == 20 &&
-					unsignedByteToInt(this.program[23]) == OP_EQUALVERIFY &&
-					unsignedByteToInt(this.program[24]) == OP_CHECKSIG) {
+			} else if (this.program.length == 25
+					&& unsignedByteToInt(this.program[0]) == OP_DUP
+					&& unsignedByteToInt(this.program[1]) == OP_HASH160
+					&& this.program[2] == 20
+					&& unsignedByteToInt(this.program[23]) == OP_EQUALVERIFY
+					&& unsignedByteToInt(this.program[24]) == OP_CHECKSIG) {
 
 				// Transfer to Bitcoin address
 				return ScriptOutTypeAddress;
 
-			} else if (this.program.length == 23 &&
-					unsignedByteToInt(this.program[0]) == OP_HASH160 &&
-					unsignedByteToInt(this.program[1]) == 0x14 &&
-					unsignedByteToInt(this.program[22]) == OP_EQUAL) {
+			} else if (this.program.length == 23
+					&& unsignedByteToInt(this.program[0]) == OP_HASH160
+					&& unsignedByteToInt(this.program[1]) == 0x14
+					&& unsignedByteToInt(this.program[22]) == OP_EQUAL) {
 
-				//Pay to Script Hash
+				// Pay to Script Hash
 				return ScriptOutTypeP2SH;
-			} else if (this.chunks.size() == 2 && unsignedByteToInt(this.chunks.get(1)[0]) == OP_CHECKSIG) {
+			} else if (this.chunks.size() == 2
+					&& unsignedByteToInt(this.chunks.get(1)[0]) == OP_CHECKSIG) {
 				// Transfer to Public Key
 				return ScriptOutTypePubKey;
 			} else {
@@ -467,8 +474,7 @@ public class BitcoinScript {
 		}
 	};
 
-	public Hash getSimpleInPubKey()
-	{
+	public Hash getSimpleInPubKey() {
 		switch (this.getInType()) {
 		case ScriptInTypePubKey:
 			System.out.println("Pub key");
@@ -479,42 +485,47 @@ public class BitcoinScript {
 		}
 	};
 
-	public BitcoinAddress getAddress()
-	{
+	public BitcoinAddress getAddress() {
 		try {
-			
+
 			System.out.println("Out type " + this.getOutType());
-			
+
 			switch (this.getOutType()) {
 			case ScriptOutTypeAddress:
-				return new BitcoinAddress(new Hash(this.chunks.get(2)), (short) 0);
+				return new BitcoinAddress(new Hash(this.chunks.get(2)),
+						(short) 0);
 			case ScriptOutTypePubKey:
-				return new BitcoinAddress(new Hash(Utils.sha256hash160(this.chunks.get(0))), (short) 0);
+				return new BitcoinAddress(new Hash(
+						Utils.sha256hash160(this.chunks.get(0))), (short) 0);
 			case ScriptOutTypeP2SH:
-				return new BitcoinAddress(new Hash(Utils.sha256hash160(this.chunks.get(0))), (short) 5);
+				return new BitcoinAddress(new Hash(
+						Utils.sha256hash160(this.chunks.get(0))), (short) 5);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		
+
 		return null;
 	};
 
-	public int extractPubKeys(List<Hash> pubkeys) 
-	{
+	public int extractPubKeys(List<Hash> pubkeys) {
 		switch (this.getOutType()) {
 		case ScriptOutTypePubKey:
 			pubkeys.add(new Hash(this.chunks.get(0)));
-			return 1; 
+			return 1;
 		case ScriptOutTypeMultiSig:
 
-			int n = unsignedByteToInt(this.chunks.get(this.chunks.size()-2)[0]) - OP_1 + 1;
+			int n = unsignedByteToInt(this.chunks.get(this.chunks.size() - 2)[0])
+					- OP_1 + 1;
 
 			for (int ii = 0; ii < n; ++ii) {
-				pubkeys.add(0, new Hash(this.chunks.get(this.chunks.size()-3-ii)));
+				pubkeys.add(0,
+						new Hash(this.chunks.get(this.chunks.size() - 3 - ii)));
 			}
 
-			int m = unsignedByteToInt(this.chunks.get(this.chunks.size()-3-n)[0]) - OP_1 + 1;
+			int m = unsignedByteToInt(this.chunks.get(this.chunks.size() - 3
+					- n)[0])
+					- OP_1 + 1;
 
 			return m;
 		}

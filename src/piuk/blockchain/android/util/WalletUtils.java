@@ -36,65 +36,60 @@ import piuk.blockchain.android.Constants;
 import java.math.BigInteger;
 import java.util.Hashtable;
 
-
 /**
  * @author Andreas Schildbach
  */
-public class WalletUtils
-{
+public class WalletUtils {
 	public final static QRCodeWriter QR_CODE_WRITER = new QRCodeWriter();
 
-	public static Bitmap getQRCodeBitmap(final String url, final int size)
-	{
-		try
-		{
+	public static Bitmap getQRCodeBitmap(final String url, final int size) {
+		try {
 			final Hashtable<EncodeHintType, Object> hints = new Hashtable<EncodeHintType, Object>();
 			hints.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.H);
-			final BitMatrix result = QR_CODE_WRITER.encode(url, BarcodeFormat.QR_CODE, size, size, hints);
+			final BitMatrix result = QR_CODE_WRITER.encode(url,
+					BarcodeFormat.QR_CODE, size, size, hints);
 
 			final int width = result.getWidth();
 			final int height = result.getHeight();
 			final int[] pixels = new int[width * height];
 
-			for (int y = 0; y < height; y++)
-			{
+			for (int y = 0; y < height; y++) {
 				final int offset = y * width;
-				for (int x = 0; x < width; x++)
-				{
-					pixels[offset + x] = result.get(x, y) ? Color.BLACK : Color.TRANSPARENT;
+				for (int x = 0; x < width; x++) {
+					pixels[offset + x] = result.get(x, y) ? Color.BLACK
+							: Color.TRANSPARENT;
 				}
 			}
 
-			final Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+			final Bitmap bitmap = Bitmap.createBitmap(width, height,
+					Bitmap.Config.ARGB_8888);
 			bitmap.setPixels(pixels, 0, width, 0, 0, width, height);
 			return bitmap;
-		}
-		catch (final WriterException x)
-		{
+		} catch (final WriterException x) {
 			x.printStackTrace();
 			return null;
 		}
 	}
 
-	public static Editable formatAddress(final Address address, final int groupSize, final int lineSize)
-	{
+	public static Editable formatAddress(final Address address,
+			final int groupSize, final int lineSize) {
 		return formatAddress(address.toString(), groupSize, lineSize);
 	}
 
-	public static Editable formatAddress(final String address, final int groupSize, final int lineSize)
-	{
+	public static Editable formatAddress(final String address,
+			final int groupSize, final int lineSize) {
 		final SpannableStringBuilder builder = new SpannableStringBuilder();
 
 		final int len = address.length();
-		for (int i = 0; i < len; i += groupSize)
-		{
+		for (int i = 0; i < len; i += groupSize) {
 			final int end = i + groupSize;
 			final String part = address.substring(i, end < len ? end : len);
 
 			builder.append(part);
-			builder.setSpan(new TypefaceSpan("monospace"), builder.length() - part.length(), builder.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-			if (end < len)
-			{
+			builder.setSpan(new TypefaceSpan("monospace"), builder.length()
+					- part.length(), builder.length(),
+					Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+			if (end < len) {
 				final boolean endOfLine = end % lineSize == 0;
 				builder.append(endOfLine ? "\n" : Constants.THIN_SPACE);
 			}
@@ -103,13 +98,12 @@ public class WalletUtils
 		return builder;
 	}
 
-	public static String formatValue(final BigInteger value)
-	{
+	public static String formatValue(final BigInteger value) {
 		return formatValue(value, "", "-");
 	}
 
-	public static String formatValue(final BigInteger value, final String plusSign, final String minusSign)
-	{
+	public static String formatValue(final BigInteger value,
+			final String plusSign, final String minusSign) {
 		final boolean negative = value.compareTo(BigInteger.ZERO) < 0;
 		final BigInteger absValue = value.abs();
 

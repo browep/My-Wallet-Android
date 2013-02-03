@@ -30,8 +30,7 @@ import android.view.View;
 /**
  * @author Andreas Schildbach
  */
-public class CircularProgressView extends View
-{
+public class CircularProgressView extends View {
 	private int width;
 	private int height;
 	private int progress = 0;
@@ -40,8 +39,7 @@ public class CircularProgressView extends View
 	private final Paint fillPaint = new Paint();
 	private final Paint strokePaint = new Paint();
 
-	public CircularProgressView(final Context context, final AttributeSet attrs)
-	{
+	public CircularProgressView(final Context context, final AttributeSet attrs) {
 		super(context, attrs);
 
 		final float density = getResources().getDisplayMetrics().density;
@@ -57,30 +55,26 @@ public class CircularProgressView extends View
 	}
 
 	@Override
-	protected void onDraw(final Canvas canvas)
-	{
+	protected void onDraw(final Canvas canvas) {
 		super.onDraw(canvas);
 
 		canvas.drawPath(path, fillPaint);
 		canvas.drawPath(path, strokePaint);
 	}
 
-	public void setColor(final int color)
-	{
+	public void setColor(final int color) {
 		fillPaint.setColor(color);
 		postInvalidate();
 	}
 
-	public void setProgress(final int progress)
-	{
+	public void setProgress(final int progress) {
 		this.progress = progress;
 
 		updatePath(getWidth(), getHeight());
 		postInvalidate();
 	}
 
-	public void setMaxProgress(final int maxProgress)
-	{
+	public void setMaxProgress(final int maxProgress) {
 		this.maxProgress = maxProgress;
 
 		updatePath(getWidth(), getHeight());
@@ -88,38 +82,31 @@ public class CircularProgressView extends View
 	}
 
 	@Override
-	protected void onSizeChanged(final int w, final int h, final int oldw, final int oldh)
-	{
+	protected void onSizeChanged(final int w, final int h, final int oldw,
+			final int oldh) {
 		updatePath(w, h);
 
 		super.onSizeChanged(w, h, oldw, oldh);
 	}
 
-	private void updatePath(final int w, final int h)
-	{
+	private void updatePath(final int w, final int h) {
 		path.reset();
 
-		if (progress == 0)
-		{
+		if (progress == 0) {
 			path.close();
-		}
-		else if (progress < maxProgress)
-		{
+		} else if (progress < maxProgress) {
 			final float angle = progress * 360 / maxProgress;
 
 			path.moveTo(w / 2f, h / 2f);
 			path.arcTo(new RectF(1, 1, w - 1, h - 1), 270, angle);
 			path.close();
-		}
-		else
-		{
+		} else {
 			path.addCircle(w / 2f, h / 2f, (w / 2f) - 1, Direction.CW);
 		}
 	}
 
 	@Override
-	protected void onMeasure(final int wMeasureSpec, final int hMeasureSpec)
-	{
+	protected void onMeasure(final int wMeasureSpec, final int hMeasureSpec) {
 		final int wMode = MeasureSpec.getMode(wMeasureSpec);
 		final int wSize = MeasureSpec.getSize(wMeasureSpec);
 
@@ -140,8 +127,7 @@ public class CircularProgressView extends View
 	}
 
 	@Override
-	public int getBaseline()
-	{
+	public int getBaseline() {
 		return getMeasuredHeight() - 1;
 	}
 }

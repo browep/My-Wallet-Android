@@ -15,7 +15,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 package piuk;
 
 import android.util.Base64;
@@ -28,18 +27,22 @@ import org.apache.commons.lang.ArrayUtils;
 import org.json.simple.JSONValue;
 import org.json.simple.parser.JSONParser;
 
-import javax.crypto.Cipher;
-import javax.crypto.SecretKey;
-import javax.crypto.SecretKeyFactory;
-import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.PBEKeySpec;
-import javax.crypto.spec.SecretKeySpec;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
-import java.security.spec.KeySpec;
 import java.util.*;
 
+import org.spongycastle.crypto.BufferedBlockCipher;
+import org.spongycastle.crypto.CipherParameters;
+import org.spongycastle.crypto.PBEParametersGenerator;
+import org.spongycastle.crypto.engines.AESEngine;
+import org.spongycastle.crypto.generators.PKCS5S2ParametersGenerator;
+import org.spongycastle.crypto.modes.CBCBlockCipher;
+import org.spongycastle.crypto.paddings.BlockCipherPadding;
+import org.spongycastle.crypto.paddings.ISO10126d2Padding;
+import org.spongycastle.crypto.paddings.PaddedBufferedBlockCipher;
+import org.spongycastle.crypto.params.KeyParameter;
+import org.spongycastle.crypto.params.ParametersWithIV;
 
 public class MyWallet {
 	private static final int AESBlockSize = 4;
@@ -57,7 +60,7 @@ public class MyWallet {
 			throw new Exception("Error Decrypting Wallet");
 	}
 
-	//Create a new Wallet
+	// Create a new Wallet
 	public MyWallet() throws Exception {
 		this.root = new HashMap<String, Object>();
 
@@ -81,7 +84,7 @@ public class MyWallet {
 	public String[] getActiveAddresses() {
 		List<String> list = new ArrayList<String>();
 		for (Map<String, Object> map : getKeysMap()) {
-			if (map.get("tag") == null || (Long)map.get("tag") == 0)
+			if (map.get("tag") == null || (Long) map.get("tag") == 0)
 				list.add((String) map.get("addr"));
 		}
 		return list.toArray(new String[list.size()]);
@@ -90,7 +93,7 @@ public class MyWallet {
 	public String[] getArchivedAddresses() {
 		List<String> list = new ArrayList<String>();
 		for (Map<String, Object> map : getKeysMap()) {
-			if (map.get("tag") != null && (Long)map.get("tag") == 2)
+			if (map.get("tag") != null && (Long) map.get("tag") == 2)
 				list.add((String) map.get("addr"));
 		}
 		return list.toArray(new String[list.size()]);
@@ -101,25 +104,24 @@ public class MyWallet {
 		return (List<Map<String, Object>>) root.get("address_book");
 	}
 
-
 	public boolean isDoubleEncrypted() {
 		Object double_encryption = root.get("double_encryption");
 		if (double_encryption != null)
-			return (Boolean)double_encryption;
+			return (Boolean) double_encryption;
 		else
 			return false;
 	}
 
 	public String getGUID() {
-		return (String)root.get("guid");
+		return (String) root.get("guid");
 	}
 
 	public String getSharedKey() {
-		return (String)root.get("sharedKey");
+		return (String) root.get("sharedKey");
 	}
 
 	public String getDPasswordHash() {
-		return (String)root.get("dpasswordhash");
+		return (String) root.get("dpasswordhash");
 	}
 
 	public void setTemporyPassword(String password) {
@@ -144,12 +146,13 @@ public class MyWallet {
 			if (this.temporySecondPassword == null)
 				throw new Exception("You must provide a second password");
 
-			base58Priv = decryptPK(base58Priv, getSharedKey(), this.temporySecondPassword);
+			base58Priv = decryptPK(base58Priv, getSharedKey(),
+					this.temporySecondPassword);
 		}
 
 		byte[] privBytes = Base58.decode(base58Priv);
 
-		//Prppend a zero byte to make the biginteger unsigned
+		// Prppend a zero byte to make the biginteger unsigned
 		byte[] appendZeroByte = ArrayUtils.addAll(new byte[1], privBytes);
 
 		ECKey ecKey = new ECKey(new BigInteger(appendZeroByte));
@@ -164,16 +167,17 @@ public class MyWallet {
 
 		if (addressBook != null) {
 			for (Map<String, Object> addr_book : addressBook) {
-				_labelMap.put((String)addr_book.get("addr"), (String)addr_book.get("label"));
+				_labelMap.put((String) addr_book.get("addr"),
+						(String) addr_book.get("label"));
 			}
 		}
 
 		if (this.getKeysMap() != null) {
 			for (Map<String, Object> key_map : this.getKeysMap()) {
-				String label = (String)key_map.get("label");
+				String label = (String) key_map.get("label");
 
 				if (label != null)
-					_labelMap.put((String)key_map.get("addr"), label);
+					_labelMap.put((String) key_map.get("addr"), label);
 			}
 		}
 
@@ -192,6 +196,7 @@ public class MyWallet {
 
 		return null;
 	}
+
 	public Map<String, Object> findKey(String address) {
 		for (Map<String, Object> key : this.getKeysMap()) {
 			String addr = (String) key.get("addr");
@@ -227,7 +232,8 @@ public class MyWallet {
 			if (entry != null) {
 				entry.put("label", label);
 			} else {
-				List<Map<String, Object>> addressBook = this.getAddressBookMap();
+				List<Map<String, Object>> addressBook = this
+						.getAddressBookMap();
 
 				if (addressBook == null) {
 					addressBook = new ArrayList<Map<String, Object>>();
@@ -242,6 +248,7 @@ public class MyWallet {
 			}
 		}
 
+		EventListeners.invokeWalletDidChange();
 	}
 
 	protected void addKeysTobitoinJWallet(Wallet wallet) throws Exception {
@@ -265,7 +272,7 @@ public class MyWallet {
 			if (key.get("tag") != null) {
 				Long tag = (Long) key.get("tag");
 
-				encoded_key.setTag((int)(long)tag);
+				encoded_key.setTag((int) (long) tag);
 			}
 
 			try {
@@ -277,7 +284,7 @@ public class MyWallet {
 	}
 
 	public Wallet getBitcoinJWallet() throws Exception {
-		//Construct a BitcoinJ wallet containing all our private keys
+		// Construct a BitcoinJ wallet containing all our private keys
 		Wallet keywallet = new Wallet(params);
 
 		addKeysTobitoinJWallet(keywallet);
@@ -303,7 +310,8 @@ public class MyWallet {
 			if (temporySecondPassword == null)
 				throw new Exception("You must provide a second password");
 
-			map.put("priv", encryptPK(base58Priv, getSharedKey(), temporySecondPassword));
+			map.put("priv",
+					encryptPK(base58Priv, getSharedKey(), temporySecondPassword));
 
 		} else {
 			map.put("priv", base58Priv);
@@ -318,13 +326,14 @@ public class MyWallet {
 		try {
 			MessageDigest md = MessageDigest.getInstance("SHA-256");
 
-			//N Rounds of SHA256
-			byte[] data = md.digest((getSharedKey() + secondPassword).getBytes("UTF-8"));
+			// N Rounds of SHA256
+			byte[] data = md.digest((getSharedKey() + secondPassword)
+					.getBytes("UTF-8"));
 			for (int ii = 1; ii < PBKDF2Iterations; ++ii) {
 				data = md.digest(data);
 			}
 
-			String dpasswordhash  = new String(Hex.encode(data));
+			String dpasswordhash = new String(Hex.encode(data));
 			if (dpasswordhash.equals(getDPasswordHash()))
 				return true;
 		} catch (Exception e) {
@@ -334,77 +343,113 @@ public class MyWallet {
 		return false;
 	}
 
-	//AES 256 PBKDF2 CBC iso10126 decryption
-	//16 byte IV must be prepended to ciphertext - Compatible with crypto-js
+
+	private static byte[] copyOfRange(byte[] source, int from, int to) {
+		byte[] range = new byte[to - from];
+		System.arraycopy(source, from, range, 0, range.length);
+
+		return range;
+	}
+
+	// AES 256 PBKDF2 CBC iso10126 decryption
+	// 16 byte IV must be prepended to ciphertext - Compatible with crypto-js
 	public static String decrypt(String ciphertext, String password) throws Exception {
 		byte[] cipherdata = Base64.decode(ciphertext, Base64.NO_WRAP);
 
 		//Sperate the IV and cipher data
-		byte[] iv = Arrays.copyOfRange(cipherdata, 0, AESBlockSize * 4);
-		byte[] input = Arrays.copyOfRange(cipherdata, AESBlockSize * 4, cipherdata.length);
+		byte[] iv = copyOfRange(cipherdata, 0, AESBlockSize * 4);
+		byte[] input = copyOfRange(cipherdata, AESBlockSize * 4, cipherdata.length);
 
-		IvParameterSpec ivspec = new IvParameterSpec(iv);
+		PBEParametersGenerator generator = new PKCS5S2ParametersGenerator();
+		generator.init(PBEParametersGenerator.PKCS5PasswordToUTF8Bytes(password.toCharArray()), iv, PBKDF2Iterations);
+		KeyParameter keyParam = (KeyParameter)generator.generateDerivedParameters(256);
 
-		SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
-		KeySpec spec = new PBEKeySpec(password.toCharArray(), iv, PBKDF2Iterations, 256);
-		SecretKey tmp = factory.generateSecret(spec);
+		CipherParameters params = new ParametersWithIV(keyParam, iv);
 
-		SecretKey secret = new SecretKeySpec(tmp.getEncoded(), "AES");
+		// setup AES cipher in CBC mode with PKCS7 padding
+		BlockCipherPadding padding = new ISO10126d2Padding();
+		BufferedBlockCipher cipher = new PaddedBufferedBlockCipher(new CBCBlockCipher(new AESEngine()), padding);
+		cipher.reset();
+		cipher.init(false, params);
 
-		byte[] output = null;
+		// create a temporary buffer to decode into (it'll include padding)
+		byte[] buf = new byte[cipher.getOutputSize(input.length)];
+		int len = cipher.processBytes(input, 0, input.length, buf, 0);
+		len += cipher.doFinal(buf, len);
 
-		Cipher cipher = Cipher.getInstance("AES/CBC/ISO10126Padding");
-		cipher.init(Cipher.DECRYPT_MODE, secret, ivspec);
-		output = cipher.doFinal(input);
+		// remove padding
+		byte[] out = new byte[len];
+		System.arraycopy(buf, 0, out, 0, len);
 
-		return new String(output, "UTF-8");
+		// return string representation of decoded bytes
+		return new String(out, "UTF-8"); 
 	}
 
-	//Encrypt compatible with crypto-js
-	public static String encrypt(String text, String password) throws Exception{
+
+	private static byte[] cipherData(BufferedBlockCipher cipher, byte[] data)
+	        throws Exception
+	{
+	    int minSize = cipher.getOutputSize(data.length);
+	    byte[] outBuf = new byte[minSize];
+	    int length1 = cipher.processBytes(data, 0, data.length, outBuf, 0);
+	    int length2 = cipher.doFinal(outBuf, length1);
+	    int actualLength = length1 + length2;
+	    byte[] result = new byte[actualLength];
+	    System.arraycopy(outBuf, 0, result, 0, result.length);
+	    return result;
+	}
+	
+	// Encrypt compatible with crypto-js
+	public static String encrypt(String text, String password) throws Exception {
 
 		if (password == null)
 			throw new Exception("You must provide an ecryption password");
 
-		//Use secure random to generate a 16 byte iv
+		// Use secure random to generate a 16 byte iv
 		SecureRandom random = new SecureRandom();
-		byte iv[] = new byte[AESBlockSize*4];
+		byte iv[] = new byte[AESBlockSize * 4];
 		random.nextBytes(iv);
 
 		byte[] textbytes = text.getBytes("UTF-8");
 
-		SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
-		KeySpec spec = new PBEKeySpec(password.toCharArray(), iv, PBKDF2Iterations, 256);
-		SecretKey tmp = factory.generateSecret(spec);
+		PBEParametersGenerator generator = new PKCS5S2ParametersGenerator();
+		generator.init(PBEParametersGenerator.PKCS5PasswordToUTF8Bytes(password.toCharArray()), iv, PBKDF2Iterations);
+		KeyParameter keyParam = (KeyParameter)generator.generateDerivedParameters(256);
 
-		IvParameterSpec ivspec = new IvParameterSpec(iv);
+		CipherParameters params = new ParametersWithIV(keyParam, iv);
 
-		SecretKey secret = new SecretKeySpec(tmp.getEncoded(), "AES");
-		Cipher cipher = Cipher.getInstance("AES/CBC/ISO10126Padding");
-		cipher.init(Cipher.ENCRYPT_MODE, secret, ivspec);
+		// setup AES cipher in CBC mode with PKCS7 padding
+		BlockCipherPadding padding = new ISO10126d2Padding();
+		BufferedBlockCipher cipher = new PaddedBufferedBlockCipher(new CBCBlockCipher(new AESEngine()), padding);
+		cipher.reset();
+		cipher.init(true, params);
 
-		byte[] output = cipher.doFinal(textbytes);
-
-		//Append to IV to the output
-		byte[] ivAppended = ArrayUtils.addAll(iv, output);
+		byte[] outBuf = cipherData(cipher, textbytes);
+		
+		// Append to IV to the output
+		byte[] ivAppended = ArrayUtils.addAll(iv, outBuf);
 
 		return new String(Base64.encode(ivAppended, Base64.NO_WRAP), "UTF-8");
 	}
 
-	//Decrypt a double encrypted private key
-	public static String decryptPK(String key, String sharedKey, String password) throws Exception {
+	// Decrypt a double encrypted private key
+	public static String decryptPK(String key, String sharedKey, String password)
+			throws Exception {
 		return decrypt(key, sharedKey + password);
 	}
 
-	//Decrypt a double encrypted private key
-	public static String encryptPK(String key, String sharedKey, String password) throws Exception {
+	// Decrypt a double encrypted private key
+	public static String encryptPK(String key, String sharedKey, String password)
+			throws Exception {
 		return encrypt(key, sharedKey + password);
 	}
 
-	//Decrypt a Wallet file and parse the JSON
+	// Decrypt a Wallet file and parse the JSON
 	@SuppressWarnings("unchecked")
-	public static Map<String, Object> decryptPayload(String payload, String password) throws Exception {
-		if (payload == null || payload.length() == 0 || password == null || password.length() == 0)
+	public static Map<String, Object> decryptPayload(String payload,
+			String password) throws Exception {
+		if (payload == null || payload.length() == 0 || password == null
+				|| password.length() == 0)
 			return null;
 
 		String decrypted = decrypt(payload, password);

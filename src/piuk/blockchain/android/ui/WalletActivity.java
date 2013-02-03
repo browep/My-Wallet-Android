@@ -38,7 +38,9 @@ import android.widget.ImageButton;
 import android.widget.Toast;
 import com.google.bitcoin.core.AbstractWalletEventListener;
 import com.google.bitcoin.core.Wallet;
-import piuk.blockchain.R;
+
+import piuk.EventListeners;
+import piuk.blockchain.android.R;
 import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.WalletApplication;
 import piuk.blockchain.android.util.ActionBarFragment;
@@ -53,19 +55,15 @@ import java.net.URLConnection;
 /**
  * @author Andreas Schildbach
  */
-public final class WalletActivity extends AbstractWalletActivity
-{
+public final class WalletActivity extends AbstractWalletActivity {
 	private static final int REQUEST_CODE_SCAN = 0;
 	private static final int DIALOG_HELP = 0;
 	private ImageButton infoButton = null;
 	private Handler handler = new Handler();
-	public long lastShowedWelcome = 0;
-	public long lastShowedDecryptionError = 0;
 
-	private AbstractWalletEventListener eventListener = new AbstractWalletEventListener() {
-	    @Override
-		public void onChange(/*Wallet arg0*/) {
-
+	private EventListeners.EventListener eventListener = new EventListeners.EventListener() {
+		@Override
+		public void onWalletDidChange() {
 			handler.post(new Runnable() {
 				public void run() {
 					checkDialogs();
@@ -76,47 +74,30 @@ public final class WalletActivity extends AbstractWalletActivity
 
 	public void showQRReader() {
 		if (getPackageManager().resolveActivity(Constants.INTENT_QR_SCANNER, 0) != null) {
-			startActivityForResult(Constants.INTENT_QR_SCANNER, REQUEST_CODE_SCAN);
-		} else 	{
+			startActivityForResult(Constants.INTENT_QR_SCANNER,
+					REQUEST_CODE_SCAN);
+		} else {
 			showMarketPage(Constants.PACKAGE_NAME_ZXING);
 			longToast(R.string.send_coins_install_qr_scanner_msg);
 		}
 	}
 
 	public void checkDialogs() {
-		System.out.println("checkDialogs()");
-
 		WalletApplication application = (WalletApplication) getApplication();
 
-		if (application.hasDecryptionError) {
-			if (System.currentTimeMillis() - lastShowedDecryptionError > 10000) {
-
-				Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://blockchain.info/wallet/decryption-error"));
-
-				startActivity(browserIntent);
-
-				lastShowedDecryptionError = System.currentTimeMillis();
-			}
-		}
-
-		if (application.isNewWallet())
-			if (System.currentTimeMillis() - lastShowedWelcome > 10000) {
-				WelcomeFragment.show(getSupportFragmentManager());
-
-				lastShowedWelcome = System.currentTimeMillis();
-			}
-
-
-		if (application.isNewWallet()) {
+		if (application.hasDecryptionError || application.isNewWallet()) {
 			infoButton.setImageResource(R.drawable.ic_action_info_red);
+
+			WelcomeFragment.show(getSupportFragmentManager(), application);
 		} else {
+			WelcomeFragment.hide();
+			
 			infoButton.setImageResource(R.drawable.ic_action_info);
 		}
 	}
 
 	@Override
-	protected void onCreate(final Bundle savedInstanceState)
-	{
+	protected void onCreate(final Bundle savedInstanceState) {
 
 		super.onCreate(savedInstanceState);
 
@@ -126,31 +107,37 @@ public final class WalletActivity extends AbstractWalletActivity
 
 		final ActionBarFragment actionBar = getActionBarFragment();
 
-		actionBar.setPrimaryTitle(R.string.app_name);
+		actionBar.getPrimaryTitleView().setOnClickListener(
+				new OnClickListener() {
+					public void onClick(final View v) {
+						WelcomeFragment.show(getSupportFragmentManager(),
+								application);
+					}
+				});
+		
+		actionBar.getIconView().setOnClickListener(
+				new OnClickListener() {
+					public void onClick(final View v) {						
+						WelcomeFragment.show(getSupportFragmentManager(),
+								application);
+					}
+				});
 
-		actionBar.getPrimaryTitleView().setOnClickListener(new OnClickListener()
-		{
-			public void onClick(final View v)
-			{
-				WelcomeFragment.show(getSupportFragmentManager());
-			}
-		});
+		actionBar.addButton(R.drawable.ic_action_send).setOnClickListener(
+				new OnClickListener() {
+					public void onClick(final View v) {
+						startActivity(new Intent(WalletActivity.this,
+								SendCoinsActivity.class));
+					}
+				});
 
-		actionBar.addButton(R.drawable.ic_action_send).setOnClickListener(new OnClickListener()
-		{
-			public void onClick(final View v)
-			{
-				startActivity(new Intent(WalletActivity.this, SendCoinsActivity.class));
-			}
-		});
-
-		actionBar.addButton(R.drawable.ic_action_receive).setOnClickListener(new OnClickListener()
-		{
-			public void onClick(final View v)
-			{
-				startActivity(new Intent(WalletActivity.this, RequestCoinsActivity.class));
-			}
-		});
+		actionBar.addButton(R.drawable.ic_action_receive).setOnClickListener(
+				new OnClickListener() {
+					public void onClick(final View v) {
+						startActivity(new Intent(WalletActivity.this,
+								RequestCoinsActivity.class));
+					}
+				});
 
 		infoButton = actionBar.addButton(R.drawable.ic_action_info);
 
@@ -158,84 +145,85 @@ public final class WalletActivity extends AbstractWalletActivity
 			public void onClick(final View v) {
 				WalletApplication application = (WalletApplication) getApplication();
 
-				Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://blockchain.info/wallet/iphone-view?guid="+application.getRemoteWallet().getGUID()+"&sharedKey="+application.getRemoteWallet().getSharedKey()));
+				Intent browserIntent = new Intent(
+						Intent.ACTION_VIEW,
+						Uri.parse("https://blockchain.info/wallet/iphone-view?guid="
+								+ application.getRemoteWallet().getGUID()
+								+ "&sharedKey="
+								+ application.getRemoteWallet().getSharedKey()));
 
 				startActivity(browserIntent);
 			}
 		});
 
-		actionBar.addButton(R.drawable.ic_action_address_book).setOnClickListener(new OnClickListener()
-        {
-            public void onClick(final View v)
-            {
-                WalletAddressesActivity.start(WalletActivity.this, true);
-            }
-        });
+		actionBar.addButton(R.drawable.ic_action_address_book)
+				.setOnClickListener(new OnClickListener() {
+					public void onClick(final View v) {
+						WalletAddressesActivity
+								.start(WalletActivity.this, true);
+					}
+				});
 
-		actionBar.addButton(R.drawable.ic_action_exchange).setOnClickListener(new OnClickListener()
-		{
-			public void onClick(final View v)
-			{
-				startActivity(new Intent(WalletActivity.this, ExchangeRatesActivity.class));
-			}
-		});
+		actionBar.addButton(R.drawable.ic_action_exchange).setOnClickListener(
+				new OnClickListener() {
+					public void onClick(final View v) {
+						startActivity(new Intent(WalletActivity.this,
+								ExchangeRatesActivity.class));
+					}
+				});
 
 		/*
-		if ((getResources().getConfiguration().screenLayout & Configuration.SCREENLAYOUT_SIZE_MASK) >= Configuration.SCREENLAYOUT_SIZE_LARGE)
-		{
-			actionBar.addButton(R.drawable.ic_action_address_book).setOnClickListener(new OnClickListener()
-			{
-				public void onClick(final View v)
-				{
-					WalletAddressesActivity.start(WalletActivity.this, true);
-				}
-			});
-		}
-
-		if ((getResources().getConfiguration().screenLayout & Configuration.SCREENLAYOUT_SIZE_MASK) < Configuration.SCREENLAYOUT_SIZE_LARGE)
-		{
-			final FragmentManager fm = getSupportFragmentManager();
-			final FragmentTransaction ft = fm.beginTransaction();
-			ft.hide(fm.findFragmentById(R.id.exchange_rates_fragment));
-			ft.commit();
-		}
-		*/
-
-		checkVersionAndTimeskewAlert();
+		 * if ((getResources().getConfiguration().screenLayout &
+		 * Configuration.SCREENLAYOUT_SIZE_MASK) >=
+		 * Configuration.SCREENLAYOUT_SIZE_LARGE) {
+		 * actionBar.addButton(R.drawable
+		 * .ic_action_address_book).setOnClickListener(new OnClickListener() {
+		 * public void onClick(final View v) {
+		 * WalletAddressesActivity.start(WalletActivity.this, true); } }); }
+		 * 
+		 * if ((getResources().getConfiguration().screenLayout &
+		 * Configuration.SCREENLAYOUT_SIZE_MASK) <
+		 * Configuration.SCREENLAYOUT_SIZE_LARGE) { final FragmentManager fm =
+		 * getSupportFragmentManager(); final FragmentTransaction ft =
+		 * fm.beginTransaction();
+		 * ft.hide(fm.findFragmentById(R.id.exchange_rates_fragment));
+		 * ft.commit(); }
+		 */
 
 		checkDialogs();
 	}
 
 	@Override
-	protected void onResume()
-	{
+	protected void onResume() {
 
 		WalletApplication application = (WalletApplication) getApplication();
 
 		application.connect();
-
-		application.getWallet().addEventListener(eventListener);
+		
+		if (!application.getRemoteWallet().isUptoDate(Constants.MultiAddrTimeThreshold)) {
+			application.checkIfWalletHasUpdatedAndFetchTransactions();
+		}
+		
+		EventListeners.addEventListener(eventListener);
 
 		super.onResume();
 
-		checkLowStorageAlert();
+		checkDialogs();
 	}
 
 	@Override
-	protected void onPause()
-	{
+	protected void onPause() {
 		WalletApplication application = (WalletApplication) getApplication();
 
 		application.diconnectSoon();
 
-		application.getWallet().removeEventListener(eventListener);
+		EventListeners.removeEventListener(eventListener);
 
 		super.onPause();
 	}
 
 	@Override
-	public boolean onCreateOptionsMenu(final Menu menu)
-	{
+	public boolean onCreateOptionsMenu(final Menu menu) {
 		super.onCreateOptionsMenu(menu);
 		getMenuInflater().inflate(R.menu.wallet_options, menu);
 		menu.findItem(R.id.wallet_options_donate).setVisible(!Constants.TEST);
@@ -243,10 +231,8 @@ public final class WalletActivity extends AbstractWalletActivity
 	}
 
 	@Override
-	public boolean onOptionsItemSelected(final MenuItem item)
-	{
-		switch (item.getItemId())
-		{
+	public boolean onOptionsItemSelected(final MenuItem item) {
+		switch (item.getItemId()) {
 		case R.id.wallet_options_address_book:
 			WalletAddressesActivity.start(WalletActivity.this, true);
 			return true;
@@ -257,15 +243,15 @@ public final class WalletActivity extends AbstractWalletActivity
 
 		case R.id.wallet_options_donate:
 			final Intent intent = new Intent(this, SendCoinsActivity.class);
-			intent.putExtra(SendCoinsActivity.INTENT_EXTRA_ADDRESS, Constants.DONATION_ADDRESS);
+			intent.putExtra(SendCoinsActivity.INTENT_EXTRA_ADDRESS,
+					Constants.DONATION_ADDRESS);
 			startActivity(intent);
 			return true;
-
 
 		case R.id.wallet_options_bug:
 			Intent i = new Intent(Intent.ACTION_SEND);
 			i.setType("text/plain");
-			i.putExtra(Intent.EXTRA_EMAIL  , new String[]{"support@pi.uk.com"});
+			i.putExtra(Intent.EXTRA_EMAIL, new String[] { "support@pi.uk.com" });
 			i.putExtra(Intent.EXTRA_SUBJECT, "Exception Report");
 
 			String log = application.readExceptionLog();
@@ -275,7 +261,8 @@ public final class WalletActivity extends AbstractWalletActivity
 			try {
 				startActivity(Intent.createChooser(i, "Send mail..."));
 			} catch (android.content.ActivityNotFoundException ex) {
-				Toast.makeText(this, "There are no email clients installed.", Toast.LENGTH_SHORT).show();
+				Toast.makeText(this, "There are no email clients installed.",
+						Toast.LENGTH_SHORT).show();
 			}
 
 			return true;
@@ -288,11 +275,11 @@ public final class WalletActivity extends AbstractWalletActivity
 	}
 
 	@Override
-	protected Dialog onCreateDialog(final int id)
-	{
+	protected Dialog onCreateDialog(final int id) {
 		final WebView webView = new WebView(this);
 		if (id == DIALOG_HELP)
-			webView.loadUrl("file:///android_asset/help" + languagePrefix() + ".html");
+			webView.loadUrl("file:///android_asset/help" + languagePrefix()
+					+ ".html");
 
 		final Dialog dialog = new Dialog(WalletActivity.this);
 		dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -300,88 +287,5 @@ public final class WalletActivity extends AbstractWalletActivity
 		dialog.setCanceledOnTouchOutside(true);
 
 		return dialog;
-	}
-
-	private void checkLowStorageAlert()
-	{
-		final Intent stickyIntent = registerReceiver(null, new IntentFilter(Intent.ACTION_DEVICE_STORAGE_LOW));
-		if (stickyIntent != null)
-		{
-			final AlertDialog.Builder builder = new AlertDialog.Builder(this);
-			builder.setIcon(android.R.drawable.ic_dialog_alert);
-			builder.setTitle(R.string.wallet_low_storage_dialog_title);
-			builder.setMessage(R.string.wallet_low_storage_dialog_msg);
-			builder.setPositiveButton(R.string.wallet_low_storage_dialog_button_apps, new DialogInterface.OnClickListener()
-			{
-				public void onClick(final DialogInterface dialog, final int id)
-				{
-					startActivity(new Intent(android.provider.Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS));
-					finish();
-				}
-			});
-			builder.setNegativeButton(R.string.button_dismiss, null);
-			builder.show();
-		}
-	}
-
-	private void checkVersionAndTimeskewAlert()
-	{
-		new Thread()
-		{
-			@Override
-			public void run()
-			{
-				try
-				{
-					final int versionCode = getWalletApplication().applicationVersionCode();
-					final URLConnection connection = new URL(Constants.VERSION_URL + "?current=" + versionCode).openConnection();
-					connection.connect();
-					final long serverTime = connection.getHeaderFieldDate("Date", 0);
-					final InputStream is = connection.getInputStream();
-					final BufferedReader reader = new BufferedReader(new InputStreamReader(is));
-					// final String version = reader.readLine();
-					reader.close();
-
-					if (serverTime > 0)
-					{
-						final long diffMinutes = Math.abs((System.currentTimeMillis() - serverTime) / 1000 / 60);
-
-						if (diffMinutes >= 60)
-						{
-							runOnUiThread(new Runnable()
-							{
-								public void run()
-								{
-									if (!isFinishing())
-										timeskewAlert(diffMinutes);
-								}
-							});
-						}
-					}
-				}
-				catch (final Exception x)
-				{
-					x.printStackTrace();
-				}
-			}
-		}.start();
-	}
-
-	private void timeskewAlert(final long diffMinutes)
-	{
-		final AlertDialog.Builder builder = new AlertDialog.Builder(this);
-		builder.setIcon(android.R.drawable.ic_dialog_alert);
-		builder.setTitle(R.string.wallet_timeskew_dialog_title);
-		builder.setMessage(getString(R.string.wallet_timeskew_dialog_msg, diffMinutes));
-		builder.setPositiveButton(R.string.wallet_timeskew_dialog_button_settings, new DialogInterface.OnClickListener()
-		{
-			public void onClick(final DialogInterface dialog, final int id)
-			{
-				startActivity(new Intent(android.provider.Settings.ACTION_DATE_SETTINGS));
-				finish();
-			}
-		});
-		builder.setNegativeButton(R.string.button_dismiss, null);
-		builder.show();
 	}
 }

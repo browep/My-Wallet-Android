@@ -32,24 +32,27 @@ import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
-import piuk.blockchain.R;
+import piuk.blockchain.android.R;
 import piuk.blockchain.android.WalletApplication;
 
 /**
  * @author Andreas Schildbach
  */
-public final class SecondPasswordFragment extends DialogFragment
-{
-	private static final String FRAGMENT_TAG = SecondPasswordFragment.class.getName();
+public final class SecondPasswordFragment extends DialogFragment {
+	private static final String FRAGMENT_TAG = SecondPasswordFragment.class
+			.getName();
 	private SuccessCallback callback = null;
 
 	public interface SuccessCallback {
 		public void onSuccess();
+
 		public void onFail();
 	}
-	public static DialogFragment show(final FragmentManager fm, SuccessCallback callback)
-	{	
-		final DialogFragment prev = (DialogFragment) fm.findFragmentById(R.layout.second_password_dialog);
+
+	public static DialogFragment show(final FragmentManager fm,
+			SuccessCallback callback) {
+		final DialogFragment prev = (DialogFragment) fm
+				.findFragmentById(R.layout.second_password_dialog);
 
 		final FragmentTransaction ft = fm.beginTransaction();
 
@@ -69,8 +72,7 @@ public final class SecondPasswordFragment extends DialogFragment
 		return newFragment;
 	}
 
-	private static SecondPasswordFragment instance()
-	{
+	private static SecondPasswordFragment instance() {
 		final SecondPasswordFragment fragment = new SecondPasswordFragment();
 
 		return fragment;
@@ -82,24 +84,28 @@ public final class SecondPasswordFragment extends DialogFragment
 	}
 
 	@Override
-	public Dialog onCreateDialog(final Bundle savedInstanceState)
-	{
+	public Dialog onCreateDialog(final Bundle savedInstanceState) {
 		final FragmentActivity activity = getActivity();
 		final LayoutInflater inflater = LayoutInflater.from(activity);
 
-		final Builder dialog = new AlertDialog.Builder(activity).setTitle(R.string.second_password_title);
+		final Builder dialog = new AlertDialog.Builder(activity)
+				.setTitle(R.string.second_password_title);
 
-		final View view = inflater.inflate(R.layout.second_password_dialog, null);
+		final View view = inflater.inflate(R.layout.second_password_dialog,
+				null);
 
 		dialog.setView(view);
 
-		final TextView passwordField = (TextView) view.findViewById(R.id.second_password);
-		final Button continueButton = (Button) view.findViewById(R.id.second_password_continue);
+		final TextView passwordField = (TextView) view
+				.findViewById(R.id.second_password);
+		final Button continueButton = (Button) view
+				.findViewById(R.id.second_password_continue);
 
-		final WalletApplication application = (WalletApplication) getActivity().getApplication();
+		final WalletApplication application = (WalletApplication) getActivity()
+				.getApplication();
 
 		continueButton.setOnClickListener(new OnClickListener() {
-			public void onClick(View v) {	
+			public void onClick(View v) {
 
 				try {
 					if (passwordField.getText() == null)
@@ -107,17 +113,23 @@ public final class SecondPasswordFragment extends DialogFragment
 
 					String secondPassword = passwordField.getText().toString();
 
-					if (application.getRemoteWallet().validateSecondPassword(secondPassword)) {
-						application.getRemoteWallet().setTemporySecondPassword(secondPassword);
+					if (application.getRemoteWallet().validateSecondPassword(
+							secondPassword)) {
+						application.getRemoteWallet().setTemporySecondPassword(
+								secondPassword);
 
-						Toast.makeText(getActivity().getApplication(), R.string.second_password_correct, Toast.LENGTH_SHORT).show();
+						Toast.makeText(getActivity().getApplication(),
+								R.string.second_password_correct,
+								Toast.LENGTH_SHORT).show();
 
 						dismiss();
 
 						callback.onSuccess();
 					} else {
-						Toast.makeText(getActivity().getApplication(), R.string.second_password_incorrect, Toast.LENGTH_SHORT).show();
-					} 
+						Toast.makeText(getActivity().getApplication(),
+								R.string.second_password_incorrect,
+								Toast.LENGTH_SHORT).show();
+					}
 				} catch (Exception e) {
 					e.printStackTrace();
 				}

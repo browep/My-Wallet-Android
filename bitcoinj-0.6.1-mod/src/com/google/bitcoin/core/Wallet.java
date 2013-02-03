@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.spongycastle.util.encoders.Hex;
 
 import java.io.*;
 import java.math.BigInteger;
@@ -1135,7 +1136,7 @@ public class Wallet implements Serializable {
     /**
      * Adds the given transaction to the given pools and registers a confidence change listener on it.
      */
-    private synchronized void addWalletTransaction(Pool pool, Transaction tx) {
+    public synchronized void addWalletTransaction(Pool pool, Transaction tx) {
         switch (pool) {
         case UNSPENT:
             Preconditions.checkState(unspent.put(tx.getHash(), tx) == null);
@@ -1572,7 +1573,7 @@ public class Wallet implements Serializable {
             autoSave();
         }
     }
-
+ 
     /**
      * Locates a keypair from the keychain given the hash of the public key. This is needed when finding out which
      * key we need to use to redeem a transaction output.
@@ -1580,7 +1581,12 @@ public class Wallet implements Serializable {
      * @return ECKey object or null if no such key was found.
      */
     public synchronized ECKey findKeyFromPubHash(byte[] pubkeyHash) {
+    	
+    	System.out.println("findKeyFromPubHash() " + new String(Hex.encode(pubkeyHash)));
+    	
         for (ECKey key : keychain) {
+        	System.out.println("key.getPubKeyHash() " + new String(Hex.encode(key.getPubKeyHash())));
+
             if (Arrays.equals(key.getPubKeyHash(), pubkeyHash)) return key;
         }
         return null;

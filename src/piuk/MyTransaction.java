@@ -22,9 +22,10 @@ import java.math.BigInteger;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
+import piuk.blockchain.android.AddressBookProvider;
 import piuk.blockchain.android.Constants;
-
 
 import org.spongycastle.util.encoders.Hex;
 import com.google.bitcoin.core.Address;
@@ -37,11 +38,11 @@ import com.google.bitcoin.core.Wallet;
 import com.google.bitcoin.core.WalletTransaction;
 import com.google.bitcoin.core.WalletTransaction.Pool;
 
-
 public class MyTransaction extends Transaction implements Serializable {
 	private static final long serialVersionUID = 1L;
 	Sha256Hash hash;
 	Date time;
+	String tag;
 
 	int height;
 	boolean double_spend;
@@ -49,12 +50,16 @@ public class MyTransaction extends Transaction implements Serializable {
 	int txIndex;
 	public BigInteger result;
 
-    @Override
-    public synchronized TransactionConfidence getConfidence() {
-    	return new MyTransactionConfidence(this, height, double_spend);
-    }
+	@Override
+	public synchronized TransactionConfidence getConfidence() {
+		return new MyTransactionConfidence(this, height, double_spend);
+	}
 
-    @Override
+	public String getTag() {
+		return tag;
+	}
+
+	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = super.hashCode();
@@ -77,9 +82,9 @@ public class MyTransaction extends Transaction implements Serializable {
 	}
 
 	@Override
-    public boolean hasConfidence() {
-       return true;
-    }
+	public boolean hasConfidence() {
+		return true;
+	}
 
 	public MyTransaction(NetworkParameters params, int version, Sha256Hash hash) {
 		super(params, version, hash);
@@ -92,14 +97,14 @@ public class MyTransaction extends Transaction implements Serializable {
 	}
 
 	@Override
-    public Date getUpdateTime() {
+	public Date getUpdateTime() {
 		return time;
-    }
+	}
 
 	@Override
-    public BigInteger getValueSentToMe(Wallet wallet) {
-        return result;
-    }
+	public BigInteger getValueSentToMe(Wallet wallet) {
+		return result;
+	}
 
 	@Override
 	public Sha256Hash getHash() {
@@ -107,27 +112,33 @@ public class MyTransaction extends Transaction implements Serializable {
 	}
 
 	@SuppressWarnings("unchecked")
-	public static WalletTransaction fromJSONDict(Map<String, Object> transactionDict) throws Exception {
+	public static MyTransaction fromJSONDict(Map<String, Object> transactionDict)
+			throws Exception {
 
-		Sha256Hash hash = new Sha256Hash(Hex.decode((String)transactionDict.get("hash")));
+		Sha256Hash hash = new Sha256Hash(Hex.decode((String) transactionDict
+				.get("hash")));
 		BigInteger result = BigInteger.ZERO;
 
 		if (transactionDict.get("result") != null)
-			result = BigInteger.valueOf(((Number)transactionDict.get("result")).longValue());
+			result = BigInteger
+					.valueOf(((Number) transactionDict.get("result"))
+							.longValue());
 
 		int height = 0;
 		boolean double_spend = false;
 
 		if (transactionDict.get("block_height") != null) {
-			height = ((Number)transactionDict.get("block_height")).intValue();
+			height = ((Number) transactionDict.get("block_height")).intValue();
 		}
 		if (transactionDict.get("double_spend") != null) {
-			double_spend = ((Boolean)transactionDict.get("double_spend")).booleanValue();
+			double_spend = ((Boolean) transactionDict.get("double_spend"))
+					.booleanValue();
 		}
 
-		int txIndex = ((Number)transactionDict.get("tx_index")).intValue();
+		int txIndex = ((Number) transactionDict.get("tx_index")).intValue();
 
-		MyTransaction tx = new MyTransaction(Constants.NETWORK_PARAMETERS, 1, hash);
+		MyTransaction tx = new MyTransaction(Constants.NETWORK_PARAMETERS, 1,
+				hash);
 
 		tx.height = height;
 
@@ -137,50 +148,66 @@ public class MyTransaction extends Transaction implements Serializable {
 
 		tx.result = result;
 
-		if (transactionDict.get("time") != null) {
-			tx.time = new Date(((Number)transactionDict.get("time")).longValue() * 1000);
+		Number time = (Number) transactionDict.get("time");
+		if (time != null) {
+			tx.time = new Date(time.longValue() * 1000);
 		} else {
 			tx.time = new Date(0);
 		}
 
-		List<Map<String, Object>> inputs = (List<Map<String, Object>>) transactionDict.get("inputs");
+		List<Map<String, Object>> inputs = (List<Map<String, Object>>) transactionDict
+				.get("inputs");
 		for (Map<String, Object> inputDict : inputs) {
 
-			Map<String, Object> prev_out_dict = (Map<String, Object>) inputDict.get("prev_out");
+			Map<String, Object> prev_out_dict = (Map<String, Object>) inputDict
+					.get("prev_out");
 
 			if (prev_out_dict == null)
 				continue;
 
 			int txOutputN = 0;
 			if (prev_out_dict.get("n") != null)
-				txOutputN = ((Number)prev_out_dict.get("n")).intValue();
+				txOutputN = ((Number) prev_out_dict.get("n")).intValue();
 
-			TransactionOutPoint outpoint = new TransactionOutPoint(Constants.NETWORK_PARAMETERS, txOutputN, (Transaction)null);
+			if (tx.tag == null)
+				tx.tag = (String) prev_out_dict.get("addr_tag");
 
-			MyTransactionInput input = new MyTransactionInput(Constants.NETWORK_PARAMETERS, null, null, outpoint);
+			TransactionOutPoint outpoint = new TransactionOutPoint(
+					Constants.NETWORK_PARAMETERS, txOutputN, (Transaction) null);
 
-			if ((String)prev_out_dict.get("addr") != null)
-				input.address = new Address(Constants.NETWORK_PARAMETERS, (String)prev_out_dict.get("addr")).toString();
+			MyTransactionInput input = new MyTransactionInput(
+					Constants.NETWORK_PARAMETERS, null, null, outpoint);
 
-			if ((Number)prev_out_dict.get("value") != null)
-				input.value = BigInteger.valueOf(((Number)prev_out_dict.get("value")).longValue());
+			if ((String) prev_out_dict.get("addr") != null)
+				input.address = new Address(Constants.NETWORK_PARAMETERS,
+						(String) prev_out_dict.get("addr")).toString();
 
+			if ((Number) prev_out_dict.get("value") != null)
+				input.value = BigInteger.valueOf(((Number) prev_out_dict
+						.get("value")).longValue());
 
 			tx.addInput(input);
 		}
 
-		List<Map<String, Object>> outputs = (List<Map<String, Object>>) transactionDict.get("out");
+		List<Map<String, Object>> outputs = (List<Map<String, Object>>) transactionDict
+				.get("out");
 		for (Map<String, Object> outDict : outputs) {
 
-			BigInteger value = BigInteger.valueOf(((Number)outDict.get("value")).longValue());
+			if (tx.tag == null)
+				tx.tag = (String) outDict.get("addr_tag");
 
-			Address addr = new Address(Constants.NETWORK_PARAMETERS, (String)outDict.get("addr"));
+			BigInteger value = BigInteger.valueOf(((Number) outDict
+					.get("value")).longValue());
 
-			MyTransactionOutput output = new MyTransactionOutput(Constants.NETWORK_PARAMETERS, null, value, addr);
+			Address addr = new Address(Constants.NETWORK_PARAMETERS,
+					(String) outDict.get("addr"));
+
+			MyTransactionOutput output = new MyTransactionOutput(
+					Constants.NETWORK_PARAMETERS, null, value, addr);
 
 			tx.addOutput(output);
 		}
 
-		return new WalletTransaction(Pool.SPENT, tx);
+		return tx;
 	}
 }

@@ -1,4 +1,4 @@
-<project name="my-wallet-bitcoinj-0.6.1" default="compile" basedir=".">
+<project name="my-wallet-bitcoinj-0.6.1" default="deploy" basedir=".">
 
 <property name="libs" value="guava-13.0.1.jar netty-3.3.1.Final.jar slf4j-api-1.6.2.jar slf4j-jdk14-1.6.2.jar sc-light-jdk15on-1.47.0.2.jar protobuf-java-2.4.1.jar"/>
 

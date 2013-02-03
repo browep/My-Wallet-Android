@@ -18,14 +18,14 @@
 package piuk.blockchain.android;
 
 import java.math.BigInteger;
-import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
 
+import piuk.EventListeners;
 import piuk.MyBlockChain;
 import piuk.MyTransactionOutput;
-
+import piuk.blockchain.android.ui.WalletActivity;
+import piuk.blockchain.android.util.WalletUtils;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -38,28 +38,17 @@ import android.content.IntentFilter;
 import android.net.ConnectivityManager;
 import android.net.Uri;
 import android.os.AsyncTask;
-import android.os.BatteryManager;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
-import android.os.Looper;
 import android.widget.Toast;
 
 import com.google.bitcoin.core.AbstractPeerEventListener;
-import com.google.bitcoin.core.AbstractWalletEventListener;
 import com.google.bitcoin.core.Address;
-import com.google.bitcoin.core.Block;
 import com.google.bitcoin.core.Peer;
 import com.google.bitcoin.core.PeerEventListener;
-import com.google.bitcoin.core.ScriptException;
 import com.google.bitcoin.core.Transaction;
 import com.google.bitcoin.core.TransactionInput;
-import com.google.bitcoin.core.TransactionOutput;
-import com.google.bitcoin.core.Wallet;
-import com.google.bitcoin.core.WalletEventListener;
-import piuk.blockchain.R;
-import piuk.blockchain.android.ui.WalletActivity;
-import piuk.blockchain.android.util.WalletUtils;
 
 /**
  * @author Andreas Schildbach
@@ -91,11 +80,10 @@ public class BlockchainService extends android.app.Service
 	private static final int NOTIFICATION_ID_COINS_RECEIVED = 1;
 	private static final int NOTIFICATION_ID_COINS_SENT = 3;
 
-	private final WalletEventListener walletEventListener = new AbstractWalletEventListener()
-	{
-
+	private final EventListeners.EventListener walletEventListener = new EventListeners.EventListener() {
+		
 		@Override
-		public void onCoinsSent(final Wallet wallet, final Transaction tx, final BigInteger prevBalance, final BigInteger newBalance)
+		public void onCoinsSent(final Transaction tx, final BigInteger prevBalance, final BigInteger newBalance)
 		{
 			System.out.println("onCoinsSent()");
 
@@ -106,7 +94,7 @@ public class BlockchainService extends android.app.Service
 					try {
 						final MyTransactionOutput output = (MyTransactionOutput) tx.getOutputs().get(0);
 						final Address to = output.getToAddress();
-						final BigInteger amount = tx.getValue(wallet);
+						final BigInteger amount = tx.getValue(application.getWallet());
 
 						notifyCoinsSent(to, amount);
 
@@ -119,20 +107,20 @@ public class BlockchainService extends android.app.Service
 		}
 
 		@Override
-		public void onCoinsReceived(final Wallet wallet, final Transaction tx, final BigInteger prevBalance, final BigInteger newBalance)
+		public void onCoinsReceived(final Transaction tx, final BigInteger prevBalance, final BigInteger newBalance)
 		{
 			try {
 				System.out.println("onCoinsReceived()");
 
 				if (tx.getInputs() == null || tx.getInputs().size() == 0) {
-					final BigInteger amount = tx.getValue(wallet);
+					final BigInteger amount = tx.getValue(application.getWallet());
 
 					notifyCoinbaseReceived(amount);
 				} else {
 					final TransactionInput input = tx.getInputs().get(0);
 
 					final Address from = input.getFromAddress();
-					final BigInteger amount = tx.getValue(wallet);
+					final BigInteger amount = tx.getValue(application.getWallet());
 
 					handler.post(new Runnable()
 					{
@@ -374,7 +362,6 @@ public class BlockchainService extends android.app.Service
 	@Override
 	public void onCreate()
 	{
-
 		System.out.println("service onCreate()");
 
 		super.onCreate();
@@ -383,7 +370,7 @@ public class BlockchainService extends android.app.Service
 
 		application = (WalletApplication) getApplication();
 
-		application.getWallet().addEventListener(walletEventListener);
+		EventListeners.addEventListener(walletEventListener);
 
 		final IntentFilter intentFilter = new IntentFilter();
 		intentFilter.addAction(ConnectivityManager.CONNECTIVITY_ACTION);
@@ -393,7 +380,7 @@ public class BlockchainService extends android.app.Service
 		registerReceiver(broadcastReceiver, intentFilter);
 
 		try {
-			blockChain = new MyBlockChain(Constants.NETWORK_PARAMETERS, application.getRemoteWallet());
+			blockChain = new MyBlockChain(Constants.NETWORK_PARAMETERS, application);
 
 			blockChain.addPeerEventListener(peerEventListener);
 
@@ -410,7 +397,7 @@ public class BlockchainService extends android.app.Service
 		System.out.println("start() blockchain");
 
 		if (!blockChain.getRemoteWallet().isUptoDate(Constants.MultiAddrTimeThreshold)) {
-			application.syncWithMyWallet();
+			application.checkIfWalletHasUpdatedAndFetchTransactions();
 		}
 
 		if (!blockChain.isConnected()) {
@@ -434,7 +421,8 @@ public class BlockchainService extends android.app.Service
 	{
 		System.out.println("service onDestroy()");
 
-		application.getWallet().removeEventListener(walletEventListener);
+		EventListeners.removeEventListener(walletEventListener);
+		
 		blockChain.removePeerEventListener(peerEventListener);
 
 		stop();

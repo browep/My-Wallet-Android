@@ -20,14 +20,12 @@ package piuk.blockchain.android.ui;
 import android.os.Bundle;
 import android.view.View;
 import android.view.View.OnClickListener;
-import piuk.blockchain.R;
+import piuk.blockchain.android.R;
 import piuk.blockchain.android.util.ActionBarFragment;
 
-public final class ExchangeRatesActivity extends AbstractWalletActivity
-{
+public final class ExchangeRatesActivity extends AbstractWalletActivity {
 	@Override
-	protected void onCreate(final Bundle savedInstanceState)
-	{
+	protected void onCreate(final Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
 		setContentView(R.layout.exchange_rates_content);
@@ -36,26 +34,22 @@ public final class ExchangeRatesActivity extends AbstractWalletActivity
 
 		actionBar.setPrimaryTitle(R.string.exchange_rates_activity_title);
 
-		actionBar.setBack(new OnClickListener()
-		{
-			public void onClick(final View v)
-			{
+		actionBar.setBack(new OnClickListener() {
+			public void onClick(final View v) {
 				finish();
 			}
 		});
 	}
 
 	@Override
-	protected void onResume()
-	{
+	protected void onResume() {
 		super.onResume();
 
 		getWalletApplication().connect();
 	}
 
 	@Override
-	protected void onPause()
-	{
+	protected void onPause() {
 		super.onPause();
 
 		getWalletApplication().diconnectSoon();

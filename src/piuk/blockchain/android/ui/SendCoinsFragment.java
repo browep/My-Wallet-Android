@@ -53,7 +53,7 @@ import com.google.bitcoin.core.Wallet.BalanceType;
 import piuk.MyRemoteWallet;
 import piuk.MyRemoteWallet.SendProgress;
 import piuk.MyWallet;
-import piuk.blockchain.R;
+import piuk.blockchain.android.R;
 import piuk.blockchain.android.AddressBookProvider;
 import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.WalletApplication;
@@ -76,6 +76,12 @@ public final class SendCoinsFragment extends Fragment
 	private CurrencyAmountView amountView;
 	private Button viewGo;
 	private Button viewCancel;
+	
+	public static enum FeePolicy {
+		FeeOnlyIfNeeded,
+		FeeForce,
+		FeeNever
+	}
 
 	private State state = State.INPUT;
 
@@ -222,7 +228,7 @@ public final class SendCoinsFragment extends Fragment
 						e.printStackTrace();
 					}
 
-					application.syncWithMyWallet();
+					application.checkIfWalletHasUpdatedAndFetchTransactions();
 				}
 
 				public void onError(final String message) {
@@ -251,9 +257,9 @@ public final class SendCoinsFragment extends Fragment
 					});
 				}
 
-				public boolean onReady(Transaction tx, BigInteger fee, long priority) {
+				public boolean onReady(Transaction tx, BigInteger fee, FeePolicy feePolicy, long priority) {
 
-					if (fee.compareTo(BigInteger.ZERO) == 0 && (priority < 57600000L || tx.bitcoinSerialize().length > 1024 || amountView.getAmount().compareTo(Constants.FEE_THRESHOLD_MIN) < 0)) {
+					if (fee.compareTo(BigInteger.ZERO) == 0  && feePolicy != FeePolicy.FeeNever && (priority < 57600000L || tx.bitcoinSerialize().length > 1024 || amountView.getAmount().compareTo(Constants.FEE_THRESHOLD_MIN) < 0)) {
 
 						handler.post(new Runnable() {
 							public void run() {
@@ -262,12 +268,12 @@ public final class SendCoinsFragment extends Fragment
 								.setCancelable(false)
 								.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
 									public void onClick(DialogInterface dialog, int id) {
-										makeTransaction(true);
+										makeTransaction(FeePolicy.FeeForce);
 									}
 								})
 								.setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
 									public void onClick(DialogInterface dialog, int id) {
-										dialog.cancel();
+										makeTransaction(FeePolicy.FeeNever);
 									}
 								});
 
@@ -336,23 +342,23 @@ public final class SendCoinsFragment extends Fragment
 				}
 			};
 
-			public void send(Address receivingAddress, BigInteger fee) {
+			public void send(Address receivingAddress, BigInteger fee, FeePolicy feePolicy) {
 				final BigInteger amount = amountView.getAmount();
 				final WalletApplication application = (WalletApplication) getActivity().getApplication();
 
-				application.getRemoteWallet().sendCoinsAsync(receivingAddress.toString(), amount, fee, progress);
+				application.getRemoteWallet().sendCoinsAsync(receivingAddress.toString(), amount, feePolicy, fee, progress);
 			}
 
-			public void makeTransaction(boolean forceFee) {
+			public void makeTransaction(final FeePolicy feePolicy) {
 				try {
-					final BigInteger fee = forceFee ? Constants.DEFAULT_TX_FEE : BigInteger.ZERO;
+					final BigInteger fee = feePolicy == FeePolicy.FeeForce ? Constants.DEFAULT_TX_FEE : BigInteger.ZERO;
 
 					String addressString = receivingAddressView.getText().toString().trim();
 
 					try {
 						Address receivingAddress = new Address(Constants.NETWORK_PARAMETERS, addressString);
 
-						send(receivingAddress, fee);
+						send(receivingAddress, fee, feePolicy);
 					} catch (AddressFormatException e) {
 
 						if (isValidEmail(addressString)) {
@@ -361,7 +367,7 @@ public final class SendCoinsFragment extends Fragment
 							application.addKeyToWallet(new ECKey(), "Sent To " + addressString, 2, new AddAddressCallback() {
 								public void onSavedAddress(String address) {
 									try {
-										send(new Address(Constants.NETWORK_PARAMETERS, address), fee);
+										send(new Address(Constants.NETWORK_PARAMETERS, address), fee, feePolicy);
 									} catch (AddressFormatException e) {
 										e.printStackTrace();
 									}
@@ -380,17 +386,16 @@ public final class SendCoinsFragment extends Fragment
 
 			public void onClick(final View v)
 			{
-
 				MyRemoteWallet remoteWallet = application.getRemoteWallet();
 
 				if (remoteWallet.isDoubleEncrypted() == false) {
-					makeTransaction(false);
+					makeTransaction(FeePolicy.FeeOnlyIfNeeded);
 				} else {
 					if (remoteWallet.temporySecondPassword == null) {
 						SecondPasswordFragment.show(getFragmentManager(), new SuccessCallback() {
 
 							public void onSuccess() {
-								makeTransaction(false);
+								makeTransaction(FeePolicy.FeeOnlyIfNeeded);
 							}
 
 							public void onFail() {
@@ -398,7 +403,7 @@ public final class SendCoinsFragment extends Fragment
 							}
 						});
 					} else {
-						makeTransaction(false);
+						makeTransaction(FeePolicy.FeeOnlyIfNeeded);
 					}
 				}
 			}
@@ -438,6 +443,7 @@ public final class SendCoinsFragment extends Fragment
 		super.onDestroyView();
 	}
 
+	
 	@Override
 	public void onDestroy()
 	{
@@ -471,14 +477,20 @@ public final class SendCoinsFragment extends Fragment
 		@Override
 		public CharSequence convertToString(final Cursor cursor)
 		{
+			if (cursor.isClosed())
+				return null;
+			
 			return cursor.getString(cursor.getColumnIndexOrThrow(AddressBookProvider.KEY_ADDRESS));
 		}
 
 		@Override
 		public Cursor runQueryOnBackgroundThread(final CharSequence constraint)
 		{
-			final Cursor cursor = getActivity().managedQuery(AddressBookProvider.CONTENT_URI, null, AddressBookProvider.SELECTION_QUERY,
-					new String[] { constraint.toString() }, null);
+			final Cursor cursor = getActivity().managedQuery(AddressBookProvider.CONTENT_URI, null, AddressBookProvider.SELECTION_QUERY, new String[] { constraint.toString() }, null);
+			
+			if (cursor != null && cursor.isClosed())
+				return null;
+			
 			return cursor;
 		}
 	}

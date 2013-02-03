@@ -32,7 +32,7 @@ import android.support.v4.app.FragmentTransaction;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.TextView;
-import piuk.blockchain.R;
+import piuk.blockchain.android.R;
 import piuk.blockchain.android.AddressBookProvider;
 import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.WalletApplication;
@@ -92,7 +92,7 @@ public final class EditAddressBookEntryFragment extends DialogFragment
 		final View view = inflater.inflate(R.layout.edit_address_book_entry_dialog, null);
 
 		final TextView viewAddress = (TextView) view.findViewById(R.id.edit_address_book_entry_address);
-		viewAddress.setText(WalletUtils.formatAddress(address, Constants.ADDRESS_FORMAT_GROUP_SIZE, Constants.ADDRESS_FORMAT_LINE_SIZE));
+		viewAddress.setText(address.toString());
 
 		final TextView viewLabel = (TextView) view.findViewById(R.id.edit_address_book_entry_label);
 		viewLabel.setText(label);

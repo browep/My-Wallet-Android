@@ -37,41 +37,36 @@ import com.google.bitcoin.core.Transaction;
 import com.google.bitcoin.core.VerificationException;
 import com.google.bitcoin.core.Wallet;
 
-import piuk.blockchain.R;
+import piuk.blockchain.android.R;
 import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.WalletApplication;
 import piuk.blockchain.android.util.ActionBarFragment;
 import piuk.blockchain.android.util.Base43;
-import piuk.blockchain.android.util.NfcTools;
 
 /**
  * @author Andreas Schildbach
  */
-public final class TransactionActivity extends AbstractWalletActivity
-{
+public final class TransactionActivity extends AbstractWalletActivity {
 	public static final String INTENT_EXTRA_TRANSACTION = "transaction";
 
 	private static final int GINGERBREAD_MR1 = 10; // API level 10
-	private static final String EXTRA_NDEF_MESSAGES = "android.nfc.extra.NDEF_MESSAGES"; // API level 10
-
-	private Object nfcManager;
+	private static final String EXTRA_NDEF_MESSAGES = "android.nfc.extra.NDEF_MESSAGES"; // API
+																							// level
+																							// 10
 	private Transaction tx;
 
-	public static void show(final Context context, final Transaction tx)
-	{
+	public static void show(final Context context, final Transaction tx) {
 		final Intent intent = new Intent(context, TransactionActivity.class);
-		// use Bitcoin serialization, because Java serialization runs out of stack on some transactions
+		// use Bitcoin serialization, because Java serialization runs out of
+		// stack on some transactions
 		intent.putExtra(TransactionActivity.INTENT_EXTRA_TRANSACTION, tx);
 
 		context.startActivity(intent);
 	}
 
 	@Override
-	protected void onCreate(final Bundle savedInstanceState)
-	{
+	protected void onCreate(final Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-
-		nfcManager = getSystemService(Context.NFC_SERVICE);
 
 		setContentView(R.layout.transaction_content);
 
@@ -79,10 +74,8 @@ public final class TransactionActivity extends AbstractWalletActivity
 
 		actionBar.setPrimaryTitle(R.string.transaction_activity_title);
 
-		actionBar.setBack(new OnClickListener()
-		{
-			public void onClick(final View v)
-			{
+		actionBar.setBack(new OnClickListener() {
+			public void onClick(final View v) {
 				finish();
 			}
 		});
@@ -91,38 +84,30 @@ public final class TransactionActivity extends AbstractWalletActivity
 	}
 
 	@Override
-	protected void onResume()
-	{
+	protected void onResume() {
 		super.onResume();
 
 		updateView();
 	}
 
 	@Override
-	public void onPause()
-	{
-		if (nfcManager != null)
-			NfcTools.unpublish(nfcManager, this);
+	public void onPause() {
 
 		super.onPause();
 	}
 
-	private void handleIntent(final Intent intent)
-	{
+	private void handleIntent(final Intent intent) {
 
 		System.out.println("Handle Intent");
 
 		final Uri intentUri = intent.getData();
 		final String scheme = intentUri != null ? intentUri.getScheme() : null;
 
-		if (intent.hasExtra(INTENT_EXTRA_TRANSACTION))
-		{
-			tx = (Transaction) intent.getSerializableExtra(INTENT_EXTRA_TRANSACTION);
-		}
-		else if (intentUri != null && "btctx".equals(scheme))
-		{
-			try
-			{
+		if (intent.hasExtra(INTENT_EXTRA_TRANSACTION)) {
+			tx = (Transaction) intent
+					.getSerializableExtra(INTENT_EXTRA_TRANSACTION);
+		} else if (intentUri != null && "btctx".equals(scheme)) {
+			try {
 				// decode transaction URI
 				final String part = intentUri.getSchemeSpecificPart();
 				final boolean useCompression = part.charAt(0) == 'Z';
@@ -140,32 +125,13 @@ public final class TransactionActivity extends AbstractWalletActivity
 				baos.close();
 				is.close();
 
-				tx = new Transaction(Constants.NETWORK_PARAMETERS, baos.toByteArray());
+				tx = new Transaction(Constants.NETWORK_PARAMETERS,
+						baos.toByteArray());
 
 				processPendingTransaction(tx);
-			}
-			catch (final IOException x)
-			{
+			} catch (final IOException x) {
 				throw new RuntimeException(x);
-			}
-			catch (final ProtocolException x)
-			{
-				throw new RuntimeException(x);
-			}
-		}
-		else if (Build.VERSION.SDK_INT >= GINGERBREAD_MR1 && Constants.MIMETYPE_TRANSACTION.equals(intent.getType()))
-		{
-			final Object ndefMessage = intent.getParcelableArrayExtra(EXTRA_NDEF_MESSAGES)[0];
-			final byte[] payload = NfcTools.extractMimePayload(Constants.MIMETYPE_TRANSACTION, ndefMessage);
-
-			try
-			{
-				tx = new Transaction(Constants.NETWORK_PARAMETERS, payload);
-
-				processPendingTransaction(tx);
-			}
-			catch (final ProtocolException x)
-			{
+			} catch (final ProtocolException x) {
 				throw new RuntimeException(x);
 			}
 		}
@@ -174,30 +140,22 @@ public final class TransactionActivity extends AbstractWalletActivity
 			throw new IllegalArgumentException("no tx");
 	}
 
-	private void updateView()
-	{
-		final TransactionFragment transactionFragment = (TransactionFragment) getSupportFragmentManager().findFragmentById(R.id.transaction_fragment);
+	private void updateView() {
+		final TransactionFragment transactionFragment = (TransactionFragment) getSupportFragmentManager()
+				.findFragmentById(R.id.transaction_fragment);
 
 		transactionFragment.update(tx);
-
-		if (nfcManager != null)
-			NfcTools.publishMimeObject(nfcManager, this, Constants.MIMETYPE_TRANSACTION, tx.unsafeBitcoinSerialize(), false);
 	}
 
-	private void processPendingTransaction(final Transaction tx)
-	{
-		final Wallet wallet = ((WalletApplication) getApplication()).getWallet();
+	private void processPendingTransaction(final Transaction tx) {
+		final Wallet wallet = ((WalletApplication) getApplication())
+				.getWallet();
 
-		try
-		{
+		try {
 			wallet.receivePending(tx);
-		}
-		catch (final VerificationException x)
-		{
+		} catch (final VerificationException x) {
 			throw new RuntimeException(x);
-		}
-		catch (final ScriptException x)
-		{
+		} catch (final ScriptException x) {
 			throw new RuntimeException(x);
 		}
 	}

@@ -23,15 +23,13 @@ import java.io.Reader;
 /**
  * @author Andreas Schildbach
  */
-public class IOUtils
-{
-	public static final long copy(final Reader reader, final StringBuilder builder) throws IOException
-	{
+public class IOUtils {
+	public static final long copy(final Reader reader,
+			final StringBuilder builder) throws IOException {
 		final char[] buffer = new char[256];
 		long count = 0;
 		int n = 0;
-		while (-1 != (n = reader.read(buffer)))
-		{
+		while (-1 != (n = reader.read(buffer))) {
 			builder.append(buffer, 0, n);
 			count += n;
 		}

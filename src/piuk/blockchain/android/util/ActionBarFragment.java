@@ -34,13 +34,12 @@ import android.widget.ImageView.ScaleType;
 import android.widget.LinearLayout;
 import android.widget.LinearLayout.LayoutParams;
 import android.widget.TextView;
-import piuk.blockchain.R;
+import piuk.blockchain.android.R;
 
 /**
  * @author Andreas Schildbach
  */
-public final class ActionBarFragment extends Fragment
-{
+public final class ActionBarFragment extends Fragment {
 	private ViewGroup view;
 	private View backButtonView;
 	private View backView;
@@ -51,38 +50,41 @@ public final class ActionBarFragment extends Fragment
 	private LinearLayout.LayoutParams separatorParams;
 
 	@Override
-	public View onCreateView(final LayoutInflater inflater, final ViewGroup container, final Bundle savedInstanceState)
-	{
-		view = (ViewGroup) inflater.inflate(R.layout.action_bar_fragment, container);
+	public View onCreateView(final LayoutInflater inflater,
+			final ViewGroup container, final Bundle savedInstanceState) {
+		view = (ViewGroup) inflater.inflate(R.layout.action_bar_fragment,
+				container);
 		backButtonView = view.findViewById(R.id.action_bar_back_button);
 		backView = view.findViewById(R.id.action_bar_back);
 		iconView = (ImageView) view.findViewById(R.id.action_bar_icon);
-		primaryTitleView = (TextView) view.findViewById(R.id.action_bar_primary_title);
-		secondaryTitleView = (TextView) view.findViewById(R.id.action_bar_secondary_title);
+		primaryTitleView = (TextView) view
+				.findViewById(R.id.action_bar_primary_title);
+		secondaryTitleView = (TextView) view
+				.findViewById(R.id.action_bar_secondary_title);
 
 		return view;
 	}
 
 	@Override
-	public void onAttach(final Activity activity)
-	{
+	public void onAttach(final Activity activity) {
 		final Resources res = getResources();
-		final int separatorWidth = res.getDimensionPixelSize(R.dimen.action_bar_button_separator_width);
-		final int separatorMargin = res.getDimensionPixelSize(R.dimen.action_bar_button_separator_margin);
+		final int separatorWidth = res
+				.getDimensionPixelSize(R.dimen.action_bar_button_separator_width);
+		final int separatorMargin = res
+				.getDimensionPixelSize(R.dimen.action_bar_button_separator_margin);
 
-		separatorParams = new LinearLayout.LayoutParams(separatorWidth, android.view.ViewGroup.LayoutParams.FILL_PARENT, 0f);
+		separatorParams = new LinearLayout.LayoutParams(separatorWidth,
+				android.view.ViewGroup.LayoutParams.FILL_PARENT, 0f);
 		separatorParams.setMargins(0, separatorMargin, 0, separatorMargin);
 
 		super.onAttach(activity);
 	}
 
-	public void setIcon(final int iconRes)
-	{
+	public void setIcon(final int iconRes) {
 		iconView.setImageResource(iconRes);
 	}
 
-	public void setBack(final OnClickListener onClickListener)
-	{
+	public void setBack(final OnClickListener onClickListener) {
 		backButtonView.setOnClickListener(onClickListener);
 		backView.setVisibility(View.VISIBLE);
 	}
@@ -90,32 +92,35 @@ public final class ActionBarFragment extends Fragment
 	public TextView getPrimaryTitleView() {
 		return primaryTitleView;
 	}
+	
+	public ImageView getIconView() {
+		return iconView;
+	}
 
 	public void setPrimaryTitleView(TextView primaryTitleView) {
 		this.primaryTitleView = primaryTitleView;
 	}
 
-	public void setPrimaryTitle(final CharSequence title)
-	{
+	public void setPrimaryTitle(final CharSequence title) {
 		primaryTitleView.setText(title);
 	}
 
-	public void setPrimaryTitle(final int titleRes)
-	{
+	public void setPrimaryTitle(final int titleRes) {
 		primaryTitleView.setText(titleRes);
 	}
 
-	public void setSecondaryTitle(final CharSequence title)
-	{
+	public void setSecondaryTitle(final CharSequence title) {
 		secondaryTitleView.setText(title);
-		secondaryTitleView.setVisibility(title != null ? View.VISIBLE : View.GONE);
+		secondaryTitleView.setVisibility(title != null ? View.VISIBLE
+				: View.GONE);
 		primaryTitleView.setSingleLine(title != null);
 	}
 
-	public ImageButton addButton(final int drawableRes)
-	{
-		final LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(getResources().getDimensionPixelSize(
-				R.dimen.action_bar_button_width), android.view.ViewGroup.LayoutParams.FILL_PARENT, 0f);
+	public ImageButton addButton(final int drawableRes) {
+		final LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
+				getResources().getDimensionPixelSize(
+						R.dimen.action_bar_button_width),
+				android.view.ViewGroup.LayoutParams.FILL_PARENT, 0f);
 		buttonParams.gravity = Gravity.CENTER_VERTICAL;
 
 		final ImageButton button = new ImageButton(getActivity());
@@ -126,18 +131,19 @@ public final class ActionBarFragment extends Fragment
 		view.addView(button, 2, buttonParams);
 
 		final ImageView separator1 = new ImageView(getActivity());
-		separator1.setImageDrawable(new ColorDrawable(Color.parseColor("#44ffffff")));
+		separator1.setImageDrawable(new ColorDrawable(Color
+				.parseColor("#44ffffff")));
 		view.addView(separator1, 2, separatorParams);
 
 		final ImageView separator2 = new ImageView(getActivity());
-		separator2.setImageDrawable(new ColorDrawable(Color.parseColor("#44000000")));
+		separator2.setImageDrawable(new ColorDrawable(Color
+				.parseColor("#44000000")));
 		view.addView(separator2, 2, separatorParams);
 
 		return button;
 	}
 
-	public boolean removeButton(final ImageButton button)
-	{
+	public boolean removeButton(final ImageButton button) {
 		final int index = view.indexOfChild(button);
 		if (index == -1)
 			return false;

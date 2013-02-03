@@ -43,7 +43,7 @@ import android.widget.TextView;
 import com.google.bitcoin.core.Address;
 import com.google.bitcoin.uri.BitcoinURI;
 
-import piuk.blockchain.R;
+import piuk.blockchain.android.R;
 import piuk.blockchain.android.AddressBookProvider;
 import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.util.QrDialog;
@@ -52,32 +52,33 @@ import piuk.blockchain.android.util.WalletUtils;
 /**
  * @author Andreas Schildbach
  */
-public final class SendingAddressesFragment extends ListFragment implements LoaderManager.LoaderCallbacks<Cursor>
-{
+public final class SendingAddressesFragment extends ListFragment implements
+		LoaderManager.LoaderCallbacks<Cursor> {
 	private Activity activity;
 	private SimpleCursorAdapter adapter;
 	private String walletAddressesSelection;
 
 	@Override
-	public void onActivityCreated(final Bundle savedInstanceState)
-	{
+	public void onActivityCreated(final Bundle savedInstanceState) {
 		super.onActivityCreated(savedInstanceState);
 
 		activity = getActivity();
 
 		setEmptyText(getString(R.string.address_book_empty_text));
 
-		adapter = new SimpleCursorAdapter(activity, R.layout.address_book_row, null, new String[] { AddressBookProvider.KEY_LABEL,
-				AddressBookProvider.KEY_ADDRESS }, new int[] { R.id.address_book_row_label, R.id.address_book_row_address }, 0);
-		adapter.setViewBinder(new ViewBinder()
-		{
-			public boolean setViewValue(final View view, final Cursor cursor, final int columnIndex)
-			{
-				if (!AddressBookProvider.KEY_ADDRESS.equals(cursor.getColumnName(columnIndex)))
+		adapter = new SimpleCursorAdapter(activity, R.layout.address_book_row,
+				null, new String[] { AddressBookProvider.KEY_LABEL,
+						AddressBookProvider.KEY_ADDRESS }, new int[] {
+						R.id.address_book_row_label,
+						R.id.address_book_row_address }, 0);
+		adapter.setViewBinder(new ViewBinder() {
+			public boolean setViewValue(final View view, final Cursor cursor,
+					final int columnIndex) {
+				if (!AddressBookProvider.KEY_ADDRESS.equals(cursor
+						.getColumnName(columnIndex)))
 					return false;
 
-				((TextView) view).setText(WalletUtils.formatAddress(cursor.getString(columnIndex), Constants.ADDRESS_FORMAT_GROUP_SIZE,
-						Constants.ADDRESS_FORMAT_LINE_SIZE));
+				((TextView) view).setText(cursor.getString(columnIndex));
 
 				return true;
 			}
@@ -88,128 +89,134 @@ public final class SendingAddressesFragment extends ListFragment implements Load
 	}
 
 	@Override
-	public void onViewCreated(final View view, final Bundle savedInstanceState)
-	{
+	public void onViewCreated(final View view, final Bundle savedInstanceState) {
 		super.onViewCreated(view, savedInstanceState);
 
 		registerForContextMenu(getListView());
 	}
 
 	@Override
-	public void onListItemClick(final ListView l, final View v, final int position, final long id)
-	{
+	public void onListItemClick(final ListView l, final View v,
+			final int position, final long id) {
 		final Cursor cursor = (Cursor) adapter.getItem(position);
-		final String address = cursor.getString(cursor.getColumnIndexOrThrow(AddressBookProvider.KEY_ADDRESS));
+		final String address = cursor.getString(cursor
+				.getColumnIndexOrThrow(AddressBookProvider.KEY_ADDRESS));
 		handleSend(address);
 	}
 
 	@Override
-	public void onCreateContextMenu(final ContextMenu menu, final View v, final ContextMenuInfo menuInfo)
-	{
-		activity.getMenuInflater().inflate(R.menu.sending_addresses_context, menu);
+	public void onCreateContextMenu(final ContextMenu menu, final View v,
+			final ContextMenuInfo menuInfo) {
+		activity.getMenuInflater().inflate(R.menu.sending_addresses_context,
+				menu);
 	}
 
 	@Override
-	public boolean onContextItemSelected(final MenuItem item)
-	{
-		final AdapterContextMenuInfo menuInfo = (AdapterContextMenuInfo) item.getMenuInfo();
+	public boolean onContextItemSelected(final MenuItem item) {
+		final AdapterContextMenuInfo menuInfo = (AdapterContextMenuInfo) item
+				.getMenuInfo();
 
-		switch (item.getItemId())
-		{
-			case R.id.sending_addresses_context_send:
-			{
-				final Cursor cursor = (Cursor) adapter.getItem(menuInfo.position);
-				final String address = cursor.getString(cursor.getColumnIndexOrThrow(AddressBookProvider.KEY_ADDRESS));
-				handleSend(address);
+		switch (item.getItemId()) {
+		case R.id.sending_addresses_context_send: {
+			final Cursor cursor = (Cursor) adapter.getItem(menuInfo.position);
+			final String address = cursor.getString(cursor
+					.getColumnIndexOrThrow(AddressBookProvider.KEY_ADDRESS));
+			handleSend(address);
+			return true;
+		}
+
+		case R.id.sending_addresses_context_edit: {
+			final Cursor cursor = (Cursor) adapter.getItem(menuInfo.position);
+			final String address = cursor.getString(cursor
+					.getColumnIndexOrThrow(AddressBookProvider.KEY_ADDRESS));
+			EditAddressBookEntryFragment.edit(getFragmentManager(), address);
+			return true;
+		}
+
+		case R.id.sending_addresses_context_remove: {
+			final Cursor cursor = (Cursor) adapter.getItem(menuInfo.position);
+			final String address = cursor.getString(cursor
+					.getColumnIndexOrThrow(AddressBookProvider.KEY_ADDRESS));
+			handleRemove(address);
+			return true;
+		}
+
+		case R.id.sending_addresses_context_show_qr: {
+			final Cursor cursor = (Cursor) adapter.getItem(menuInfo.position);
+			Address address;
+			try {
+				address = new Address(
+						Constants.NETWORK_PARAMETERS,
+						cursor.getString(cursor
+								.getColumnIndexOrThrow(AddressBookProvider.KEY_ADDRESS)));
+
+				final String uri = BitcoinURI.convertToBitcoinURI(address,
+						null, null, null);
+				final int size = (int) (256 * getResources()
+						.getDisplayMetrics().density);
+				new QrDialog(activity, WalletUtils.getQRCodeBitmap(uri, size))
+						.show();
 				return true;
-			}
-
-			case R.id.sending_addresses_context_edit:
-			{
-				final Cursor cursor = (Cursor) adapter.getItem(menuInfo.position);
-				final String address = cursor.getString(cursor.getColumnIndexOrThrow(AddressBookProvider.KEY_ADDRESS));
-				EditAddressBookEntryFragment.edit(getFragmentManager(), address);
-				return true;
-			}
-
-			case R.id.sending_addresses_context_remove:
-			{
-				final Cursor cursor = (Cursor) adapter.getItem(menuInfo.position);
-				final String address = cursor.getString(cursor.getColumnIndexOrThrow(AddressBookProvider.KEY_ADDRESS));
-				handleRemove(address);
-				return true;
-			}
-
-			case R.id.sending_addresses_context_show_qr:
-			{
-				final Cursor cursor = (Cursor) adapter.getItem(menuInfo.position);
-				Address address;
-				try {
-					address = new Address(Constants.NETWORK_PARAMETERS, cursor.getString(cursor.getColumnIndexOrThrow(AddressBookProvider.KEY_ADDRESS)));
-
-					final String uri = BitcoinURI.convertToBitcoinURI(address, null, null, null);
-					final int size = (int) (256 * getResources().getDisplayMetrics().density);
-					new QrDialog(activity, WalletUtils.getQRCodeBitmap(uri, size)).show();
-					return true;
-				} catch (Exception e) {
-					e.printStackTrace();
-					return false;
-				}
-			}
-
-			case R.id.sending_addresses_context_copy_to_clipboard:
-			{
-				final Cursor cursor = (Cursor) adapter.getItem(menuInfo.position);
-				final String address = cursor.getString(cursor.getColumnIndexOrThrow(AddressBookProvider.KEY_ADDRESS));
-				handleCopyToClipboard(address);
-				return true;
-			}
-
-			default:
+			} catch (Exception e) {
+				e.printStackTrace();
 				return false;
+			}
+		}
+
+		case R.id.sending_addresses_context_copy_to_clipboard: {
+			final Cursor cursor = (Cursor) adapter.getItem(menuInfo.position);
+			final String address = cursor.getString(cursor
+					.getColumnIndexOrThrow(AddressBookProvider.KEY_ADDRESS));
+			handleCopyToClipboard(address);
+			return true;
+		}
+
+		default:
+			return false;
 		}
 	}
 
-	private void handleSend(final String address)
-	{
+	private void handleSend(final String address) {
 		final Intent intent = new Intent(activity, SendCoinsActivity.class);
 		intent.putExtra(SendCoinsActivity.INTENT_EXTRA_ADDRESS, address);
 		startActivity(intent);
 	}
 
-	private void handleRemove(final String address)
-	{
-		final Uri uri = AddressBookProvider.CONTENT_URI.buildUpon().appendPath(address).build();
+	private void handleRemove(final String address) {
+		final Uri uri = AddressBookProvider.CONTENT_URI.buildUpon()
+				.appendPath(address).build();
 		activity.getContentResolver().delete(uri, null, null);
 	}
 
-	private void handleCopyToClipboard(final String address)
-	{
-		ClipboardManager clipboardManager = (ClipboardManager) activity.getSystemService(Context.CLIPBOARD_SERVICE);
+	private void handleCopyToClipboard(final String address) {
+		ClipboardManager clipboardManager = (ClipboardManager) activity
+				.getSystemService(Context.CLIPBOARD_SERVICE);
 		clipboardManager.setText(address);
-		((AbstractWalletActivity) activity).toast(R.string.wallet_address_fragment_clipboard_msg);
+		((AbstractWalletActivity) activity)
+				.toast(R.string.wallet_address_fragment_clipboard_msg);
 	}
 
-	public Loader<Cursor> onCreateLoader(final int id, final Bundle args)
-	{
+	public Loader<Cursor> onCreateLoader(final int id, final Bundle args) {
 		final Uri uri = AddressBookProvider.CONTENT_URI;
-		return new CursorLoader(activity, uri, null, AddressBookProvider.SELECTION_NOTIN,
-				new String[] { walletAddressesSelection != null ? walletAddressesSelection : "" }, AddressBookProvider.KEY_LABEL
+		return new CursorLoader(
+				activity,
+				uri,
+				null,
+				AddressBookProvider.SELECTION_NOTIN,
+				new String[] { walletAddressesSelection != null ? walletAddressesSelection
+						: "" }, AddressBookProvider.KEY_LABEL
 						+ " COLLATE LOCALIZED ASC");
 	}
 
-	public void onLoadFinished(final Loader<Cursor> loader, final Cursor data)
-	{
+	public void onLoadFinished(final Loader<Cursor> loader, final Cursor data) {
 		adapter.swapCursor(data);
 	}
 
-	public void onLoaderReset(final Loader<Cursor> loader)
-	{
+	public void onLoaderReset(final Loader<Cursor> loader) {
 		adapter.swapCursor(null);
 	}
 
-	public void setWalletAddresses(final ArrayList<Address> addresses)
-	{
+	public void setWalletAddresses(final ArrayList<Address> addresses) {
 		final StringBuilder builder = new StringBuilder();
 		for (final Address address : addresses)
 			builder.append(address.toString()).append(",");

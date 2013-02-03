@@ -31,59 +31,49 @@ import java.util.regex.Pattern;
 import piuk.blockchain.android.util.IOUtils;
 import piuk.blockchain.android.util.Iso8601Format;
 
-
 /**
  * @author Andreas Schildbach
  */
-public class DetermineFirstSeenThread extends Thread
-{
-	private static final Pattern P_FIRST_SEEN = Pattern.compile("<li>First seen.*\\((\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2})\\)</li>");
+public class DetermineFirstSeenThread extends Thread {
+	private static final Pattern P_FIRST_SEEN = Pattern
+			.compile("<li>First seen.*\\((\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2})\\)</li>");
 
 	private final String address;
 
-	public DetermineFirstSeenThread(final String address)
-	{
+	public DetermineFirstSeenThread(final String address) {
 		this.address = address;
 		start();
 	}
 
 	@Override
-	public void run()
-	{
-		try
-		{
-			final URLConnection connection = new URL(Constants.BLOCKEXPLORER_BASE_URL + "address/" + address).openConnection();
+	public void run() {
+		try {
+			final URLConnection connection = new URL(
+					Constants.BLOCKEXPLORER_BASE_URL + "address/" + address)
+					.openConnection();
 			connection.connect();
-			final Reader is = new InputStreamReader(new BufferedInputStream(connection.getInputStream()));
+			final Reader is = new InputStreamReader(new BufferedInputStream(
+					connection.getInputStream()));
 			final StringBuilder content = new StringBuilder();
 			IOUtils.copy(is, content);
 			is.close();
 
 			final Matcher m = P_FIRST_SEEN.matcher(content);
-			if (m.find())
-			{
+			if (m.find()) {
 				succeed(Iso8601Format.parseDateTime(m.group(1)));
-			}
-			else
-			{
+			} else {
 				succeed(null);
 			}
-		}
-		catch (final IOException x)
-		{
+		} catch (final IOException x) {
 			failed(x);
-		}
-		catch (final ParseException x)
-		{
+		} catch (final ParseException x) {
 			failed(x);
 		}
 	}
 
-	protected void succeed(final Date creationTime)
-	{
+	protected void succeed(final Date creationTime) {
 	}
 
-	protected void failed(final Exception x)
-	{
+	protected void failed(final Exception x) {
 	}
 }

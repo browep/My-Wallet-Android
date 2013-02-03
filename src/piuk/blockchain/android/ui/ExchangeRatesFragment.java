@@ -35,12 +35,10 @@ import android.widget.BaseAdapter;
 import android.widget.ListAdapter;
 import android.widget.ListView;
 
-import com.google.bitcoin.core.AbstractWalletEventListener;
-import com.google.bitcoin.core.Wallet;
 import com.google.bitcoin.core.Wallet.BalanceType;
-import com.google.bitcoin.core.WalletEventListener;
 
-import piuk.blockchain.R;
+import piuk.EventListeners;
+import piuk.blockchain.android.R;
 import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.ExchangeRatesProvider;
 import piuk.blockchain.android.WalletApplication;
@@ -48,27 +46,23 @@ import piuk.blockchain.android.WalletApplication;
 /**
  * @author Andreas Schildbach
  */
-public final class ExchangeRatesFragment extends ListFragment implements LoaderManager.LoaderCallbacks<Cursor>
-{
+public final class ExchangeRatesFragment extends ListFragment implements
+		LoaderManager.LoaderCallbacks<Cursor> {
 	private WalletApplication application;
 	private SharedPreferences prefs;
 	private SimpleCursorAdapter adapter;
 
-	private final WalletEventListener walletEventListener = new AbstractWalletEventListener()
-	{
+	private final EventListeners.EventListener walletEventListener = new EventListeners.EventListener() {
 		@Override
-		public void onChange(/*Wallet wallet*/)
-		{
+		public void onWalletDidChange() {
 
 			try {
 				if (getActivity() == null) {
 					return;
 				}
 
-				getActivity().runOnUiThread(new Runnable()
-				{
-					public void run()
-					{
+				getActivity().runOnUiThread(new Runnable() {
+					public void run() {
 						updateView();
 					}
 				});
@@ -79,36 +73,39 @@ public final class ExchangeRatesFragment extends ListFragment implements LoaderM
 	};
 
 	@Override
-	public void onCreate(final Bundle savedInstanceState)
-	{
+	public void onCreate(final Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
 		application = (WalletApplication) getActivity().getApplication();
-		final Wallet wallet = application.getWallet();
 
-		wallet.addEventListener(walletEventListener);
+		EventListeners.addEventListener(walletEventListener);
 	}
 
 	@Override
-	public void onActivityCreated(final Bundle savedInstanceState)
-	{
+	public void onActivityCreated(final Bundle savedInstanceState) {
 		super.onActivityCreated(savedInstanceState);
 
 		prefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
 
 		setEmptyText(getString(R.string.exchange_rates_fragment_empty_text));
 
-		adapter = new SimpleCursorAdapter(getActivity(), R.layout.exchange_rate_row, null, new String[] { ExchangeRatesProvider.KEY_CURRENCY_CODE,
-			ExchangeRatesProvider.KEY_EXCHANGE_RATE }, new int[] { R.id.exchange_rate_currency_code, R.id.exchange_rate_value }, 0);
-		adapter.setViewBinder(new ViewBinder()
-		{
-			public boolean setViewValue(final View view, final Cursor cursor, final int columnIndex)
-			{
-				if (!ExchangeRatesProvider.KEY_EXCHANGE_RATE.equals(cursor.getColumnName(columnIndex)))
+		adapter = new SimpleCursorAdapter(getActivity(),
+				R.layout.exchange_rate_row, null, new String[] {
+						ExchangeRatesProvider.KEY_CURRENCY_CODE,
+						ExchangeRatesProvider.KEY_EXCHANGE_RATE }, new int[] {
+						R.id.exchange_rate_currency_code,
+						R.id.exchange_rate_value }, 0);
+		adapter.setViewBinder(new ViewBinder() {
+			public boolean setViewValue(final View view, final Cursor cursor,
+					final int columnIndex) {
+				if (!ExchangeRatesProvider.KEY_EXCHANGE_RATE.equals(cursor
+						.getColumnName(columnIndex)))
 					return false;
 
-				final BigInteger value = new BigDecimal(application.getWallet().getBalance(BalanceType.ESTIMATED)).multiply(
-						new BigDecimal(cursor.getDouble(columnIndex))).toBigInteger();
+				final BigInteger value = new BigDecimal(application.getWallet()
+						.getBalance(BalanceType.ESTIMATED)).multiply(
+						new BigDecimal(cursor.getDouble(columnIndex)))
+						.toBigInteger();
 				final CurrencyAmountView valueView = (CurrencyAmountView) view;
 				valueView.setCurrencyCode(null);
 				valueView.setAmount(value);
@@ -122,57 +119,55 @@ public final class ExchangeRatesFragment extends ListFragment implements LoaderM
 	}
 
 	@Override
-	public void onResume()
-	{
+	public void onResume() {
 		super.onResume();
 
 		updateView();
 	}
 
 	@Override
-	public void onDestroy()
-	{
-		application.getWallet().removeEventListener(walletEventListener);
+	public void onDestroy() {
+		EventListeners.removeEventListener(walletEventListener);
 
 		super.onDestroy();
 	}
 
 	@Override
-	public void onListItemClick(final ListView l, final View v, final int position, final long id)
-	{
+	public void onListItemClick(final ListView l, final View v,
+			final int position, final long id) {
 		final Cursor cursor = (Cursor) adapter.getItem(position);
-		final String currencyCode = cursor.getString(cursor.getColumnIndexOrThrow(ExchangeRatesProvider.KEY_CURRENCY_CODE));
+		final String currencyCode = cursor
+				.getString(cursor
+						.getColumnIndexOrThrow(ExchangeRatesProvider.KEY_CURRENCY_CODE));
 
-		prefs.edit().putString(Constants.PREFS_KEY_EXCHANGE_CURRENCY, currencyCode).commit();
+		prefs.edit()
+				.putString(Constants.PREFS_KEY_EXCHANGE_CURRENCY, currencyCode)
+				.commit();
 
-		final WalletBalanceFragment walletBalanceFragment = (WalletBalanceFragment) getFragmentManager().findFragmentById(
-				R.id.wallet_balance_fragment);
-		if (walletBalanceFragment != null)
-		{
+		final WalletBalanceFragment walletBalanceFragment = (WalletBalanceFragment) getFragmentManager()
+				.findFragmentById(R.id.wallet_balance_fragment);
+		if (walletBalanceFragment != null) {
 			walletBalanceFragment.updateView();
 			walletBalanceFragment.flashLocal();
 		}
 	}
 
-	private void updateView()
-	{
+	private void updateView() {
 		final ListAdapter adapter = getListAdapter();
 		if (adapter != null)
 			((BaseAdapter) adapter).notifyDataSetChanged();
 	}
 
-	public Loader<Cursor> onCreateLoader(final int id, final Bundle args)
-	{
-		return new CursorLoader(getActivity(), ExchangeRatesProvider.CONTENT_URI, null, null, null, null);
+	public Loader<Cursor> onCreateLoader(final int id, final Bundle args) {
+		return new CursorLoader(getActivity(),
+				ExchangeRatesProvider.CONTENT_URI, null, null, null, null);
 	}
 
-	public void onLoadFinished(final Loader<Cursor> loader, final Cursor data)
-	{
+	public void onLoadFinished(final Loader<Cursor> loader, final Cursor data) {
 		adapter.swapCursor(data);
 	}
 
-	public void onLoaderReset(final Loader<Cursor> loader)
-	{
+	public void onLoaderReset(final Loader<Cursor> loader) {
 		adapter.swapCursor(null);
 	}
 }

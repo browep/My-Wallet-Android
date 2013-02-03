@@ -29,21 +29,19 @@ import android.graphics.Typeface;
 import android.support.v4.view.ViewPager.OnPageChangeListener;
 import android.util.AttributeSet;
 import android.view.View;
-import piuk.blockchain.R;
+import piuk.blockchain.android.R;
 
 /**
  * @author Andreas Schildbach
  */
-public class ViewPagerTabs extends View implements OnPageChangeListener
-{
+public class ViewPagerTabs extends View implements OnPageChangeListener {
 	private final List<String> labels = new ArrayList<String>();
 	private final Paint paint = new Paint();
 	private int maxWidth = 0;
 	private int pagePosition = 0;
 	private float pageOffset = 0;
 
-	public ViewPagerTabs(final Context context, final AttributeSet attrs)
-	{
+	public ViewPagerTabs(final Context context, final AttributeSet attrs) {
 		super(context, attrs);
 		paint.setTextSize(getResources().getDimension(R.dimen.font_size_tiny));
 		paint.setColor(Color.BLACK);
@@ -51,14 +49,12 @@ public class ViewPagerTabs extends View implements OnPageChangeListener
 		paint.setShadowLayer(2, 0, 0, Color.WHITE);
 	}
 
-	public void addTabLabels(final int... labelResId)
-	{
+	public void addTabLabels(final int... labelResId) {
 		final Context context = getContext();
 
 		paint.setTypeface(Typeface.DEFAULT_BOLD);
 
-		for (final int resId : labelResId)
-		{
+		for (final int resId : labelResId) {
 			final String label = context.getString(resId);
 
 			final int width = (int) paint.measureText(label);
@@ -71,8 +67,7 @@ public class ViewPagerTabs extends View implements OnPageChangeListener
 	}
 
 	@Override
-	protected void onDraw(final Canvas canvas)
-	{
+	protected void onDraw(final Canvas canvas) {
 		super.onDraw(canvas);
 
 		final int viewWidth = getWidth();
@@ -94,24 +89,28 @@ public class ViewPagerTabs extends View implements OnPageChangeListener
 		paint.setTypeface(Typeface.DEFAULT_BOLD);
 		final float y = getPaddingTop() + -paint.getFontMetrics().top;
 
-		for (int i = 0; i < labels.size(); i++)
-		{
+		for (int i = 0; i < labels.size(); i++) {
 			final String label = labels.get(i);
 
-			paint.setTypeface(i == pagePosition ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
+			paint.setTypeface(i == pagePosition ? Typeface.DEFAULT_BOLD
+					: Typeface.DEFAULT);
 			paint.setColor(i == pagePosition ? Color.BLACK : Color.DKGRAY);
 
-			final float x = viewHalfWidth + (maxWidth + spacing) * (i - pageOffset);
+			final float x = viewHalfWidth + (maxWidth + spacing)
+					* (i - pageOffset);
 			final float labelWidth = paint.measureText(label);
 			final float labelHalfWidth = labelWidth / 2;
 
 			final float labelLeft = x - labelHalfWidth;
-			final float labelVisibleLeft = labelLeft >= 0 ? 1f : 1f - (-labelLeft / labelWidth);
+			final float labelVisibleLeft = labelLeft >= 0 ? 1f
+					: 1f - (-labelLeft / labelWidth);
 
 			final float labelRight = x + labelHalfWidth;
-			final float labelVisibleRight = labelRight < viewWidth ? 1f : 1f - ((labelRight - viewWidth) / labelWidth);
+			final float labelVisibleRight = labelRight < viewWidth ? 1f
+					: 1f - ((labelRight - viewWidth) / labelWidth);
 
-			final float labelVisible = Math.min(labelVisibleLeft, labelVisibleRight);
+			final float labelVisible = Math.min(labelVisibleLeft,
+					labelVisibleRight);
 
 			paint.setAlpha((int) (labelVisible * 255));
 
@@ -120,8 +119,8 @@ public class ViewPagerTabs extends View implements OnPageChangeListener
 	}
 
 	@Override
-	protected void onMeasure(final int widthMeasureSpec, final int heightMeasureSpec)
-	{
+	protected void onMeasure(final int widthMeasureSpec,
+			final int heightMeasureSpec) {
 		final int widthMode = MeasureSpec.getMode(widthMeasureSpec);
 		final int widthSize = MeasureSpec.getSize(widthMeasureSpec);
 
@@ -148,25 +147,23 @@ public class ViewPagerTabs extends View implements OnPageChangeListener
 	}
 
 	@Override
-	protected int getSuggestedMinimumHeight()
-	{
+	protected int getSuggestedMinimumHeight() {
 		paint.setTypeface(Typeface.DEFAULT_BOLD);
-		return (int) (-paint.getFontMetrics().top + paint.getFontMetrics().bottom) + getPaddingTop() + getPaddingBottom();
+		return (int) (-paint.getFontMetrics().top + paint.getFontMetrics().bottom)
+				+ getPaddingTop() + getPaddingBottom();
 	}
 
-	public void onPageScrolled(final int position, final float positionOffset, final int positionOffsetPixels)
-	{
+	public void onPageScrolled(final int position, final float positionOffset,
+			final int positionOffsetPixels) {
 		pageOffset = position + positionOffset;
 		invalidate();
 	}
 
-	public void onPageSelected(final int position)
-	{
+	public void onPageSelected(final int position) {
 		pagePosition = position;
 		invalidate();
 	}
 
-	public void onPageScrollStateChanged(final int state)
-	{
+	public void onPageScrollStateChanged(final int state) {
 	}
 }

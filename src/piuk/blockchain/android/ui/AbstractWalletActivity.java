@@ -28,7 +28,7 @@ import android.support.v4.app.FragmentActivity;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
-import piuk.blockchain.R;
+import piuk.blockchain.android.R;
 import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.WalletApplication;
 import piuk.blockchain.android.util.ActionBarFragment;
@@ -36,56 +36,51 @@ import piuk.blockchain.android.util.ActionBarFragment;
 /**
  * @author Andreas Schildbach
  */
-public abstract class AbstractWalletActivity extends FragmentActivity
-{
+public abstract class AbstractWalletActivity extends FragmentActivity {
 	protected WalletApplication application;
 	private ActionBarFragment actionBar;
 
 	@Override
-	protected void onCreate(final Bundle savedInstanceState)
-	{
+	protected void onCreate(final Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
 		application = (WalletApplication) getApplication();
 	}
 
 	@Override
-	protected void onStart()
-	{
+	protected void onStart() {
 		super.onStart();
 
-		getActionBar(); // make sure action bar is initialized
 		actionBar.setIcon(Constants.APP_ICON_RESID);
 		actionBar.setSecondaryTitle(Constants.TEST ? "[testnet]" : null);
 	}
 
-	protected WalletApplication getWalletApplication()
-	{
+	protected WalletApplication getWalletApplication() {
 		return application;
 	}
 
-	public ActionBarFragment getActionBarFragment()
-	{
+	public ActionBarFragment getActionBarFragment() {
 		if (actionBar == null)
-			actionBar = (ActionBarFragment) getSupportFragmentManager().findFragmentById(R.id.action_bar_fragment);
+			actionBar = (ActionBarFragment) getSupportFragmentManager()
+					.findFragmentById(R.id.action_bar_fragment);
 
 		return actionBar;
 	}
 
-	public final void toast(final String text, final Object... formatArgs)
-	{
+	public final void toast(final String text, final Object... formatArgs) {
 		toast(text, 0, Toast.LENGTH_SHORT, formatArgs);
 	}
 
-	public final void longToast(final String text, final Object... formatArgs)
-	{
+	public final void longToast(final String text, final Object... formatArgs) {
 		toast(text, 0, Toast.LENGTH_LONG, formatArgs);
 	}
 
-	public final void toast(final String text, final int imageResId, final int duration, final Object... formatArgs)
-	{
-		final View view = getLayoutInflater().inflate(R.layout.transient_notification, null);
-		TextView tv = (TextView) view.findViewById(R.id.transient_notification_text);
+	public final void toast(final String text, final int imageResId,
+			final int duration, final Object... formatArgs) {
+		final View view = getLayoutInflater().inflate(
+				R.layout.transient_notification, null);
+		TextView tv = (TextView) view
+				.findViewById(R.id.transient_notification_text);
 		tv.setText(String.format(text, formatArgs));
 		tv.setCompoundDrawablesWithIntrinsicBounds(imageResId, 0, 0, 0);
 
@@ -95,20 +90,20 @@ public abstract class AbstractWalletActivity extends FragmentActivity
 		toast.show();
 	}
 
-	public final void toast(final int textResId, final Object... formatArgs)
-	{
+	public final void toast(final int textResId, final Object... formatArgs) {
 		toast(textResId, 0, Toast.LENGTH_SHORT, formatArgs);
 	}
 
-	public final void longToast(final int textResId, final Object... formatArgs)
-	{
+	public final void longToast(final int textResId, final Object... formatArgs) {
 		toast(textResId, 0, Toast.LENGTH_LONG, formatArgs);
 	}
 
-	public final void toast(final int textResId, final int imageResId, final int duration, final Object... formatArgs)
-	{
-		final View view = getLayoutInflater().inflate(R.layout.transient_notification, null);
-		TextView tv = (TextView) view.findViewById(R.id.transient_notification_text);
+	public final void toast(final int textResId, final int imageResId,
+			final int duration, final Object... formatArgs) {
+		final View view = getLayoutInflater().inflate(
+				R.layout.transient_notification, null);
+		TextView tv = (TextView) view
+				.findViewById(R.id.transient_notification_text);
 		tv.setText(getString(textResId, formatArgs));
 		tv.setCompoundDrawablesWithIntrinsicBounds(imageResId, 0, 0, 0);
 
@@ -118,8 +113,7 @@ public abstract class AbstractWalletActivity extends FragmentActivity
 		toast.show();
 	}
 
-	public void errorDialog(final int title, final String message)
-	{
+	public void errorDialog(final int title, final String message) {
 		final Builder dialog = new AlertDialog.Builder(this);
 		dialog.setTitle(title);
 		dialog.setMessage(message);
@@ -127,8 +121,7 @@ public abstract class AbstractWalletActivity extends FragmentActivity
 		dialog.show();
 	}
 
-	protected final static String languagePrefix()
-	{
+	protected final static String languagePrefix() {
 		final String language = Locale.getDefault().getLanguage();
 		if ("de".equals(language))
 			return "_de";
@@ -158,12 +151,13 @@ public abstract class AbstractWalletActivity extends FragmentActivity
 			return "";
 	}
 
-	public void showMarketPage(final String packageName)
-	{
-		final Intent marketIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(String.format(Constants.MARKET_APP_URL, packageName)));
+	public void showMarketPage(final String packageName) {
+		final Intent marketIntent = new Intent(Intent.ACTION_VIEW,
+				Uri.parse(String.format(Constants.MARKET_APP_URL, packageName)));
 		if (getPackageManager().resolveActivity(marketIntent, 0) != null)
 			startActivity(marketIntent);
 		else
-			startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(String.format(Constants.WEBMARKET_APP_URL, packageName))));
+			startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(String
+					.format(Constants.WEBMARKET_APP_URL, packageName))));
 	}
 }

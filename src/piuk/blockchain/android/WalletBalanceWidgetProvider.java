@@ -29,34 +29,49 @@ import android.widget.RemoteViews;
 import com.google.bitcoin.core.Wallet;
 import com.google.bitcoin.core.Wallet.BalanceType;
 
-import piuk.blockchain.R;
+import piuk.blockchain.android.R;
 import piuk.blockchain.android.ui.WalletActivity;
 import piuk.blockchain.android.util.WalletUtils;
 
 /**
  * @author Andreas Schildbach
  */
-public class WalletBalanceWidgetProvider extends AppWidgetProvider
-{
+public class WalletBalanceWidgetProvider extends AppWidgetProvider {
 	@Override
-	public void onUpdate(final Context context, final AppWidgetManager appWidgetManager, final int[] appWidgetIds)
-	{
-		final WalletApplication application = (WalletApplication) context.getApplicationContext();
-		final Wallet wallet = application.getWallet();
-		final BigInteger balance = wallet.getBalance(BalanceType.ESTIMATED);
-		final String balanceStr = WalletUtils.formatValue(balance);
+	public void onUpdate(final Context context,
+			final AppWidgetManager appWidgetManager, final int[] appWidgetIds) {
+		try {
+			final WalletApplication application = (WalletApplication) context
+					.getApplicationContext();
 
-		for (int i = 0; i < appWidgetIds.length; i++)
-		{
-			final int appWidgetId = appWidgetIds[i];
+			BigInteger balance = BigInteger.ZERO;
+			{
+				final Wallet wallet = application.getWallet();
 
-			final RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.wallet_balance_widget_content);
-			views.setTextViewText(R.id.widget_wallet_balance, balanceStr);
-			views.setImageViewResource(R.id.widget_app_icon, Constants.APP_ICON_RESID);
-			final Intent intent = new Intent(context, WalletActivity.class);
-			views.setOnClickPendingIntent(R.id.widget_frame, PendingIntent.getActivity(context, 0, intent, 0));
+				if (wallet != null)
+					balance = wallet.getBalance(BalanceType.ESTIMATED);
+			}
 
-			AppWidgetManager.getInstance(context).updateAppWidget(appWidgetId, views);
+			final String balanceStr = WalletUtils.formatValue(balance);
+
+			for (int i = 0; i < appWidgetIds.length; i++) {
+				final int appWidgetId = appWidgetIds[i];
+
+				final RemoteViews views = new RemoteViews(
+						context.getPackageName(),
+						R.layout.wallet_balance_widget_content);
+				views.setTextViewText(R.id.widget_wallet_balance, balanceStr);
+				views.setImageViewResource(R.id.widget_app_icon,
+						Constants.APP_ICON_RESID);
+				final Intent intent = new Intent(context, WalletActivity.class);
+				views.setOnClickPendingIntent(R.id.widget_frame,
+						PendingIntent.getActivity(context, 0, intent, 0));
+
+				AppWidgetManager.getInstance(context).updateAppWidget(
+						appWidgetId, views);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 	}
 }

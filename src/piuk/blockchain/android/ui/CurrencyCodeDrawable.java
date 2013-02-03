@@ -25,14 +25,13 @@ import android.graphics.drawable.Drawable;
 /**
  * @author Andreas Schildbach
  */
-public final class CurrencyCodeDrawable extends Drawable
-{
+public final class CurrencyCodeDrawable extends Drawable {
 	private final Paint paint = new Paint();
 	private final String currencyCode;
 	private final float y;
 
-	public CurrencyCodeDrawable(final String currencyCode, final float textSize, final int color, final float y)
-	{
+	public CurrencyCodeDrawable(final String currencyCode,
+			final float textSize, final int color, final float y) {
 		paint.setColor(color);
 		paint.setAntiAlias(true);
 		paint.setTextSize(textSize);
@@ -42,30 +41,25 @@ public final class CurrencyCodeDrawable extends Drawable
 	}
 
 	@Override
-	public void draw(final Canvas canvas)
-	{
+	public void draw(final Canvas canvas) {
 		canvas.drawText(currencyCode, 0, y, paint);
 	}
 
 	@Override
-	public int getIntrinsicWidth()
-	{
+	public int getIntrinsicWidth() {
 		return (int) paint.measureText(currencyCode);
 	}
 
 	@Override
-	public int getOpacity()
-	{
+	public int getOpacity() {
 		return 0;
 	}
 
 	@Override
-	public void setAlpha(final int alpha)
-	{
+	public void setAlpha(final int alpha) {
 	}
 
 	@Override
-	public void setColorFilter(final ColorFilter cf)
-	{
+	public void setColorFilter(final ColorFilter cf) {
 	}
 }

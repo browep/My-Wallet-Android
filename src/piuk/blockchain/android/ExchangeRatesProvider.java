@@ -42,9 +42,9 @@ import android.provider.BaseColumns;
 /**
  * @author Andreas Schildbach
  */
-public class ExchangeRatesProvider extends ContentProvider
-{
-	public static final Uri CONTENT_URI = Uri.parse("content://" + Constants.PACKAGE_NAME + '.' + "exchange_rates");
+public class ExchangeRatesProvider extends ContentProvider {
+	public static final Uri CONTENT_URI = Uri.parse("content://"
+			+ Constants.PACKAGE_NAME + '.' + "exchange_rates");
 
 	public static final String KEY_CURRENCY_CODE = "currency_code";
 	public static final String KEY_EXCHANGE_RATE = "exchange_rate";
@@ -52,31 +52,30 @@ public class ExchangeRatesProvider extends ContentProvider
 	private Map<String, Double> exchangeRates = null;
 
 	@Override
-	public boolean onCreate()
-	{
+	public boolean onCreate() {
 		return true;
 	}
 
 	@Override
-	public Cursor query(final Uri uri, final String[] projection, final String selection, final String[] selectionArgs, final String sortOrder)
-	{
-		if (exchangeRates == null)
-		{
+	public Cursor query(final Uri uri, final String[] projection,
+			final String selection, final String[] selectionArgs,
+			final String sortOrder) {
+		if (exchangeRates == null) {
 			exchangeRates = getExchangeRates();
-			
+
 			if (exchangeRates == null)
 				return null;
 		}
-	
-		final MatrixCursor cursor = new MatrixCursor(new String[] { BaseColumns._ID, KEY_CURRENCY_CODE, KEY_EXCHANGE_RATE });
 
-		if (selection == null)
-		{
-			for (final Map.Entry<String, Double> entry : exchangeRates.entrySet())
-				cursor.newRow().add(entry.getKey().hashCode()).add(entry.getKey()).add(entry.getValue());
-		}
-		else if (selection.equals(KEY_CURRENCY_CODE))
-		{
+		final MatrixCursor cursor = new MatrixCursor(new String[] {
+				BaseColumns._ID, KEY_CURRENCY_CODE, KEY_EXCHANGE_RATE });
+
+		if (selection == null) {
+			for (final Map.Entry<String, Double> entry : exchangeRates
+					.entrySet())
+				cursor.newRow().add(entry.getKey().hashCode())
+						.add(entry.getKey()).add(entry.getValue());
+		} else if (selection.equals(KEY_CURRENCY_CODE)) {
 
 			if (selectionArgs == null)
 				return null;
@@ -90,40 +89,39 @@ public class ExchangeRatesProvider extends ContentProvider
 	}
 
 	@Override
-	public Uri insert(final Uri uri, final ContentValues values)
-	{
+	public Uri insert(final Uri uri, final ContentValues values) {
 		throw new UnsupportedOperationException();
 	}
 
 	@Override
-	public int update(final Uri uri, final ContentValues values, final String selection, final String[] selectionArgs)
-	{
+	public int update(final Uri uri, final ContentValues values,
+			final String selection, final String[] selectionArgs) {
 		throw new UnsupportedOperationException();
 	}
 
 	@Override
-	public int delete(final Uri uri, final String selection, final String[] selectionArgs)
-	{
+	public int delete(final Uri uri, final String selection,
+			final String[] selectionArgs) {
 		throw new UnsupportedOperationException();
 	}
 
 	@Override
-	public String getType(final Uri uri)
-	{
+	public String getType(final Uri uri) {
 		throw new UnsupportedOperationException();
 	}
 
-	private static Map<String, Double> getExchangeRates()
-	{
-		try
-		{
-			final URLConnection connection = new URL("http://bitcoincharts.com/t/weighted_prices.json").openConnection();
+	private static Map<String, Double> getExchangeRates() {
+		try {
+			final URLConnection connection = new URL(
+					"http://bitcoincharts.com/t/weighted_prices.json")
+					.openConnection();
 			// https://mtgox.com/code/data/ticker.php
 			// https://bitmarket.eu/api/ticker
 			// http://bitcoincharts.com/t/weighted_prices.json
 
 			connection.connect();
-			final Reader is = new InputStreamReader(new BufferedInputStream(connection.getInputStream()));
+			final Reader is = new InputStreamReader(new BufferedInputStream(
+					connection.getInputStream()));
 			final StringBuilder content = new StringBuilder();
 			IOUtils.copy(is, content);
 			is.close();
@@ -132,11 +130,9 @@ public class ExchangeRatesProvider extends ContentProvider
 
 			final JSONObject head = new JSONObject(content.toString());
 			for (@SuppressWarnings("unchecked")
-			final Iterator<String> i = head.keys(); i.hasNext();)
-			{
+			final Iterator<String> i = head.keys(); i.hasNext();) {
 				final String currencyCode = i.next();
-				if (!"timestamp".equals(currencyCode))
-				{
+				if (!"timestamp".equals(currencyCode)) {
 					final JSONObject o = head.getJSONObject(currencyCode);
 					double rate = o.optDouble("24h", 0);
 					if (rate == 0)
@@ -150,13 +146,9 @@ public class ExchangeRatesProvider extends ContentProvider
 			}
 
 			return rates;
-		}
-		catch (final IOException x)
-		{
+		} catch (final IOException x) {
 			x.printStackTrace();
-		}
-		catch (final JSONException x)
-		{
+		} catch (final JSONException x) {
 			x.printStackTrace();
 		}
 

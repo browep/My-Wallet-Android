@@ -50,8 +50,9 @@ import com.google.bitcoin.core.ECKey;
 import com.google.bitcoin.core.Wallet;
 import com.google.bitcoin.uri.BitcoinURI;
 
+import piuk.EventListeners;
 import piuk.MyECKey;
-import piuk.blockchain.R;
+import piuk.blockchain.android.R;
 import piuk.blockchain.android.AddressBookProvider;
 import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.WalletApplication;
@@ -67,7 +68,19 @@ public class WalletAddressesFragment extends ListFragment
 	private Activity activity;
 	private List<ECKey> keys;
 	private int tag_filter = 0;
-	private AbstractWalletEventListener eventListener = null;
+
+	private EventListeners.EventListener eventListener = new EventListeners.EventListener() {
+	    @Override
+		public void onWalletDidChange() {
+
+			try {
+				updateView();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+	};
+	
 	private ViewPager pagerView;
 
 	public WalletAddressesFragment()
@@ -79,17 +92,6 @@ public class WalletAddressesFragment extends ListFragment
 
 		this.tag_filter = tag_filter;
 		this.pagerView = pagerView;
-
-		eventListener = new AbstractWalletEventListener() {
-		    @Override
-			public void onChange(/*Wallet arg0*/) {
-				try {
-					updateView();
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			}
-		};
 	}
 
 	public void setKeys() {
@@ -140,7 +142,7 @@ public class WalletAddressesFragment extends ListFragment
 	{
 		super.onResume();
 
-		application.getWallet().addEventListener(eventListener);
+		EventListeners.addEventListener(eventListener);
 
 		activity.getContentResolver().registerContentObserver(AddressBookProvider.CONTENT_URI, true, contentObserver);
 
@@ -152,7 +154,7 @@ public class WalletAddressesFragment extends ListFragment
 	{
 		activity.getContentResolver().unregisterContentObserver(contentObserver);
 
-		application.getWallet().removeEventListener(eventListener);
+		EventListeners.removeEventListener(eventListener);
 
 		super.onPause();
 	}
@@ -278,7 +280,8 @@ public class WalletAddressesFragment extends ListFragment
 				row = getLayoutInflater(null).inflate(R.layout.address_book_row, null);
 
 			final TextView addressView = (TextView) row.findViewById(R.id.address_book_row_address);
-			addressView.setText(WalletUtils.formatAddress(address, Constants.ADDRESS_FORMAT_GROUP_SIZE, Constants.ADDRESS_FORMAT_LINE_SIZE));
+		
+			addressView.setText(address.toString());
 
 			final TextView labelView = (TextView) row.findViewById(R.id.address_book_row_label);
 			final String label = AddressBookProvider.resolveLabel(activity.getContentResolver(), address.toString());
@@ -289,16 +292,6 @@ public class WalletAddressesFragment extends ListFragment
 			else {
 				labelView.setText(R.string.wallet_addresses_fragment_unlabeled);
 				labelView.setTextColor(res.getColor(R.color.insignificant));
-			}
-
-			final TextView createdView = (TextView) row.findViewById(R.id.address_book_row_created);
-			final long created = key.getCreationTimeSeconds();
-			if (created != 0) {
-				createdView.setText(dateFormat.format(new Date(created * 1000)));
-				createdView.setVisibility(View.VISIBLE);
-			}
-			else {
-				createdView.setVisibility(View.GONE);
 			}
 
 			return row;
