@@ -20,6 +20,8 @@ package piuk.blockchain.android;
 import java.math.BigInteger;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import piuk.EventListeners;
 import piuk.WebSocketHandler;
@@ -63,7 +65,9 @@ public class BlockchainService extends android.app.Service
 
 	private WalletApplication application;
 
-	private WebSocketHandler blockChain;
+	private WebSocketHandler webSocketHandler;
+
+	Timer timer = new Timer();
 
 	private final Handler handler = new Handler();
 
@@ -254,7 +258,7 @@ public class BlockchainService extends android.app.Service
 						System.out.println("network is " + (hasConnectivity ? "up" : "down") + (reason != null ? ": " + reason : ""));
 
 						if (hasConnectivity) {
-							start();
+							connectToWebsocketIfNotConnected();
 						}
 					}	
 				}
@@ -298,27 +302,35 @@ public class BlockchainService extends android.app.Service
 		intentFilter.addAction(Intent.ACTION_DEVICE_STORAGE_OK);
 		registerReceiver(broadcastReceiver, intentFilter);
 
-		try {
-			blockChain = new WebSocketHandler(application);
+		webSocketHandler = new WebSocketHandler(application);
+
+		connectToWebsocketIfNotConnected();
+		
+		timer.scheduleAtFixedRate(new TimerTask() {
+			@Override
+			public void run() {
+				handler.post(new Runnable() {
+					@Override
+					public void run() {
+						connectToWebsocketIfNotConnected();
+					}
+				});
+			}
 			
-			blockChain.start();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}	
+		}, 10000, 20000);
 	}
 
-	public void start()
+	public void connectToWebsocketIfNotConnected()
 	{
-
-		System.out.println("start() blockchain");
-
-		if (!blockChain.getRemoteWallet().isUptoDate(Constants.MultiAddrTimeThreshold)) {
-			application.checkIfWalletHasUpdatedAndFetchTransactions();
-		}
+		System.out.println("connectToWebsocketIfNotConnected()");
 
 		try {
-			if (!blockChain.isConnected()) {
-				blockChain.start();
+			if (!webSocketHandler.isConnected()) {
+				System.out.println("connectToWebsocketIfNotConnected() really connect");
+
+				webSocketHandler.start();
+			} else {
+				System.out.println("connectToWebsocketIfNotConnected() already connected");
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -329,7 +341,7 @@ public class BlockchainService extends android.app.Service
 		try {
 			System.out.println("Stop");
 
-			blockChain.stop();
+			webSocketHandler.stop();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

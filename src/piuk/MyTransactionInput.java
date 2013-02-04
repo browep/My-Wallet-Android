@@ -21,7 +21,7 @@ public class MyTransactionInput extends TransactionInput {
 		
 		this.params = params;
 	}
-
+ 
 	@Override
 	public Address getFromAddress() {
 		try {

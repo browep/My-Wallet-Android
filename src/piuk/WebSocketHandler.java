@@ -28,23 +28,20 @@ import org.spongycastle.util.encoders.Hex;
 
 import piuk.blockchain.android.WalletApplication;
 
+import com.codebutler.android_websockets.WebSocketClient;
 import com.google.bitcoin.core.Sha256Hash;
 import com.google.bitcoin.core.TransactionInput;
 import com.google.bitcoin.core.TransactionOutput;
 
-import de.tavendo.autobahn.WebSocket.ConnectionHandler;
-import de.tavendo.autobahn.WebSocketConnection;
-import de.tavendo.autobahn.WebSocketException;
-
 public class WebSocketHandler {
-	final static String URL = "ws://blockchain.info/inv";
+	final static String URL = "ws://api.blockchain.info:8335/inv";
 	int nfailures = 0;
 	WalletApplication application;
 	MyBlock latestBlock;
 	boolean isConnected = false;
 	boolean isRunning = true;
 
-	private WebSocketConnection client = new WebSocketConnection();
+	private WebSocketClient client;
 
 	public MyRemoteWallet getRemoteWallet() {
 		return application.getRemoteWallet();
@@ -86,7 +83,7 @@ public class WebSocketHandler {
 
 	public void send(String message) {
 		try {
-			client.sendTextMessage(message);
+			client.send(message);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -114,38 +111,31 @@ public class WebSocketHandler {
 
 		this.isRunning = false;
 
+		this.isConnected = false;
+		
 		client.disconnect();
+		
+		client = null;
 
 		EventListeners.removeEventListener(walletEventListener);
 	}
-
-	public void connect() throws URISyntaxException, InterruptedException, WebSocketException {
-
-		final WebSocketHandler handler = this;
-
-		client.connect(URL, new ConnectionHandler() {
+	
+	public static WebSocketClient newClient(final WebSocketHandler handler) throws URISyntaxException {
+		return new WebSocketClient(new URI(URL), new WebSocketClient.Listener() {
 
 			@Override
-			public void onOpen() {
-				System.out.println("Websocket onOpen()");
-
+			public void onConnect() {
 				handler.isConnected = true;
 
 				handler.subscribe();
 
-				handler.nfailures = 0;
+				handler.nfailures = 0;				
 			}
-
+ 
 			@Override
-			public void onRawTextMessage(byte[] payload) {
-				System.out.println("onTextMessage()");
-			}
-
-			@Override
-			public void onTextMessage(String message) {
-
-				System.out.println("onMessage() " + message);
-
+			public void onMessage(String message) {
+				System.out.println("onMessage() text "  + message);
+				
 				MyRemoteWallet wallet = handler.getRemoteWallet();
 
 				try {
@@ -264,18 +254,34 @@ public class WebSocketHandler {
 			}
 
 			@Override
-			public void onBinaryMessage(byte[] payload) {
-				System.out.println("onBinaryMessage()");
+			public void onMessage(byte[] data) {
+				System.out.println("onMessage() data");
+				
 			}
 
 			@Override
-			public void onClose(int code, String reason) {
+			public void onDisconnect(int code, String reason) {
 				handler.isConnected = false;
 
 				++handler.nfailures;
 			}
-		});
 
+			@Override
+			public void onError(Exception error) {
+				error.printStackTrace();
+			}
+			
+		}, null);
+	}
+
+	public void connect() throws URISyntaxException, InterruptedException {
+
+		client = newClient(this);
+		
+		isConnected = false;
+
+		client.connect();
+		
 		EventListeners.addEventListener(walletEventListener);
 	}
 
@@ -293,8 +299,6 @@ public class WebSocketHandler {
 		} catch (URISyntaxException e) {
 			e.printStackTrace();
 		} catch (InterruptedException e) {
-			e.printStackTrace();
-		} catch (WebSocketException e) {
 			e.printStackTrace();
 		}
 	}

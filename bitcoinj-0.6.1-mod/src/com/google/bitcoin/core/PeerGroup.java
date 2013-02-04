@@ -359,15 +359,12 @@ public class PeerGroup {
      * Starts the background thread that makes connections.
      */
     public synchronized void start() {
-        this.peerGroupThread = new PeerGroupThread();
-        running = true;
-        this.peerGroupThread.start();
+    	System.out.println("Unsupported");
     }
 
     // Visible for testing.
     synchronized void mockStart(PeerGroupThread peerGroupThread) {
-        this.peerGroupThread = peerGroupThread;
-        running = true;
+    	System.out.println("Unsupported");
     }
 
     /**
