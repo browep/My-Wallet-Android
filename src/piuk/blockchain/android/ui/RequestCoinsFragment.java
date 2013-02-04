@@ -40,7 +40,6 @@ import com.google.bitcoin.core.Address;
 import com.google.bitcoin.uri.BitcoinURI;
 
 import piuk.blockchain.android.R;
-import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.WalletApplication;
 import piuk.blockchain.android.ui.CurrencyAmountView.Listener;
 import piuk.blockchain.android.util.ActionBarFragment;

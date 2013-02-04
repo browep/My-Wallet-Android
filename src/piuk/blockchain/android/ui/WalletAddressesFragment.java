@@ -17,11 +17,13 @@
 
 package piuk.blockchain.android.ui;
 
-import java.text.DateFormat;
-import java.util.Date;
-import java.util.List;
-import java.util.ArrayList;
-
+import piuk.EventListeners;
+import piuk.blockchain.android.AddressBookProvider;
+import piuk.blockchain.android.Constants;
+import piuk.blockchain.android.R;
+import piuk.blockchain.android.WalletApplication;
+import piuk.blockchain.android.util.QrDialog;
+import piuk.blockchain.android.util.WalletUtils;
 import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -44,20 +46,7 @@ import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 
-import com.google.bitcoin.core.AbstractWalletEventListener;
-import com.google.bitcoin.core.Address;
-import com.google.bitcoin.core.ECKey;
-import com.google.bitcoin.core.Wallet;
 import com.google.bitcoin.uri.BitcoinURI;
-
-import piuk.EventListeners;
-import piuk.MyECKey;
-import piuk.blockchain.android.R;
-import piuk.blockchain.android.AddressBookProvider;
-import piuk.blockchain.android.Constants;
-import piuk.blockchain.android.WalletApplication;
-import piuk.blockchain.android.util.QrDialog;
-import piuk.blockchain.android.util.WalletUtils;
 
 /**
  * @author Andreas Schildbach
@@ -66,7 +55,7 @@ public class WalletAddressesFragment extends ListFragment
 {
 	private WalletApplication application;
 	private Activity activity;
-	private List<ECKey> keys;
+	private String[] addresses;
 	private int tag_filter = 0;
 
 	private EventListeners.EventListener eventListener = new EventListeners.EventListener() {
@@ -77,15 +66,13 @@ public class WalletAddressesFragment extends ListFragment
 				updateView();
 			} catch (Exception e) {
 				e.printStackTrace();
-			}
+			} 
 		}
 	};
 	
 	private ViewPager pagerView;
 
-	public WalletAddressesFragment()
-	{
-	}
+	public WalletAddressesFragment() {}
 
 	public WalletAddressesFragment(int tag_filter, ViewPager pagerView) {
 		super();
@@ -95,17 +82,11 @@ public class WalletAddressesFragment extends ListFragment
 	}
 
 	public void setKeys() {
-		@SuppressWarnings("unchecked")
-		List<ECKey> keys = (List<ECKey>) application.getWallet().keychain.clone();
-
-		this.keys = new ArrayList<ECKey>(keys.size());
-
-		for (ECKey key : keys) {
-			MyECKey myKey = (MyECKey) key;
-
-			if (myKey.getTag() == tag_filter)
-				this.keys.add(key);
-		}
+		
+		if (tag_filter == 2)
+			addresses = application.getRemoteWallet().getArchivedAddresses();
+		else
+			addresses = application.getRemoteWallet().getActiveAddresses();
 	}
 
 	@Override
@@ -162,13 +143,7 @@ public class WalletAddressesFragment extends ListFragment
 	@Override
 	public void onListItemClick(final ListView l, final View v, final int position, final long id)
 	{
-
-		System.out.println("Clicked " + tag_filter);
-
-		final ECKey key = keys.get(position);
-		final Address address = key.toAddress(Constants.NETWORK_PARAMETERS);
-
-		EditAddressBookEntryFragment.edit(getFragmentManager(), address.toString());
+		EditAddressBookEntryFragment.edit(getFragmentManager(), addresses[position].toString());
 	}
 
 	@Override
@@ -180,8 +155,6 @@ public class WalletAddressesFragment extends ListFragment
 	@Override
 	public boolean onContextItemSelected(final MenuItem item)
 	{
-		System.out.println(this);
-
 		if (pagerView.getCurrentItem() == 0 && tag_filter == 2)
 			return false;
 		else if (pagerView.getCurrentItem() == 1 && tag_filter == 0)
@@ -189,20 +162,18 @@ public class WalletAddressesFragment extends ListFragment
 
 		final AdapterContextMenuInfo menuInfo = (AdapterContextMenuInfo) item.getMenuInfo();
 
-		final ECKey key = (ECKey) getListView().getAdapter().getItem(menuInfo.position);
-
+		final String address = (String) getListView().getAdapter().getItem(menuInfo.position);
+		
 		switch (item.getItemId())
 		{
 			case R.id.wallet_addresses_context_edit:
 			{
-				final Address address = key.toAddress(Constants.NETWORK_PARAMETERS);
 				EditAddressBookEntryFragment.edit(getFragmentManager(), address.toString());
 				return true;
 			}
 
 			case R.id.wallet_addresses_context_show_qr:
 			{
-				final Address address = key.toAddress(Constants.NETWORK_PARAMETERS);
 				final String uri = BitcoinURI.convertToBitcoinURI(address, null, null, null);
 				final int size = (int) (256 * getResources().getDisplayMetrics().density);
 				new QrDialog(activity, WalletUtils.getQRCodeBitmap(uri, size)).show();
@@ -211,14 +182,12 @@ public class WalletAddressesFragment extends ListFragment
 
 			case R.id.wallet_addresses_context_copy_to_clipboard:
 			{
-				final Address address = key.toAddress(Constants.NETWORK_PARAMETERS);
 				handleCopyToClipboard(address.toString());
 				return true;
 			}
 
 			case R.id.wallet_addresses_context_default:
 			{
-				final Address address = key.toAddress(Constants.NETWORK_PARAMETERS);
 				handleDefault(address);
 				return true;
 			}
@@ -228,7 +197,7 @@ public class WalletAddressesFragment extends ListFragment
 		}
 	}
 
-	private void handleDefault(final Address address)
+	private void handleDefault(final String address)
 	{
 		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
 		prefs.edit().putString(Constants.PREFS_KEY_SELECTED_ADDRESS, address.toString()).commit();
@@ -244,9 +213,6 @@ public class WalletAddressesFragment extends ListFragment
 
 	private void updateView()
 	{
-
-		System.out.println("Set Keys");
-
 		setKeys();
 
 		final ListAdapter adapter = getListAdapter();
@@ -257,24 +223,22 @@ public class WalletAddressesFragment extends ListFragment
 
 	private class Adapter extends BaseAdapter
 	{
-		final DateFormat dateFormat = android.text.format.DateFormat.getDateFormat(activity);
 		final Resources res = getResources();
 
 		public int getCount() {
-			return keys.size();
+			return addresses.length;
 		}
 
 		public Object getItem(final int position) {
-			return keys.get(position);
+			return addresses[position];
 		}
 
 		public long getItemId(final int position) {
-			return keys.get(position).hashCode();
+			return addresses[position].hashCode();
 		}
 
 		public View getView(final int position, View row, final ViewGroup parent) {
-			final ECKey key = (ECKey) getItem(position);
-			final Address address = key.toAddress(Constants.NETWORK_PARAMETERS);
+			final String address = (String) getItem(position);
 
 			if (row == null)
 				row = getLayoutInflater(null).inflate(R.layout.address_book_row, null);

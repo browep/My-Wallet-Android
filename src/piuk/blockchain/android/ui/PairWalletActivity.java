@@ -98,9 +98,7 @@ public class PairWalletActivity extends AbstractWalletActivity {
 				edit.putString("sharedKey", sharedKey);
 				edit.putString("password", password);
 
-				if (edit.commit()) {
-					EventListeners.invokeWalletDidChange();
-					
+				if (edit.commit()) {					
 					application.checkIfWalletHasUpdatedAndFetchTransactions();
 				} else {
 					errorDialog(R.string.error_pairing_wallet,

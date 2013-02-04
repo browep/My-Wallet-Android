@@ -47,12 +47,10 @@ import com.google.bitcoin.core.Address;
 import com.google.bitcoin.core.AddressFormatException;
 import com.google.bitcoin.core.ECKey;
 import com.google.bitcoin.core.Transaction;
-import com.google.bitcoin.core.Wallet;
 import com.google.bitcoin.core.Wallet.BalanceType;
 
 import piuk.MyRemoteWallet;
 import piuk.MyRemoteWallet.SendProgress;
-import piuk.MyWallet;
 import piuk.blockchain.android.R;
 import piuk.blockchain.android.AddressBookProvider;
 import piuk.blockchain.android.Constants;
@@ -138,9 +136,7 @@ public final class SendCoinsFragment extends Fragment
 
 		final View view = inflater.inflate(R.layout.send_coins_fragment, container);
 
-		final BigInteger estimated = application.getWallet().getBalance(BalanceType.ESTIMATED);
-		final BigInteger available = application.getWallet().getBalance(BalanceType.AVAILABLE);
-		final BigInteger pending = estimated.subtract(available);
+		final BigInteger available = application.getRemoteWallet().getBalance();
 
 		Button instantDepositButton = (Button) view.findViewById(R.id.instant_deposit);
 
@@ -174,10 +170,6 @@ public final class SendCoinsFragment extends Fragment
 
 		final CurrencyAmountView availableView = (CurrencyAmountView) view.findViewById(R.id.send_coins_available);
 		availableView.setAmount(available);
-
-		final TextView pendingView = (TextView) view.findViewById(R.id.send_coins_pending);
-		pendingView.setVisibility(pending.signum() > 0 ? View.VISIBLE : View.GONE);
-		pendingView.setText(getString(R.string.send_coins_fragment_pending, WalletUtils.formatValue(pending)));
 
 		amountView = (CurrencyAmountView) view.findViewById(R.id.send_coins_amount);
 		amountView.setListener(listener);
@@ -555,22 +547,6 @@ public final class SendCoinsFragment extends Fragment
 			amountView.requestFocus();
 
 		updateView();
-	}
-
-	private void showAddAddressDialog(final String address)
-	{
-		final Activity activity = getActivity();
-		final AlertDialog.Builder builder = new AlertDialog.Builder(activity);
-		builder.setMessage(R.string.send_coins_add_address_dialog_title);
-		builder.setPositiveButton(R.string.send_coins_add_address_dialog_button_add, new DialogInterface.OnClickListener()
-		{
-			public void onClick(final DialogInterface dialog, final int id)
-			{
-				EditAddressBookEntryFragment.edit(getFragmentManager(), address.toString());
-			}
-		});
-		builder.setNegativeButton(R.string.button_dismiss, null);
-		builder.show();
 	}
 
 	private Runnable resetColorRunnable = new Runnable()

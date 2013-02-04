@@ -90,6 +90,14 @@ public class MyWallet {
 		return list.toArray(new String[list.size()]);
 	}
 
+	public String[] getAllAddresses() {
+		List<String> list = new ArrayList<String>();
+		for (Map<String, Object> map : getKeysMap()) {
+			list.add((String) map.get("addr"));
+		}
+		return list.toArray(new String[list.size()]);
+	}
+
 	public String[] getArchivedAddresses() {
 		List<String> list = new ArrayList<String>();
 		for (Map<String, Object> map : getKeysMap()) {
@@ -283,7 +291,7 @@ public class MyWallet {
 		}
 	}
 
-	public Wallet getBitcoinJWallet() throws Exception {
+	protected Wallet getBitcoinJWallet() throws Exception {
 		// Construct a BitcoinJ wallet containing all our private keys
 		Wallet keywallet = new Wallet(params);
 
@@ -387,18 +395,18 @@ public class MyWallet {
 
 
 	private static byte[] cipherData(BufferedBlockCipher cipher, byte[] data)
-	        throws Exception
-	{
-	    int minSize = cipher.getOutputSize(data.length);
-	    byte[] outBuf = new byte[minSize];
-	    int length1 = cipher.processBytes(data, 0, data.length, outBuf, 0);
-	    int length2 = cipher.doFinal(outBuf, length1);
-	    int actualLength = length1 + length2;
-	    byte[] result = new byte[actualLength];
-	    System.arraycopy(outBuf, 0, result, 0, result.length);
-	    return result;
-	}
-	
+			throws Exception
+			{
+		int minSize = cipher.getOutputSize(data.length);
+		byte[] outBuf = new byte[minSize];
+		int length1 = cipher.processBytes(data, 0, data.length, outBuf, 0);
+		int length2 = cipher.doFinal(outBuf, length1);
+		int actualLength = length1 + length2;
+		byte[] result = new byte[actualLength];
+		System.arraycopy(outBuf, 0, result, 0, result.length);
+		return result;
+			}
+
 	// Encrypt compatible with crypto-js
 	public static String encrypt(String text, String password) throws Exception {
 
@@ -425,7 +433,7 @@ public class MyWallet {
 		cipher.init(true, params);
 
 		byte[] outBuf = cipherData(cipher, textbytes);
-		
+
 		// Append to IV to the output
 		byte[] ivAppended = ArrayUtils.addAll(iv, outBuf);
 

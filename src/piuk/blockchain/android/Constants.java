@@ -44,8 +44,15 @@ public class Constants {
 	static final String EXCEPTION_LOG = "exception.log";
 
 	static final boolean isAmazon = true;
+	
+	public static final String SENDER_ID = "789483738880";
 
-	public final static long MultiAddrTimeThreshold = 30000; // 30 seconds
+    public static final String DISPLAY_MESSAGE_ACTION = "piuk.blockchain.android.DISPLAY_MESSAGE";
+
+    public static final String TITLE = "title";
+    public static final String BODY = "body";
+
+	public final static long MultiAddrTimeThreshold = 10000; // 10 seconds
 
 	private static final String WALLET_KEY_BACKUP_BASE58_PROD = "key-backup-base58";
 	private static final String WALLET_KEY_BACKUP_BASE58_TEST = "key-backup-base58-testnet";

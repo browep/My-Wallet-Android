@@ -17,23 +17,22 @@
 
 package piuk.blockchain.android.ui;
 
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.util.List;
-
+import piuk.EventListeners;
+import piuk.MyTransaction;
+import piuk.blockchain.android.Constants;
+import piuk.blockchain.android.ExchangeRatesProvider;
+import piuk.blockchain.android.R;
+import piuk.blockchain.android.WalletApplication;
+import piuk.blockchain.android.util.QrDialog;
+import piuk.blockchain.android.util.WalletUtils;
 import android.app.Activity;
 import android.content.SharedPreferences;
-import android.content.res.Configuration;
 import android.database.Cursor;
 import android.graphics.Bitmap;
-import android.graphics.Color;
-import android.graphics.Paint;
 import android.os.Bundle;
 import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentManager;
-import android.support.v4.app.FragmentTransaction;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
@@ -42,20 +41,6 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.ImageView;
-import android.widget.TextView;
-
-import com.google.bitcoin.core.AbstractWalletEventListener;
-import com.google.bitcoin.core.Wallet;
-import com.google.bitcoin.core.Wallet.BalanceType;
-import com.google.bitcoin.core.WalletEventListener;
-
-import piuk.EventListeners;
-import piuk.blockchain.android.R;
-import piuk.blockchain.android.Constants;
-import piuk.blockchain.android.ExchangeRatesProvider;
-import piuk.blockchain.android.WalletApplication;
-import piuk.blockchain.android.util.QrDialog;
-import piuk.blockchain.android.util.WalletUtils;
 
 /**
  * @author Andreas Schildbach
@@ -69,7 +54,6 @@ LoaderManager.LoaderCallbacks<Cursor> {
 	private Bitmap qrCodeBitmap;
 
 	private CurrencyAmountView viewBalance;
-	//private TextView viewBalanceLocal;
 
 	private EventListeners.EventListener eventListener = new EventListeners.EventListener() {
 		@Override
@@ -84,6 +68,33 @@ LoaderManager.LoaderCallbacks<Cursor> {
 				}
 			});
 		}
+		
+		@Override
+		public void onCoinsSent(final MyTransaction tx, final long result) {
+			handler.post(new Runnable() {
+				public void run() {
+					try {
+						updateView();
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
+			});
+		};
+
+		@Override
+		public void onCoinsReceived(final MyTransaction tx, final long result) {
+			handler.post(new Runnable() {
+				public void run() {
+					try {
+						updateView();
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
+			});
+		};
+		
 	};
 
 	@Override
@@ -137,9 +148,7 @@ LoaderManager.LoaderCallbacks<Cursor> {
 	}
 
 	public void updateView() {
-		viewBalance.setAmount(application.getWallet().getBalance(
-				BalanceType.ESTIMATED));
-
+		viewBalance.setAmount(application.getRemoteWallet().getBalance());
 
 		String[] active = application.getRemoteWallet().getActiveAddresses();
 

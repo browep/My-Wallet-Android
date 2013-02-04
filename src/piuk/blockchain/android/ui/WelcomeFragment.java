@@ -18,6 +18,8 @@
 package piuk.blockchain.android.ui;
 
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.List;
 
 import android.app.AlertDialog;
 import android.app.AlertDialog.Builder;
@@ -40,18 +42,26 @@ import piuk.blockchain.android.WalletApplication;
  * @author Andreas Schildbach
  */
 public final class WelcomeFragment extends DialogFragment {
-	private static WeakReference<WelcomeFragment> fragmentRef = null;
+	private static List<WeakReference<WelcomeFragment>> fragmentRefs = new ArrayList<WeakReference<WelcomeFragment>>();
 	private static final String FRAGMENT_TAG = WelcomeFragment.class.getName();
 
 	public static void hide() {
-		if (fragmentRef != null && fragmentRef.get() != null && fragmentRef.get().isVisible()) {
-			 fragmentRef.get().dismiss();
+		for (WeakReference<WelcomeFragment> fragmentRef : fragmentRefs) {
+			if (fragmentRef != null && fragmentRef.get() != null) {
+				try {
+					fragmentRef.get().dismissAllowingStateLoss();
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
 		}
 	}
-	
+
 	public static void show(final FragmentManager fm, WalletApplication application) {
-	
+
 		try {
+			hide();
+			
 			final DialogFragment prev = (DialogFragment) fm.findFragmentById(R.layout.welcome_dialog);
 
 			final FragmentTransaction ft = fm.beginTransaction();
@@ -62,7 +72,7 @@ public final class WelcomeFragment extends DialogFragment {
 			}
 
 			ft.addToBackStack(null);
-			
+
 			final DialogFragment newFragment = instance();
 
 			newFragment.show(ft, FRAGMENT_TAG);
@@ -82,7 +92,7 @@ public final class WelcomeFragment extends DialogFragment {
 	private static WelcomeFragment instance() {
 		final WelcomeFragment fragment = new WelcomeFragment();
 
-		fragmentRef = new WeakReference<WelcomeFragment>(fragment);
+		fragmentRefs.add(new WeakReference<WelcomeFragment>(fragment));
 
 		return fragment;
 	}
@@ -93,7 +103,7 @@ public final class WelcomeFragment extends DialogFragment {
 		final LayoutInflater inflater = LayoutInflater.from(activity);
 
 		final Builder dialog = new AlertDialog.Builder(activity)
-				.setTitle(R.string.welcome_title);
+		.setTitle(R.string.welcome_title);
 
 		final View view = inflater.inflate(R.layout.welcome_dialog, null);
 

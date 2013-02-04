@@ -23,15 +23,14 @@ import java.net.URL;
 
 import org.apache.commons.io.IOUtils;
 
+import piuk.EventListeners;
+import piuk.blockchain.android.R;
+import piuk.blockchain.android.WalletApplication;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.AlertDialog.Builder;
-import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.DialogInterface;
-import android.content.DialogInterface.OnCancelListener;
-import android.content.DialogInterface.OnDismissListener;
-import android.content.Intent;
 import android.content.SharedPreferences.Editor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -39,10 +38,8 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.support.v4.app.DialogFragment;
-import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
-import android.support.v4.view.ViewPager.LayoutParams;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -51,10 +48,6 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
-import piuk.EventListeners;
-import piuk.MyRemoteWallet;
-import piuk.blockchain.android.R;
-import piuk.blockchain.android.WalletApplication;
 
 /**
  * @author Andreas Schildbach

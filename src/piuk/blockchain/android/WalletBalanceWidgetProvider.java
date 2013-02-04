@@ -44,13 +44,7 @@ public class WalletBalanceWidgetProvider extends AppWidgetProvider {
 			final WalletApplication application = (WalletApplication) context
 					.getApplicationContext();
 
-			BigInteger balance = BigInteger.ZERO;
-			{
-				final Wallet wallet = application.getWallet();
-
-				if (wallet != null)
-					balance = wallet.getBalance(BalanceType.ESTIMATED);
-			}
+			BigInteger balance = application.getRemoteWallet().final_balance;
 
 			final String balanceStr = WalletUtils.formatValue(balance);
 

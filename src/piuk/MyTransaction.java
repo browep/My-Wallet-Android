@@ -22,9 +22,6 @@ import java.math.BigInteger;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-
-import piuk.blockchain.android.AddressBookProvider;
 import piuk.blockchain.android.Constants;
 
 import org.spongycastle.util.encoders.Hex;
@@ -35,21 +32,21 @@ import com.google.bitcoin.core.Transaction;
 import com.google.bitcoin.core.TransactionConfidence;
 import com.google.bitcoin.core.TransactionOutPoint;
 import com.google.bitcoin.core.Wallet;
-import com.google.bitcoin.core.WalletTransaction;
-import com.google.bitcoin.core.WalletTransaction.Pool;
 
 public class MyTransaction extends Transaction implements Serializable {
 	private static final long serialVersionUID = 1L;
 	Sha256Hash hash;
 	Date time;
 	String tag;
-
 	int height;
 	boolean double_spend;
-
 	int txIndex;
 	public BigInteger result;
 
+	public BigInteger getResult() {
+		return result;
+	}
+	
 	@Override
 	public synchronized TransactionConfidence getConfidence() {
 		return new MyTransactionConfidence(this, height, double_spend);

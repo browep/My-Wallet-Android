@@ -17,6 +17,9 @@
 
 package piuk.blockchain.android.ui;
 
+import piuk.blockchain.android.AddressBookProvider;
+import piuk.blockchain.android.R;
+import piuk.blockchain.android.WalletApplication;
 import android.app.AlertDialog;
 import android.app.AlertDialog.Builder;
 import android.app.Dialog;
@@ -32,11 +35,6 @@ import android.support.v4.app.FragmentTransaction;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.TextView;
-import piuk.blockchain.android.R;
-import piuk.blockchain.android.AddressBookProvider;
-import piuk.blockchain.android.Constants;
-import piuk.blockchain.android.WalletApplication;
-import piuk.blockchain.android.util.WalletUtils;
 
 /**
  * @author Andreas Schildbach

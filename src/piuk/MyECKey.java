@@ -1,7 +1,6 @@
 package piuk;
 
 import java.math.BigInteger;
-import java.util.Arrays;
 
 import piuk.blockchain.android.Constants;
 

@@ -21,12 +21,14 @@ import android.app.Application;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProviderInfo;
 import android.content.*;
+import android.content.SharedPreferences.Editor;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.os.Handler;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.widget.Toast;
 import com.google.bitcoin.core.*;
+
 import org.apache.commons.io.IOUtils;
 import piuk.BitcoinAddress;
 import piuk.EventListeners;
@@ -105,8 +107,7 @@ public class WalletApplication extends Application {
 			}
 		}
 
-		bindService(new Intent(this, BlockchainService.class),
-				serviceConnection, Context.BIND_AUTO_CREATE);
+		bindService(new Intent(this, BlockchainService.class), serviceConnection, Context.BIND_AUTO_CREATE);
 	}
 
 	public void diconnectSoon() {
@@ -138,7 +139,7 @@ public class WalletApplication extends Application {
 	@Override
 	public void onCreate() {
 		super.onCreate();
- 
+
 		ErrorReporter.getInstance().init(this);
 
 		try {
@@ -148,7 +149,7 @@ public class WalletApplication extends Application {
 					"java.net.CookieManager");
 
 			CookieHandler.setDefault((CookieHandler) aClass.newInstance());
-			
+
 			Security.addProvider(new org.spongycastle.jce.provider.BouncyCastleProvider());
 
 		} catch (Throwable e) {
@@ -186,9 +187,9 @@ public class WalletApplication extends Application {
 		connect();
 	}
 
-	public Wallet getWallet() {
+	/*public Wallet getWallet() {
 		return blockchainWallet.getBitcoinJWallet();
-	}
+	}*/
 
 	public MyRemoteWallet getRemoteWallet() {
 		return blockchainWallet;
@@ -200,8 +201,86 @@ public class WalletApplication extends Application {
 	}
 
 	public String getGUID() {
-		return PreferenceManager.getDefaultSharedPreferences(this).getString(
-				"guid", null);
+		return PreferenceManager.getDefaultSharedPreferences(this).getString("guid", null);
+	}
+
+	public long getLastTriedToRegisterForNotifications() {
+		return PreferenceManager.getDefaultSharedPreferences(this).getLong("last_notification_register", 0);
+	}
+
+	public boolean hasRegisteredForNotifications(String guid) {
+		String registered_guid = PreferenceManager.getDefaultSharedPreferences(this).getString("registered_guid", null);
+
+		return registered_guid != null && registered_guid.equals(guid); 
+	}
+
+	public boolean setLastRegisteredForNotifications(long time) {
+		Editor edit = PreferenceManager
+				.getDefaultSharedPreferences(
+						this
+						.getApplicationContext())
+						.edit();
+
+		edit.putLong("last_notification_register", time);
+
+		return edit.commit();
+	}
+
+	public boolean setRegisteredForNotifications(String guid) {
+		Editor edit = PreferenceManager
+				.getDefaultSharedPreferences(
+						this
+						.getApplicationContext())
+						.edit();
+
+		edit.putString("registered_guid", guid);
+
+		return edit.commit();
+	}
+
+	public void registerForNotificationsIfNeeded(final String registration_id) {
+
+		if (!blockchainWallet.isNew() && !hasRegisteredForNotifications(getGUID())) {
+
+			if (getLastTriedToRegisterForNotifications() > System.currentTimeMillis()-30000) {
+				System.out.println("Registered Recently");
+				return;
+			}
+
+			setLastRegisteredForNotifications(System.currentTimeMillis());
+
+			new Thread(new Runnable() {
+				@Override
+				public void run() {
+					try {
+						if (blockchainWallet.registerNotifications(registration_id)) {
+							setRegisteredForNotifications(getGUID());
+						}
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
+
+			}).start();
+		} else {
+			System.out.println("New wallet or already Registered");
+		}
+	}
+
+	public void unRegisterForNotifications(final String registration_id) {
+		new Thread(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					if (blockchainWallet.unregisterNotifications(registration_id)) {
+						setRegisteredForNotifications(null);
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+
+		}).start();
 	}
 
 	public String getSharedKey() {
@@ -290,6 +369,11 @@ public class WalletApplication extends Application {
 						payload = MyRemoteWallet.getWalletPayload(getGUID(),
 								getSharedKey(), blockchainWallet.getChecksum());
 				} catch (NotModfiedException e) {
+					if (!blockchainWallet.isUptoDate(Constants.MultiAddrTimeThreshold)) {
+						doMultiAddr();
+					} else {
+						System.out.println("Skipping doMultiAddr");
+					}
 					return;
 				} catch (final Exception e) {
 					e.printStackTrace();
@@ -309,8 +393,7 @@ public class WalletApplication extends Application {
 					return;
 
 				try {
-					blockchainWallet = new MyRemoteWallet(payload,
-							getPassword());
+					blockchainWallet = new MyRemoteWallet(payload, getPassword());
 
 					hasDecryptionError = false;
 
@@ -578,23 +661,26 @@ public class WalletApplication extends Application {
 	}
 
 	public Address determineSelectedAddress() {
-		final ArrayList<ECKey> keychain = getWallet().keychain;
+		final String[] addresses = blockchainWallet.getActiveAddresses();
 
-		if (keychain.size() == 0)
+		if (addresses.length == 0)
 			return null;
 
-		final SharedPreferences prefs = PreferenceManager
-				.getDefaultSharedPreferences(this);
-		final String defaultAddress = keychain.get(0)
-				.toAddress(Constants.NETWORK_PARAMETERS).toString();
-		final String selectedAddress = prefs.getString(
-				Constants.PREFS_KEY_SELECTED_ADDRESS, defaultAddress);
+		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+		final String defaultAddress = addresses[0];
+		final String selectedAddress = prefs.getString(Constants.PREFS_KEY_SELECTED_ADDRESS, defaultAddress);
 
 		// sanity check
-		for (final ECKey key : keychain) {
-			final Address address = key.toAddress(Constants.NETWORK_PARAMETERS);
-			if (address.toString().equals(selectedAddress))
-				return address;
+		for (final String address : addresses) {
+			if (address.equals(selectedAddress)) {
+				try {
+					return new Address(Constants.NETWORK_PARAMETERS, address);
+				} catch (WrongNetworkException e) {
+					e.printStackTrace();
+				} catch (AddressFormatException e) {
+					e.printStackTrace();
+				}
+			}
 		}
 
 		return null;

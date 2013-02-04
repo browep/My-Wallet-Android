@@ -22,7 +22,8 @@ import java.util.LinkedList;
 import java.util.List;
 
 import piuk.EventListeners;
-import piuk.MyBlockChain;
+import piuk.WebSocketHandler;
+import piuk.MyTransaction;
 import piuk.MyTransactionOutput;
 import piuk.blockchain.android.ui.WalletActivity;
 import piuk.blockchain.android.util.WalletUtils;
@@ -43,11 +44,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.widget.Toast;
 
-import com.google.bitcoin.core.AbstractPeerEventListener;
 import com.google.bitcoin.core.Address;
-import com.google.bitcoin.core.Peer;
-import com.google.bitcoin.core.PeerEventListener;
-import com.google.bitcoin.core.Transaction;
 import com.google.bitcoin.core.TransactionInput;
 
 /**
@@ -55,9 +52,6 @@ import com.google.bitcoin.core.TransactionInput;
  */
 public class BlockchainService extends android.app.Service
 {
-	public static final String ACTION_PEER_STATE = BlockchainService.class.getName() + ".peer_state";
-	public static final String ACTION_PEER_STATE_NUM_PEERS = "num_peers";
-
 	public static final String ACTION_BLOCKCHAIN_STATE = BlockchainService.class.getName() + ".blockchain_state";
 	public static final String ACTION_BLOCKCHAIN_STATE_BEST_CHAIN_DATE = "best_chain_date";
 	public static final String ACTION_BLOCKCHAIN_STATE_BEST_CHAIN_HEIGHT = "best_chain_height";
@@ -69,11 +63,9 @@ public class BlockchainService extends android.app.Service
 
 	private WalletApplication application;
 
-	private MyBlockChain blockChain;
+	private WebSocketHandler blockChain;
 
 	private final Handler handler = new Handler();
-
-	private final Handler delayHandler = new Handler();
 
 	private NotificationManager nm;
 	private static final int NOTIFICATION_ID_CONNECTED = 0;
@@ -81,9 +73,9 @@ public class BlockchainService extends android.app.Service
 	private static final int NOTIFICATION_ID_COINS_SENT = 3;
 
 	private final EventListeners.EventListener walletEventListener = new EventListeners.EventListener() {
-		
+
 		@Override
-		public void onCoinsSent(final Transaction tx, final BigInteger prevBalance, final BigInteger newBalance)
+		public void onCoinsSent(final MyTransaction tx, final long result)
 		{
 			System.out.println("onCoinsSent()");
 
@@ -94,9 +86,8 @@ public class BlockchainService extends android.app.Service
 					try {
 						final MyTransactionOutput output = (MyTransactionOutput) tx.getOutputs().get(0);
 						final Address to = output.getToAddress();
-						final BigInteger amount = tx.getValue(application.getWallet());
 
-						notifyCoinsSent(to, amount);
+						notifyCoinsSent(to, BigInteger.valueOf(result));
 
 						notifyWidgets();
 					} catch (Exception e) {
@@ -107,26 +98,23 @@ public class BlockchainService extends android.app.Service
 		}
 
 		@Override
-		public void onCoinsReceived(final Transaction tx, final BigInteger prevBalance, final BigInteger newBalance)
+		public void onCoinsReceived(final MyTransaction tx, final long result)
 		{
 			try {
 				System.out.println("onCoinsReceived()");
 
 				if (tx.getInputs() == null || tx.getInputs().size() == 0) {
-					final BigInteger amount = tx.getValue(application.getWallet());
-
-					notifyCoinbaseReceived(amount);
+					notifyCoinbaseReceived(BigInteger.valueOf(result));
 				} else {
 					final TransactionInput input = tx.getInputs().get(0);
 
 					final Address from = input.getFromAddress();
-					final BigInteger amount = tx.getValue(application.getWallet());
 
 					handler.post(new Runnable()
 					{
 						public void run()
 						{
-							notifyCoinsReceived(from, amount);
+							notifyCoinsReceived(from, BigInteger.valueOf(result));
 
 							notifyWidgets();
 
@@ -187,7 +175,7 @@ public class BlockchainService extends android.app.Service
 	private void notifyCoinbaseReceived(final BigInteger amount) {
 
 		final Notification notification = new Notification(R.drawable.stat_notify_received, "Newly Generated Coins", System.currentTimeMillis());
-		
+
 		final String msg = getString(R.string.notification_coins_received_msg, WalletUtils.formatValue(amount));
 
 		notification.setLatestEventInfo(BlockchainService.this, msg, "Newly Generated Coins",
@@ -199,8 +187,8 @@ public class BlockchainService extends android.app.Service
 		nm.notify(NOTIFICATION_ID_COINS_RECEIVED, notification);
 
 		Toast.makeText(application, "Newly Generated Coins Receive", Toast.LENGTH_LONG).show();
-	
-}
+
+	}
 
 	private void notifyCoinsReceived(final Address from, final BigInteger amount)
 	{
@@ -246,47 +234,6 @@ public class BlockchainService extends android.app.Service
 		Toast.makeText(application, tickerMsg, Toast.LENGTH_LONG).show();
 	}
 
-	private final PeerEventListener peerEventListener = new AbstractPeerEventListener()
-	{
-		@Override
-		public void onPeerConnected(final Peer peer, final int peerCount)
-		{
-			changed(peerCount);
-		}
-
-		@Override
-		public void onPeerDisconnected(final Peer peer, final int peerCount)
-		{
-			changed(peerCount);
-		}
-
-		private void changed(final int numPeers)
-		{
-			handler.post(new Runnable()
-			{
-				public void run()
-				{
-					if (numPeers == 0)
-					{
-						nm.cancel(NOTIFICATION_ID_CONNECTED);
-					}
-					else
-					{
-						final String msg = getString(R.string.notification_peers_connected_msg, numPeers);
-						System.out.println("Peer connected, " + msg);
-
-						final Notification notification = new Notification(R.drawable.stat_sys_peers, null, 0);
-						notification.flags |= Notification.FLAG_ONGOING_EVENT;
-						notification.iconLevel = numPeers > 4 ? 4 : numPeers;
-						notification.setLatestEventInfo(BlockchainService.this, getString(R.string.app_name) + (Constants.TEST ? " [testnet]" : ""),
-								msg,
-								PendingIntent.getActivity(BlockchainService.this, 0, new Intent(BlockchainService.this, WalletActivity.class), 0));
-						nm.notify(NOTIFICATION_ID_CONNECTED, notification);
-					}
-				}
-			});
-		}
-	};
 
 	private final BroadcastReceiver broadcastReceiver = new BroadcastReceiver()
 	{
@@ -331,34 +278,6 @@ public class BlockchainService extends android.app.Service
 		return mBinder;
 	}
 
-	private class BlockchainStartTask extends AsyncTask<Object, Object, Object> {
-
-		@Override
-		protected Object doInBackground(Object... arg0) {
-			try {
-				blockChain.start();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-			return arg0;
-		}
-	}
-
-	private class BlockchainStopTask extends AsyncTask<Object, Object, Object> {
-
-		@Override
-		protected Object doInBackground(Object... arg0) {
-			try {
-				blockChain.stop();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-
-			return arg0;
-		}
-	}
-
-
 	@Override
 	public void onCreate()
 	{
@@ -380,15 +299,12 @@ public class BlockchainService extends android.app.Service
 		registerReceiver(broadcastReceiver, intentFilter);
 
 		try {
-			blockChain = new MyBlockChain(Constants.NETWORK_PARAMETERS, application);
-
-			blockChain.addPeerEventListener(peerEventListener);
-
+			blockChain = new WebSocketHandler(application);
+			
+			blockChain.start();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}	
-
-		new BlockchainStartTask().execute();
 	}
 
 	public void start()
@@ -400,8 +316,12 @@ public class BlockchainService extends android.app.Service
 			application.checkIfWalletHasUpdatedAndFetchTransactions();
 		}
 
-		if (!blockChain.isConnected()) {
-			new BlockchainStartTask().execute();
+		try {
+			if (!blockChain.isConnected()) {
+				blockChain.start();
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 	}
 
@@ -409,8 +329,7 @@ public class BlockchainService extends android.app.Service
 		try {
 			System.out.println("Stop");
 
-			new BlockchainStopTask().execute();
-
+			blockChain.stop();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -422,14 +341,12 @@ public class BlockchainService extends android.app.Service
 		System.out.println("service onDestroy()");
 
 		EventListeners.removeEventListener(walletEventListener);
-		
-		blockChain.removePeerEventListener(peerEventListener);
 
 		stop();
 
 		unregisterReceiver(broadcastReceiver);
 
-		delayHandler.removeCallbacksAndMessages(null);
+		handler.removeCallbacksAndMessages(null);
 
 		handler.postDelayed(new Runnable()
 		{

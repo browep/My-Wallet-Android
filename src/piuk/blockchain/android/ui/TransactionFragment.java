@@ -45,6 +45,7 @@ import com.google.bitcoin.core.Transaction;
 import com.google.bitcoin.core.TransactionConfidence.ConfidenceType;
 import com.google.bitcoin.core.Wallet;
 
+import piuk.MyRemoteWallet;
 import piuk.MyTransaction;
 import piuk.blockchain.android.R;
 import piuk.blockchain.android.AddressBookProvider;
@@ -83,10 +84,10 @@ public final class TransactionFragment extends Fragment
 		return inflater.inflate(R.layout.transaction_fragment, null);
 	}
 
-	public void update(final Transaction tx)
+	public void update(final MyTransaction tx)
 	{
 		
-		final Wallet wallet = ((WalletApplication) activity.getApplication()).getWallet();
+		final MyRemoteWallet wallet = ((WalletApplication) activity.getApplication()).getRemoteWallet();
 
 		final byte[] serializedTx = tx.unsafeBitcoinSerialize();
 
@@ -95,7 +96,7 @@ public final class TransactionFragment extends Fragment
 		try
 		{
 			from = tx.getInputs().get(0).getFromAddress();
-			fromMine = wallet.isPubKeyHashMine(from.getHash160());
+			fromMine = wallet.isMine(from.toString());
 		}
 		catch (final ScriptException x)
 		{
@@ -107,7 +108,7 @@ public final class TransactionFragment extends Fragment
 		try
 		{
 			to = tx.getOutputs().get(0).getScriptPubKey().getToAddress();
-			toMine = wallet.isPubKeyHashMine(to.getHash160());
+			toMine = wallet.isMine(to.toString());
 		}
 		catch (final ScriptException x)
 		{
@@ -127,22 +128,15 @@ public final class TransactionFragment extends Fragment
 					+ ", " + timeFormat.format(time));
 		}
 
-		try
+		final BigInteger amountSent = tx.getResult();
+		view.findViewById(R.id.transaction_fragment_amount_sent_row).setVisibility(amountSent.signum() != 0 ? View.VISIBLE : View.GONE);
+		if (amountSent.signum() != 0)
 		{
-			final BigInteger amountSent = tx.getValueSentFromMe(wallet);
-			view.findViewById(R.id.transaction_fragment_amount_sent_row).setVisibility(amountSent.signum() != 0 ? View.VISIBLE : View.GONE);
-			if (amountSent.signum() != 0)
-			{
-				final TextView viewAmountSent = (TextView) view.findViewById(R.id.transaction_fragment_amount_sent);
-				viewAmountSent.setText(Constants.CURRENCY_MINUS_SIGN + WalletUtils.formatValue(amountSent));
-			}
-		}
-		catch (final ScriptException x)
-		{
-			x.printStackTrace();
+			final TextView viewAmountSent = (TextView) view.findViewById(R.id.transaction_fragment_amount_sent);
+			viewAmountSent.setText(Constants.CURRENCY_MINUS_SIGN + WalletUtils.formatValue(amountSent));
 		}
 
-		final BigInteger amountReceived = tx.getValueSentToMe(wallet);
+		final BigInteger amountReceived = tx.getResult();
 		view.findViewById(R.id.transaction_fragment_amount_received_row).setVisibility(amountReceived.signum() != 0 ? View.VISIBLE : View.GONE);
 		if (amountReceived.signum() != 0)
 		{

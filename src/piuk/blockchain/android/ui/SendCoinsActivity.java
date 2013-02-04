@@ -32,7 +32,6 @@ import android.view.View.OnClickListener;
 import android.view.Window;
 import android.webkit.WebView;
 
-import com.google.bitcoin.core.Address;
 import com.google.bitcoin.core.Base58;
 import com.google.bitcoin.core.ECKey;
 

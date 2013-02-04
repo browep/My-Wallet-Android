@@ -39,6 +39,7 @@ import android.widget.Toast;
 import com.google.bitcoin.core.Address;
 import com.google.bitcoin.core.AddressFormatException;
 import com.google.bitcoin.core.ECKey;
+import com.google.bitcoin.core.WrongNetworkException;
 import com.google.bitcoin.uri.BitcoinURIParseException;
 
 import piuk.BitcoinAddress;
@@ -252,13 +253,17 @@ public final class WalletAddressesActivity extends AbstractWalletActivity {
 	}
 
 	private void updateFragments() {
-		final ArrayList<ECKey> keychain = getWalletApplication().getWallet().keychain;
-		final ArrayList<Address> addresses = new ArrayList<Address>(
-				keychain.size());
+		final String[] addressesArray = getWalletApplication().getRemoteWallet().getActiveAddresses();
+		final ArrayList<Address> addresses = new ArrayList<Address>(addressesArray.length);
 
-		for (final ECKey key : keychain) {
-			final Address address = key.toAddress(Constants.NETWORK_PARAMETERS);
-			addresses.add(address);
+		for (final String address : addressesArray) {
+			try {
+				addresses.add(new Address(Constants.NETWORK_PARAMETERS, address));
+			} catch (WrongNetworkException e) {
+				e.printStackTrace();
+			} catch (AddressFormatException e) {
+				e.printStackTrace();
+			}
 		}
 
 		sendingAddressesFragment.setWalletAddresses(addresses);

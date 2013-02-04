@@ -17,17 +17,25 @@
 
 package piuk.blockchain.android.ui;
 
+import com.google.android.gcm.GCMRegistrar;
+
+import piuk.EventListeners;
+import piuk.blockchain.android.Constants;
+import piuk.blockchain.android.R;
+import piuk.blockchain.android.WalletApplication;
+import piuk.blockchain.android.util.ActionBarFragment;
+import piuk.blockchain.android.util.ErrorReporter;
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.res.Configuration;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
-import android.support.v4.app.FragmentManager;
-import android.support.v4.app.FragmentTransaction;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -36,30 +44,39 @@ import android.view.Window;
 import android.webkit.WebView;
 import android.widget.ImageButton;
 import android.widget.Toast;
-import com.google.bitcoin.core.AbstractWalletEventListener;
-import com.google.bitcoin.core.Wallet;
 
-import piuk.EventListeners;
-import piuk.blockchain.android.R;
-import piuk.blockchain.android.Constants;
-import piuk.blockchain.android.WalletApplication;
-import piuk.blockchain.android.util.ActionBarFragment;
-import piuk.blockchain.android.util.ErrorReporter;
-
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.URL;
-import java.net.URLConnection;
-
-/**
- * @author Andreas Schildbach
- */
 public final class WalletActivity extends AbstractWalletActivity {
 	private static final int REQUEST_CODE_SCAN = 0;
 	private static final int DIALOG_HELP = 0;
 	private ImageButton infoButton = null;
 	private Handler handler = new Handler();
+	AsyncTask<Void, Void, Void> mRegisterTask;
+
+	private final BroadcastReceiver mHandleMessageReceiver =
+			new BroadcastReceiver() { 
+		@Override
+		public void onReceive(Context context, Intent intent) {
+			String body = intent.getExtras().getString(Constants.BODY);
+			String title = intent.getExtras().getString(Constants.TITLE);
+
+			AlertDialog.Builder builder = new AlertDialog.Builder(context);
+			builder.setTitle(title)
+			.setMessage(body)
+			.setCancelable(false)
+			.setIcon(R.drawable.app_icon)
+			.setNegativeButton(R.string.button_dismiss, new DialogInterface.OnClickListener() {
+				public void onClick(DialogInterface dialog, int id) {
+					dialog.cancel();
+				}
+			});
+
+			builder.create().show();		// create and show the alert dialog
+			
+			System.out.println("Received " + body);
+			
+			application.checkIfWalletHasUpdatedAndFetchTransactions();
+		}
+	};
 
 	private EventListeners.EventListener eventListener = new EventListeners.EventListener() {
 		@Override
@@ -91,14 +108,13 @@ public final class WalletActivity extends AbstractWalletActivity {
 			WelcomeFragment.show(getSupportFragmentManager(), application);
 		} else {
 			WelcomeFragment.hide();
-			
+
 			infoButton.setImageResource(R.drawable.ic_action_info);
 		}
-	}
+	} 
 
 	@Override
 	protected void onCreate(final Bundle savedInstanceState) {
-
 		super.onCreate(savedInstanceState);
 
 		ErrorReporter.getInstance().check(this);
@@ -114,7 +130,7 @@ public final class WalletActivity extends AbstractWalletActivity {
 								application);
 					}
 				});
-		
+
 		actionBar.getIconView().setOnClickListener(
 				new OnClickListener() {
 					public void onClick(final View v) {						
@@ -157,12 +173,12 @@ public final class WalletActivity extends AbstractWalletActivity {
 		});
 
 		actionBar.addButton(R.drawable.ic_action_address_book)
-				.setOnClickListener(new OnClickListener() {
-					public void onClick(final View v) {
-						WalletAddressesActivity
-								.start(WalletActivity.this, true);
-					}
-				});
+		.setOnClickListener(new OnClickListener() {
+			public void onClick(final View v) {
+				WalletAddressesActivity
+				.start(WalletActivity.this, true);
+			}
+		});
 
 		actionBar.addButton(R.drawable.ic_action_exchange).setOnClickListener(
 				new OnClickListener() {
@@ -172,43 +188,56 @@ public final class WalletActivity extends AbstractWalletActivity {
 					}
 				});
 
-		/*
-		 * if ((getResources().getConfiguration().screenLayout &
-		 * Configuration.SCREENLAYOUT_SIZE_MASK) >=
-		 * Configuration.SCREENLAYOUT_SIZE_LARGE) {
-		 * actionBar.addButton(R.drawable
-		 * .ic_action_address_book).setOnClickListener(new OnClickListener() {
-		 * public void onClick(final View v) {
-		 * WalletAddressesActivity.start(WalletActivity.this, true); } }); }
-		 * 
-		 * if ((getResources().getConfiguration().screenLayout &
-		 * Configuration.SCREENLAYOUT_SIZE_MASK) <
-		 * Configuration.SCREENLAYOUT_SIZE_LARGE) { final FragmentManager fm =
-		 * getSupportFragmentManager(); final FragmentTransaction ft =
-		 * fm.beginTransaction();
-		 * ft.hide(fm.findFragmentById(R.id.exchange_rates_fragment));
-		 * ft.commit(); }
-		 */
+		registerReceiver(mHandleMessageReceiver, new IntentFilter(Constants.DISPLAY_MESSAGE_ACTION));
 
 		checkDialogs();
+		
+		registerNotifications();
 	}
+
+	
+	public void registerNotifications() {
+		try {
+			final String regId = GCMRegistrar.getRegistrationId(this);
+
+			if (regId == null || regId.equals("")) {
+				GCMRegistrar.register(this, Constants.SENDER_ID);
+			} else {
+				application.registerForNotificationsIfNeeded(regId);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	@Override
+	protected void onDestroy() {
+		if (mRegisterTask != null) {
+			mRegisterTask.cancel(true);
+		}
+		unregisterReceiver(mHandleMessageReceiver);
+		GCMRegistrar.onDestroy(this);
+		super.onDestroy();
+	}
+
 
 	@Override
 	protected void onResume() {
+		super.onResume();
 
 		WalletApplication application = (WalletApplication) getApplication();
 
 		application.connect();
-		
+
 		if (!application.getRemoteWallet().isUptoDate(Constants.MultiAddrTimeThreshold)) {
 			application.checkIfWalletHasUpdatedAndFetchTransactions();
 		}
-		
+
 		EventListeners.addEventListener(eventListener);
 
-		super.onResume();
-
 		checkDialogs();
+		
+		registerNotifications();
 	}
 
 	@Override
