@@ -95,6 +95,21 @@ LoaderManager.LoaderCallbacks<Cursor> {
 			});
 		};
 		
+
+		@Override
+		public void onTransactionsChanged() {
+			handler.post(new Runnable() {
+				public void run() {
+					try {
+						updateView();
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
+			});
+		};
+		
+		
 	};
 
 	@Override
@@ -148,6 +163,10 @@ LoaderManager.LoaderCallbacks<Cursor> {
 	}
 
 	public void updateView() {
+
+		if (application.getRemoteWallet() == null)
+			return;
+		
 		viewBalance.setAmount(application.getRemoteWallet().getBalance());
 
 		String[] active = application.getRemoteWallet().getActiveAddresses();

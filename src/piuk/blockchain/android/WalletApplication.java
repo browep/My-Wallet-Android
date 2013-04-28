@@ -17,6 +17,7 @@
 
 package piuk.blockchain.android;
 
+import android.app.Activity;
 import android.app.Application;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProviderInfo;
@@ -36,6 +37,10 @@ import piuk.Hash;
 import piuk.MyRemoteWallet;
 import piuk.MyRemoteWallet.NotModfiedException;
 import piuk.blockchain.android.R;
+import piuk.blockchain.android.ui.AbstractWalletActivity;
+import piuk.blockchain.android.ui.PasswordFragment;
+import piuk.blockchain.android.ui.PinEntryActivity;
+import piuk.blockchain.android.ui.SuccessCallback;
 import piuk.blockchain.android.util.ErrorReporter;
 
 import java.io.FileInputStream;
@@ -58,6 +63,7 @@ public class WalletApplication extends Application {
 	private final Handler handler = new Handler();
 	private Timer timer;
 	public boolean hasDecryptionError = false;
+	
 
 	private final ServiceConnection serviceConnection = new ServiceConnection() {
 		private BlockchainService service;
@@ -87,13 +93,19 @@ public class WalletApplication extends Application {
 		}
 	};
 
-	public boolean isNewWallet() {
-		if (blockchainWallet == null)
-			return true;
+	public void clearWallet() {
+		Editor edit = PreferenceManager.getDefaultSharedPreferences(
+				this).edit();
 
-		return blockchainWallet.isNew();
+		edit.remove("guid");
+		edit.remove("sharedKey");
+
+		this.blockchainWallet = null;
+		this.hasDecryptionError = false;
+		
+		edit.commit();
 	}
-
+	
 	public void connect() {
 		if (timer != null) {
 			try {
@@ -122,6 +134,25 @@ public class WalletApplication extends Application {
 						handler.post(new Runnable() {
 							public void run() {
 								try {
+									blockchainWallet = null;
+									
+									hasDecryptionError = false;
+									
+								} catch (Exception e) {
+									e.printStackTrace();
+								}
+							}
+						});
+					}
+				}, 30000);
+				
+				timer.schedule(new TimerTask() {
+
+					@Override
+					public void run() {
+						handler.post(new Runnable() {
+							public void run() {
+								try {
 									unbindService(serviceConnection);
 								} catch (Exception e) {
 									e.printStackTrace();
@@ -134,6 +165,45 @@ public class WalletApplication extends Application {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+	}
+
+	public void generateNewWallet() throws Exception {
+		this.blockchainWallet = new MyRemoteWallet();
+	}
+
+	public void checkWalletStatus(final AbstractWalletActivity activity) {
+
+		if (activity instanceof PinEntryActivity)
+			return;
+		
+		System.out.println("checkWalletStatus()");
+		
+		if (blockchainWallet != null && !hasDecryptionError) {
+			if (!blockchainWallet.isUptoDate(Constants.MultiAddrTimeThreshold)) {
+				checkIfWalletHasUpdatedAndFetchTransactions(blockchainWallet.getTemporyPassword());
+			} else {
+				System.out.println("upToDate()  " + (System.currentTimeMillis() - blockchainWallet.lastMultiAddress) + " ms");
+			}
+		} else if (blockchainWallet == null || hasDecryptionError) {
+
+			//Remove old password 
+			String old_password = PreferenceManager.getDefaultSharedPreferences(this).getString("password", null);
+
+			if (old_password != null) {
+				readLocalWallet(old_password);
+
+				PreferenceManager.getDefaultSharedPreferences(this).edit().remove("password").commit();
+			}
+ 
+			handler.post(new Runnable() {
+				@Override
+				public void run() {	
+					Intent intent = new Intent(activity, PinEntryActivity.class);
+
+					activity.startActivity(intent);
+				}
+			});
+		}	
 	}
 
 	@Override
@@ -156,31 +226,6 @@ public class WalletApplication extends Application {
 			e.printStackTrace();
 		}
 
-		// If the User has a saved GUID then we can restore the wallet
-		if (getGUID() != null && getSharedKey() != null) {
-
-			// Try and read the wallet from the local cache
-			if (readLocalWallet()) {
-				readLocalMultiAddr();
-			}
-
-			Toast.makeText(WalletApplication.this,
-					R.string.toast_downloading_wallet, Toast.LENGTH_LONG)
-					.show();
-		}
-
-		// Otherwise wither first load or an error
-		if (blockchainWallet == null) {
-			try {
-				this.blockchainWallet = new MyRemoteWallet();
-
-				Toast.makeText(WalletApplication.this,
-						R.string.toast_generated_new_wallet, Toast.LENGTH_LONG)
-						.show();
-			} catch (Exception e) {
-				throw new Error("Could not create wallet ", e);
-			}
-		}
 
 		EventListeners.addEventListener(eventListener);
 
@@ -195,10 +240,6 @@ public class WalletApplication extends Application {
 		return blockchainWallet;
 	}
 
-	public String getPassword() {
-		return PreferenceManager.getDefaultSharedPreferences(this).getString(
-				"password", null);
-	}
 
 	public String getGUID() {
 		return PreferenceManager.getDefaultSharedPreferences(this).getString("guid", null);
@@ -239,6 +280,9 @@ public class WalletApplication extends Application {
 	}
 
 	public void registerForNotificationsIfNeeded(final String registration_id) {
+
+		if (blockchainWallet == null)
+			return;
 
 		if (!blockchainWallet.isNew() && !hasRegisteredForNotifications(getGUID())) {
 
@@ -339,6 +383,9 @@ public class WalletApplication extends Application {
 	}
 
 	public synchronized void writeMultiAddrCache(String repsonse) {
+		if (blockchainWallet == null)
+			return;
+
 		try {
 			FileOutputStream file = openFileOutput(blockchainWallet.getGUID()
 					+ Constants.MULTIADDR_FILENAME, Constants.WALLET_MODE);
@@ -352,27 +399,66 @@ public class WalletApplication extends Application {
 		}
 	}
 
-	public synchronized void checkIfWalletHasUpdatedAndFetchTransactions() {
+	public synchronized void checkIfWalletHasUpdatedAndFetchTransactions(final String password) {
+		checkIfWalletHasUpdatedAndFetchTransactions(password, null);
+	}
 
-		if (getGUID() == null || getSharedKey() == null)
+	public synchronized void checkIfWalletHasUpdatedAndFetchTransactions(final String password, final SuccessCallback callbackFinal) {
+		if (getGUID() == null || getSharedKey() == null) {
+			if (callbackFinal != null) callbackFinal.onFail();
 			return;
-		
+		}
+	
+		checkIfWalletHasUpdatedAndFetchTransactions(password, getGUID(), getSharedKey(), callbackFinal);
+	}
+	
+	public synchronized void checkIfWalletHasUpdatedAndFetchTransactions(final String password, final String guid, final String sharedKey, final SuccessCallback callbackFinal) {
+	
 		new Thread(new Runnable() {
 			public void run() {
+				System.out.println("checkIfWalletHasUpdatedAndFetchTransactions()");
+				
 				String payload = null;
+				SuccessCallback callback = callbackFinal;
 
 				try {
-					if (blockchainWallet == null)
-						payload = MyRemoteWallet.getWalletPayload(getGUID(),
-								getSharedKey());
-					else
-						payload = MyRemoteWallet.getWalletPayload(getGUID(),
-								getSharedKey(), blockchainWallet.getChecksum());
+					if (blockchainWallet == null) {
+
+						if (readLocalWallet(password)) {
+							System.out.println("Try success");
+
+							if (callback != null)  {
+								handler.post(new Runnable() {
+									public void run() {
+										callbackFinal.onSuccess();
+									};
+								});
+
+								callback = null;
+							}
+
+							readLocalMultiAddr();
+						}
+
+						payload = MyRemoteWallet.getWalletPayload(guid, sharedKey);				
+					} else {
+						payload = MyRemoteWallet.getWalletPayload(guid, sharedKey, blockchainWallet.getChecksum());		
+					}
+
 				} catch (NotModfiedException e) {
 					if (!blockchainWallet.isUptoDate(Constants.MultiAddrTimeThreshold)) {
 						doMultiAddr();
 					} else {
 						System.out.println("Skipping doMultiAddr");
+					}
+
+					if (callback != null)  {
+						handler.post(new Runnable() {
+							public void run() {
+								callbackFinal.onSuccess();
+							};
+						});
+						callback = null;
 					}
 					return;
 				} catch (final Exception e) {
@@ -389,19 +475,54 @@ public class WalletApplication extends Application {
 					});
 				}
 
-				if (payload == null)
+				if (payload == null) {
+					if (callback != null)  {
+						handler.post(new Runnable() {
+							public void run() {
+								callbackFinal.onFail();
+							};
+						});
+						callback = null;
+					}
 					return;
+				}
 
 				try {
-					blockchainWallet = new MyRemoteWallet(payload, getPassword());
+					if (blockchainWallet == null) {
+						blockchainWallet = new MyRemoteWallet(payload, password);
+					} else {						
+						blockchainWallet.setTemporyPassword(password);
+
+						blockchainWallet.setPayload(payload);
+					}
 
 					hasDecryptionError = false;
+
+					if (callback != null)  {
+						handler.post(new Runnable() {
+							public void run() {
+								callbackFinal.onSuccess();
+							};
+						});
+						callback = null;
+					}
 
 					EventListeners.invokeWalletDidChange();
 
 				} catch (Exception e) {
 
 					hasDecryptionError = true;
+
+					blockchainWallet = null;
+
+					if (callback != null)  {
+						handler.post(new Runnable() {
+							public void run() {
+								callbackFinal.onFail();
+							};
+						});
+						callback = null;
+					}
 
 					EventListeners.invokeWalletDidChange();
 
@@ -469,6 +590,9 @@ public class WalletApplication extends Application {
 	}
 
 	public void doMultiAddr() {
+		if (blockchainWallet == null)
+			return;
+
 		new Thread(new Runnable() {
 			public void run() {
 				try {
@@ -505,6 +629,10 @@ public class WalletApplication extends Application {
 
 	public void addKeyToWallet(ECKey key, String label, int tag,
 			final AddAddressCallback callback) {
+
+		if (blockchainWallet == null)
+			return;
+
 		try {
 			blockchainWallet.addKey(key, label);
 
@@ -551,12 +679,17 @@ public class WalletApplication extends Application {
 			e.printStackTrace();
 
 			writeException(e);
+
+			callback.onError();
 		}
 
 		localSaveWallet();
 	}
 
 	public void setAddressLabel(String address, String label) {
+		if (blockchainWallet == null)
+			return;
+
 		try {
 			blockchainWallet.addLabel(address, label);
 
@@ -589,6 +722,9 @@ public class WalletApplication extends Application {
 	}
 
 	public boolean readLocalMultiAddr() {
+		if (blockchainWallet == null)
+			return false;
+
 		try {
 			// Restore the multi address cache
 			FileInputStream multiaddrCacheFile = openFileInput(blockchainWallet
@@ -596,7 +732,7 @@ public class WalletApplication extends Application {
 
 			String multiAddr = IOUtils.toString(multiaddrCacheFile);
 
-			blockchainWallet.parseMultiAddr(multiAddr);
+			blockchainWallet.parseMultiAddr(multiAddr, false);
 
 			return true;
 
@@ -609,7 +745,7 @@ public class WalletApplication extends Application {
 		}
 	}
 
-	public boolean readLocalWallet() {
+	public boolean readLocalWallet(String password) {
 		try {
 			// Read the wallet from local file
 			FileInputStream file = openFileInput(Constants.WALLET_FILENAME);
@@ -618,7 +754,7 @@ public class WalletApplication extends Application {
 
 			payload = IOUtils.toString(file, "UTF-8");
 
-			MyRemoteWallet wallet = new MyRemoteWallet(payload, getPassword());
+			MyRemoteWallet wallet = new MyRemoteWallet(payload, password);
 
 			if (wallet.getGUID().equals(getGUID())) {
 				this.blockchainWallet = wallet;
@@ -645,6 +781,9 @@ public class WalletApplication extends Application {
 	}
 
 	public void localSaveWallet() {
+		if (blockchainWallet == null)
+			return;
+
 		try {
 			if (blockchainWallet.isNew())
 				return;
@@ -661,6 +800,9 @@ public class WalletApplication extends Application {
 	}
 
 	public Address determineSelectedAddress() {
+		if (blockchainWallet == null)
+			return null;
+
 		final String[] addresses = blockchainWallet.getActiveAddresses();
 
 		if (addresses.length == 0)

@@ -82,6 +82,9 @@ public class WalletAddressesFragment extends ListFragment
 	}
 
 	public void setKeys() {
+
+		if (application.getRemoteWallet() == null)
+			return;
 		
 		if (tag_filter == 2)
 			addresses = application.getRemoteWallet().getArchivedAddresses();

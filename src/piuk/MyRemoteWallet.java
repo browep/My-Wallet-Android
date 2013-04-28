@@ -43,11 +43,11 @@ import java.util.*;
 
 @SuppressWarnings("unchecked")
 public class MyRemoteWallet extends MyWallet {
-	public static final String WebROOT = "http://blockchain.info/";
+	public static final String WebROOT = "https://blockchain.info/";
 	String _checksum;
 	boolean _isNew = false;
 	MyBlock latestBlock;
-	long lastMultiAddress;
+	public long lastMultiAddress;
 	public BigInteger final_balance = BigInteger.ZERO;
 	public BigInteger total_received = BigInteger.ZERO;
 	public BigInteger total_sent = BigInteger.ZERO;
@@ -71,7 +71,7 @@ public class MyRemoteWallet extends MyWallet {
 		Hash hash;
 		long time;
 	}
-	
+
 	public synchronized BigInteger getBalance() {
 		return final_balance;
 	}
@@ -104,8 +104,6 @@ public class MyRemoteWallet extends MyWallet {
 	private static String fetchURL(String URL) throws Exception {
 		URL url = new URL(URL);
 
-		System.out.println("URL " + url);
-
 		HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 
 		try {
@@ -113,7 +111,8 @@ public class MyRemoteWallet extends MyWallet {
 			connection.setRequestProperty("charset", "utf-8");
 			connection.setRequestMethod("GET");
 
-			connection.setConnectTimeout(10000);
+			connection.setConnectTimeout(30000);
+			connection.setReadTimeout(30000);
 
 			connection.setInstanceFollowRedirects(false);
 
@@ -131,7 +130,7 @@ public class MyRemoteWallet extends MyWallet {
 		}
 	}
 
-	private static String postURL(String request, String urlParameters) throws Exception {
+	public static String postURL(String request, String urlParameters) throws Exception {
 
 		URL url = new URL(request);
 		HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -153,11 +152,12 @@ public class MyRemoteWallet extends MyWallet {
 			wr.flush();
 			wr.close();
 
-			connection.setConnectTimeout(10000);
+			connection.setConnectTimeout(30000);
+			connection.setReadTimeout(30000);
 
 			connection.setInstanceFollowRedirects(false);
 
-			if (connection.getResponseCode() == 500)
+			if (connection.getResponseCode() != 200)
 				throw new Exception("Error Response " + IOUtils.toString(connection.getErrorStream(), "UTF-8"));
 			else
 				return IOUtils.toString(connection.getInputStream(), "UTF-8");
@@ -179,24 +179,23 @@ public class MyRemoteWallet extends MyWallet {
 	public List<MyTransaction> getMyTransactions() {
 		return transactions;
 	}
-	
+
 	public void addTransaction(MyTransaction tx) {
 		this.transactions.add(tx);
 	}
-	
+
 	public void prependTransaction(MyTransaction tx) {
-		
-		System.out.println("Prepend Tx " + tx);
-		
 		this.transactions.add(0, tx);
 	}
-	
+
 	public List<MyTransaction> getTransactions() {
 		return this.transactions;
 	}
 
-	public void parseMultiAddr(String response) throws Exception {
+	public void parseMultiAddr(String response, boolean notifications) throws Exception {
 
+		System.out.println("parseMultiAddr() " + notifications);
+		
 		transactions.clear();
 
 		BigInteger previousBalance = final_balance;
@@ -214,7 +213,7 @@ public class MyRemoteWallet extends MyWallet {
 			long time = ((Number)block_obj.get("time")).longValue();
 
 			MyBlock block = new MyBlock();
-			
+
 			block.height = blockHeight;
 			block.hash = hash;
 			block.blockIndex = blockIndex;
@@ -247,18 +246,22 @@ public class MyRemoteWallet extends MyWallet {
 			}
 		}
 
-		if (this.final_balance.compareTo(previousBalance) != 0) {
-			if (newestTransaction.getResult().compareTo(BigInteger.ZERO) >= 0)
-				EventListeners.invokeOnCoinsReceived(newestTransaction, newestTransaction.getResult().longValue());
-			else
-				EventListeners.invokeOnCoinsSent(newestTransaction, newestTransaction.getResult().longValue());
+		if (notifications) {
+			if (this.final_balance.compareTo(previousBalance) != 0) {
+				if (newestTransaction.getResult().compareTo(BigInteger.ZERO) >= 0)
+					EventListeners.invokeOnCoinsReceived(newestTransaction, newestTransaction.getResult().longValue());
+				else
+					EventListeners.invokeOnCoinsSent(newestTransaction, newestTransaction.getResult().longValue());
+			}
+		} else {
+			EventListeners.invokeOnTransactionsChanged();
 		}
 	}
 
 	public boolean isUptoDate(long time) {
 		long now = System.currentTimeMillis();
 
-		if (now - lastMultiAddress > time) {
+		if (lastMultiAddress < now - time) {
 			return false;
 		} else {
 			return true;
@@ -270,7 +273,7 @@ public class MyRemoteWallet extends MyWallet {
 
 		String response = fetchURL(url);
 
-		parseMultiAddr(response);
+		parseMultiAddr(response, true);
 
 		lastMultiAddress = System.currentTimeMillis();
 
@@ -299,7 +302,7 @@ public class MyRemoteWallet extends MyWallet {
 			@Override
 			public void run() {
 				List<ECKey> tempKeys = new ArrayList<ECKey>();
-				
+
 				try {
 
 					//Construct a new transaction
@@ -547,6 +550,21 @@ public class MyRemoteWallet extends MyWallet {
 		String response = postURL(WebROOT + "wallet", args.toString());
 
 		return response != null && response.length() > 0;
+	}
+
+
+	/**
+	 * Register this account/device pair within the server.
+	 * @throws Exception 
+	 *
+	 */
+	public static String getPairingEncryptionPassword(final String guid) throws Exception {
+		StringBuilder args = new StringBuilder();
+
+		args.append("guid=" + guid);
+		args.append("&method=pairing-encryption-password");
+
+		return postURL(WebROOT + "wallet", args.toString());
 	}
 
 	public synchronized boolean remoteSave(String kaptcha) throws Exception {

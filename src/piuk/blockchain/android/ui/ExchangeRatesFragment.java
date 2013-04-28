@@ -102,9 +102,12 @@ public final class ExchangeRatesFragment extends ListFragment implements
 						.getColumnName(columnIndex)))
 					return false;
 
-				final BigInteger value = new BigDecimal(application.getRemoteWallet().final_balance).multiply(
+				BigInteger balance = (application.getRemoteWallet() == null) ? BigInteger.ZERO : application.getRemoteWallet().final_balance;
+				
+				final BigInteger value = new BigDecimal(balance).multiply(
 						new BigDecimal(cursor.getDouble(columnIndex)))
 						.toBigInteger();
+				
 				final CurrencyAmountView valueView = (CurrencyAmountView) view;
 				valueView.setCurrencyCode(null);
 				valueView.setAmount(value);

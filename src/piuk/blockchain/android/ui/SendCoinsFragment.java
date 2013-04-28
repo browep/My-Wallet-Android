@@ -47,7 +47,8 @@ import com.google.bitcoin.core.Address;
 import com.google.bitcoin.core.AddressFormatException;
 import com.google.bitcoin.core.ECKey;
 import com.google.bitcoin.core.Transaction;
-import com.google.bitcoin.core.Wallet.BalanceType;
+import com.google.bitcoin.core.TransactionOutput;
+import com.google.bitcoin.core.Utils;
 
 import piuk.MyRemoteWallet;
 import piuk.MyRemoteWallet.SendProgress;
@@ -57,8 +58,6 @@ import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.WalletApplication;
 import piuk.blockchain.android.WalletApplication.AddAddressCallback;
 import piuk.blockchain.android.ui.CurrencyAmountView.Listener;
-import piuk.blockchain.android.ui.SecondPasswordFragment.SuccessCallback;
-import piuk.blockchain.android.util.WalletUtils;
 
 /**
  * @author Andreas Schildbach
@@ -74,7 +73,7 @@ public final class SendCoinsFragment extends Fragment
 	private CurrencyAmountView amountView;
 	private Button viewGo;
 	private Button viewCancel;
-	
+
 	public static enum FeePolicy {
 		FeeOnlyIfNeeded,
 		FeeForce,
@@ -132,16 +131,24 @@ public final class SendCoinsFragment extends Fragment
 	@Override
 	public View onCreateView(final LayoutInflater inflater, final ViewGroup container, final Bundle savedInstanceState)
 	{
+		
 		final SendCoinsActivity activity = (SendCoinsActivity) getActivity();
 
 		final View view = inflater.inflate(R.layout.send_coins_fragment, container);
 
+		if (application.getRemoteWallet() == null)
+			return view;
+		
 		final BigInteger available = application.getRemoteWallet().getBalance();
 
 		Button instantDepositButton = (Button) view.findViewById(R.id.instant_deposit);
 
 		instantDepositButton.setOnClickListener(new OnClickListener() {
 			public void onClick(final View v) {
+
+				if (application.getRemoteWallet() == null)
+					return;
+				
 				WalletApplication application = (WalletApplication) activity.getApplication();
 
 				MyRemoteWallet wallet = application.getRemoteWallet();
@@ -149,13 +156,13 @@ public final class SendCoinsFragment extends Fragment
 				//Don't allow deposits into new wallets
 				if (wallet == null || wallet.isNew() || wallet.getActiveAddresses().length == 0)
 					return;
-								
+
 				String address = wallet.getActiveAddresses()[0];
 
 				String sharedKey = wallet.getSharedKey();
-				
+
 				String guid = wallet.getGUID();
-				
+
 				Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://blockchain.info/deposit?address="+address+"&guid="+guid+"&sharedKey="+sharedKey));
 
 				startActivity(browserIntent);
@@ -220,7 +227,7 @@ public final class SendCoinsFragment extends Fragment
 						e.printStackTrace();
 					}
 
-					application.checkIfWalletHasUpdatedAndFetchTransactions();
+					application.doMultiAddr();
 				}
 
 				public void onError(final String message) {
@@ -251,7 +258,15 @@ public final class SendCoinsFragment extends Fragment
 
 				public boolean onReady(Transaction tx, BigInteger fee, FeePolicy feePolicy, long priority) {
 
-					if (fee.compareTo(BigInteger.ZERO) == 0  && feePolicy != FeePolicy.FeeNever && (priority < 57600000L || tx.bitcoinSerialize().length > 1024 || amountView.getAmount().compareTo(Constants.FEE_THRESHOLD_MIN) < 0)) {
+					boolean containsOutputLessThanThreshold = false;
+					for (TransactionOutput output : tx.getOutputs()) {
+						if (output.getValue().compareTo(Constants.FEE_THRESHOLD_MIN) < 0) {
+							containsOutputLessThanThreshold = true;
+							break;
+						}
+					}
+
+					if (fee.compareTo(BigInteger.ZERO) == 0  && feePolicy != FeePolicy.FeeNever && (priority < 57600000L || tx.bitcoinSerialize().length > 1024 || containsOutputLessThanThreshold)) {
 
 						handler.post(new Runnable() {
 							public void run() {
@@ -335,6 +350,10 @@ public final class SendCoinsFragment extends Fragment
 			};
 
 			public void send(Address receivingAddress, BigInteger fee, FeePolicy feePolicy) {
+
+				if (application.getRemoteWallet() == null)
+					return;
+				
 				final BigInteger amount = amountView.getAmount();
 				final WalletApplication application = (WalletApplication) getActivity().getApplication();
 
@@ -342,8 +361,23 @@ public final class SendCoinsFragment extends Fragment
 			}
 
 			public void makeTransaction(final FeePolicy feePolicy) {
+
+				if (application.getRemoteWallet() == null)
+					return;
+				
 				try {
-					final BigInteger fee = feePolicy == FeePolicy.FeeForce ? Constants.DEFAULT_TX_FEE : BigInteger.ZERO;
+					MyRemoteWallet wallet = application.getRemoteWallet();
+					
+					BigInteger baseFee = null; 
+					if (wallet.getFeePolicy() == -1) {
+						baseFee = Utils.toNanoCoins("0.0001");
+					} else if (wallet.getFeePolicy() == 1) {
+						baseFee = Utils.toNanoCoins("0.001");
+					} else {
+						baseFee = Utils.toNanoCoins("0.0005");
+					}
+					
+					final BigInteger fee = (feePolicy == FeePolicy.FeeForce || wallet.getFeePolicy() == 1) ? baseFee : BigInteger.ZERO;
 
 					String addressString = receivingAddressView.getText().toString().trim();
 
@@ -378,13 +412,16 @@ public final class SendCoinsFragment extends Fragment
 
 			public void onClick(final View v)
 			{
+				if (application.getRemoteWallet() == null)
+					return;
+				
 				MyRemoteWallet remoteWallet = application.getRemoteWallet();
 
 				if (remoteWallet.isDoubleEncrypted() == false) {
 					makeTransaction(FeePolicy.FeeOnlyIfNeeded);
 				} else {
 					if (remoteWallet.temporySecondPassword == null) {
-						SecondPasswordFragment.show(getFragmentManager(), new SuccessCallback() {
+						PasswordFragment.show(getFragmentManager(), new SuccessCallback() {
 
 							public void onSuccess() {
 								makeTransaction(FeePolicy.FeeOnlyIfNeeded);
@@ -393,7 +430,7 @@ public final class SendCoinsFragment extends Fragment
 							public void onFail() {
 								Toast.makeText(application, R.string.send_no_password_error, Toast.LENGTH_LONG).show();
 							}
-						});
+						}, PasswordFragment.PasswordTypeSecond);
 					} else {
 						makeTransaction(FeePolicy.FeeOnlyIfNeeded);
 					}
@@ -416,7 +453,7 @@ public final class SendCoinsFragment extends Fragment
 
 		return view;
 	}
-
+	
 	protected void onServiceBound()
 	{
 		System.out.println("service bound");
@@ -435,11 +472,19 @@ public final class SendCoinsFragment extends Fragment
 		super.onDestroyView();
 	}
 
-	
+
 	@Override
 	public void onDestroy()
 	{
 		super.onDestroy();
+		
+		if (application.getRemoteWallet() == null)
+			return;
+		
+		//Clear the second password
+		MyRemoteWallet remoteWallet = application.getRemoteWallet();
+		
+		remoteWallet.setTemporySecondPassword(null);
 	}
 
 	public class AutoCompleteAdapter extends CursorAdapter
@@ -471,7 +516,7 @@ public final class SendCoinsFragment extends Fragment
 		{
 			if (cursor.isClosed())
 				return null;
-			
+
 			return cursor.getString(cursor.getColumnIndexOrThrow(AddressBookProvider.KEY_ADDRESS));
 		}
 
@@ -479,16 +524,16 @@ public final class SendCoinsFragment extends Fragment
 		public Cursor runQueryOnBackgroundThread(final CharSequence constraint)
 		{
 			final Cursor cursor = getActivity().managedQuery(AddressBookProvider.CONTENT_URI, null, AddressBookProvider.SELECTION_QUERY, new String[] { constraint.toString() }, null);
-			
+
 			if (cursor != null && cursor.isClosed())
 				return null;
-			
+
 			return cursor;
 		}
 	}
 
 	private boolean isValidEmail(String email) {
-        return android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches();
+		return android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches();
 	}
 
 	private void updateView()
@@ -500,14 +545,14 @@ public final class SendCoinsFragment extends Fragment
 			final String address = receivingAddressView.getText().toString().trim();
 			if (address.length() > 0) {
 				//try {
-					new Address(Constants.NETWORK_PARAMETERS, address);
-					AddressType = 1;
-					receivingAddressErrorView.setVisibility(View.GONE);
+				new Address(Constants.NETWORK_PARAMETERS, address);
+				AddressType = 1;
+				receivingAddressErrorView.setVisibility(View.GONE);
 				//} catch (AddressFormatException e) {
-					//if (isValidEmail(address)) {
-					//	AddressType = 2;
-					//	receivingAddressErrorView.setVisibility(View.GONE);
-					//}
+				//if (isValidEmail(address)) {
+				//	AddressType = 2;
+				//	receivingAddressErrorView.setVisibility(View.GONE);
+				//}
 				//}
 			}
 		}

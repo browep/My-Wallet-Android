@@ -86,8 +86,12 @@ public final class TransactionFragment extends Fragment
 
 	public void update(final MyTransaction tx)
 	{
+		WalletApplication application = (WalletApplication) activity.getApplication();
 		
-		final MyRemoteWallet wallet = ((WalletApplication) activity.getApplication()).getRemoteWallet();
+		if (application.getRemoteWallet() == null)
+			return;
+		
+		final MyRemoteWallet wallet = application.getRemoteWallet();
 
 		final byte[] serializedTx = tx.unsafeBitcoinSerialize();
 

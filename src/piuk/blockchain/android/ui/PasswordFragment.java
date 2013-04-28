@@ -21,6 +21,7 @@ import android.app.AlertDialog;
 import android.app.AlertDialog.Builder;
 import android.app.Dialog;
 import android.content.DialogInterface;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.FragmentActivity;
@@ -32,27 +33,28 @@ import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
+import piuk.MyRemoteWallet;
 import piuk.blockchain.android.R;
 import piuk.blockchain.android.WalletApplication;
 
 /**
  * @author Andreas Schildbach
  */
-public final class SecondPasswordFragment extends DialogFragment {
-	private static final String FRAGMENT_TAG = SecondPasswordFragment.class
+public final class PasswordFragment extends DialogFragment {
+	private static final String FRAGMENT_TAG = PasswordFragment.class
 			.getName();
 	private SuccessCallback callback = null;
 
-	public interface SuccessCallback {
-		public void onSuccess();
+	public static final int PasswordTypeMain = 1;
+	public static final int PasswordTypeSecond = 2;
 
-		public void onFail();
-	}
+	private int passwordType;
 
 	public static DialogFragment show(final FragmentManager fm,
-			SuccessCallback callback) {
+			SuccessCallback callback, int passwordType) {
+
 		final DialogFragment prev = (DialogFragment) fm
-				.findFragmentById(R.layout.second_password_dialog);
+				.findFragmentById(R.layout.password_dialog);
 
 		final FragmentTransaction ft = fm.beginTransaction();
 
@@ -63,17 +65,19 @@ public final class SecondPasswordFragment extends DialogFragment {
 
 		ft.addToBackStack(null);
 
-		final SecondPasswordFragment newFragment = instance();
+		final PasswordFragment newFragment = instance();
 
 		newFragment.show(ft, FRAGMENT_TAG);
+
+		newFragment.passwordType = passwordType;
 
 		newFragment.callback = callback;
 
 		return newFragment;
 	}
 
-	private static SecondPasswordFragment instance() {
-		final SecondPasswordFragment fragment = new SecondPasswordFragment();
+	private static PasswordFragment instance() {
+		final PasswordFragment fragment = new PasswordFragment();
 
 		return fragment;
 	}
@@ -88,18 +92,32 @@ public final class SecondPasswordFragment extends DialogFragment {
 		final FragmentActivity activity = getActivity();
 		final LayoutInflater inflater = LayoutInflater.from(activity);
 
-		final Builder dialog = new AlertDialog.Builder(activity)
-				.setTitle(R.string.second_password_title);
+		final Builder dialog = new AlertDialog.Builder(activity);
 
-		final View view = inflater.inflate(R.layout.second_password_dialog,
-				null);
+		if (passwordType == PasswordTypeSecond)
+			dialog.setTitle(R.string.second_password_title);
+		else
+			dialog.setTitle(R.string.main_password_title);
+		
+		final View view = inflater.inflate(R.layout.password_dialog, null);
 
 		dialog.setView(view);
 
 		final TextView passwordField = (TextView) view
-				.findViewById(R.id.second_password);
+				.findViewById(R.id.password_field);
+
+		passwordField.setTextColor(Color.BLACK);
+
+		final TextView titleTextView = (TextView) view
+				.findViewById(R.id.title_text_view);
+
+		if (passwordType == PasswordTypeSecond)
+			titleTextView.setText(R.string.second_password_text);
+		else
+			titleTextView.setText(R.string.main_password_text);
+
 		final Button continueButton = (Button) view
-				.findViewById(R.id.second_password_continue);
+				.findViewById(R.id.password_continue);
 
 		final WalletApplication application = (WalletApplication) getActivity()
 				.getApplication();
@@ -111,24 +129,49 @@ public final class SecondPasswordFragment extends DialogFragment {
 					if (passwordField.getText() == null)
 						return;
 
-					String secondPassword = passwordField.getText().toString();
+					MyRemoteWallet wallet = application.getRemoteWallet();
+					
+					if (passwordType == PasswordTypeSecond) {
+						String secondPassword = passwordField.getText().toString();
 
-					if (application.getRemoteWallet().validateSecondPassword(
-							secondPassword)) {
-						application.getRemoteWallet().setTemporySecondPassword(
-								secondPassword);
+						if (wallet == null) {
+							dismiss();
 
-						Toast.makeText(getActivity().getApplication(),
-								R.string.second_password_correct,
-								Toast.LENGTH_SHORT).show();
+							callback.onFail();
+						} if (wallet.validateSecondPassword(secondPassword)) {
+							wallet.setTemporySecondPassword(secondPassword);
 
-						dismiss();
+							Toast.makeText(getActivity().getApplication(),
+									R.string.second_password_correct,
+									Toast.LENGTH_SHORT).show();
 
-						callback.onSuccess();
+							dismiss();
+
+							callback.onSuccess();
+						} else {
+							Toast.makeText(getActivity().getApplication(),
+									R.string.second_password_incorrect,
+									Toast.LENGTH_SHORT).show();
+						}
 					} else {
-						Toast.makeText(getActivity().getApplication(),
-								R.string.second_password_incorrect,
-								Toast.LENGTH_SHORT).show();
+						String password = passwordField.getText().toString();
+						
+						application.checkIfWalletHasUpdatedAndFetchTransactions(password, new SuccessCallback() {
+							@Override
+							public void onSuccess() {
+								dismiss();
+
+								callback.onSuccess();
+							}
+
+							@Override
+							public void onFail() {
+								dismiss();
+
+								callback.onFail();
+							}
+						});
+						
 					}
 				} catch (Exception e) {
 					e.printStackTrace();

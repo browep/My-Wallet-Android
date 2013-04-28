@@ -149,7 +149,6 @@ public class Constants {
 	public static final String PREFS_KEY_TRUSTED_PEER = "trusted_peer";
 	public static final String PREFS_KEY_INITIATE_RESET = "initiate_reset";
 
-	public static final BigInteger DEFAULT_TX_FEE = Utils.toNanoCoins("0.005");
 	public static final BigInteger FEE_THRESHOLD_MIN = Utils
 			.toNanoCoins("0.01");
 }

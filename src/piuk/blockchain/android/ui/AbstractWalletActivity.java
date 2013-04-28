@@ -21,13 +21,16 @@ import java.util.Locale;
 
 import android.app.AlertDialog;
 import android.app.AlertDialog.Builder;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v4.app.FragmentActivity;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
+import piuk.EventListeners;
 import piuk.blockchain.android.R;
 import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.WalletApplication;
@@ -37,32 +40,64 @@ import piuk.blockchain.android.util.ActionBarFragment;
  * @author Andreas Schildbach
  */
 public abstract class AbstractWalletActivity extends FragmentActivity {
-	protected WalletApplication application;
-	private ActionBarFragment actionBar;
+	protected WalletApplication application = (WalletApplication) this.getApplication();
+	protected ActionBarFragment actionBar;
+	protected final AbstractWalletActivity self = this;
+	protected Handler handler = new Handler();
+	public static boolean isVisible = false;
+
+	private EventListeners.EventListener eventListener = new EventListeners.EventListener() {
+		@Override
+		public void onWalletDidChange() {
+			handler.post(new Runnable() {
+				public void run() {
+					application.checkWalletStatus(self);
+				}
+			});
+		}
+	};
 
 	@Override
 	protected void onCreate(final Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
-		application = (WalletApplication) getApplication();
+		application = (WalletApplication) this.getApplication();
+	}
+
+	@Override
+	protected void onResume() {
+		super.onResume();
+
+		EventListeners.addEventListener(eventListener);
+
+		application.checkWalletStatus(self);
+		
+		isVisible = true;
+	}
+
+	@Override
+	protected void onPause() {
+		super.onPause();
+
+		EventListeners.removeEventListener(eventListener);
+		
+		isVisible = false;
 	}
 
 	@Override
 	protected void onStart() {
 		super.onStart();
 
-		actionBar.setIcon(Constants.APP_ICON_RESID);
-		actionBar.setSecondaryTitle(Constants.TEST ? "[testnet]" : null);
-	}
-
-	protected WalletApplication getWalletApplication() {
-		return application;
+		if (getActionBarFragment() != null) {
+			actionBar.setIcon(Constants.APP_ICON_RESID);
+			actionBar.setSecondaryTitle(Constants.TEST ? "[testnet]" : null);
+		}
 	}
 
 	public ActionBarFragment getActionBarFragment() {
 		if (actionBar == null)
 			actionBar = (ActionBarFragment) getSupportFragmentManager()
-					.findFragmentById(R.id.action_bar_fragment);
+			.findFragmentById(R.id.action_bar_fragment);
 
 		return actionBar;
 	}
@@ -118,6 +153,14 @@ public abstract class AbstractWalletActivity extends FragmentActivity {
 		dialog.setTitle(title);
 		dialog.setMessage(message);
 		dialog.setNeutralButton(R.string.button_dismiss, null);
+		dialog.show();
+	}
+
+	public void errorDialog(final int title, final String message, final DialogInterface.OnClickListener dismiss) {
+		final Builder dialog = new AlertDialog.Builder(this);
+		dialog.setTitle(title);
+		dialog.setMessage(message);
+		dialog.setNeutralButton(R.string.button_dismiss, dismiss);
 		dialog.show();
 	}
 

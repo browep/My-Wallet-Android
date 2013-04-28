@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <resources>
-
 	<string name="app_name">Blockchain</string>
 	<string name="toast_wallet_reset">Wallet was reset,\nwill take some time to recover
 	</string>
@@ -12,6 +11,8 @@
 	<string name="toast_wallet_decrypt_failed">Error decrypting wallet. Please check your
 		password.</string>
 	<string name="toast_generated_new_wallet">Generated new wallet.</string>
+	<string name="toast_pin_saved">PIN Saved.</string>
+
 	<string name="toast_downloading_wallet">Downloading wallet.</string>
 	<string name="toast_error_downloading_transactions">Error downloading transactions.</string>
 	<string name="toast_error_syncing_wallet">Error syncing wallet. Please check your internet
@@ -27,7 +28,10 @@
 	<string name="second_password_text">This action requires a second password in order to
 		fully decrypt your bitcoin wallet. Please enter your second password
 		below.</string>
-	<string name="new_account_password_length_error">Password must be between 10 and 255 characters
+	
+	<string name="main_password_text">Please enter your main password below.</string>
+		
+	<string name="new_account_password_length_error">Password must be between 11 and 255 characters
 	</string>
 	<string name="new_account_password_mismatch_error">Passwords do not match</string>
 	<string name="new_account_kaptcha_error">Captcha code incorrect</string>
@@ -35,6 +39,8 @@
 	<string name="new_account_success">New account successfully created</string>
 	<string name="dialog_continue">Continue</string>
 	<string name="second_password_title">Second Password</string>
+	<string name="main_password_title">Main Password</string>
+	
 	<string name="second_password_correct">Second Password Correct</string>
 	<string name="second_password_incorrect">Second Password Incorrect</string>
 	<string name="generate_key_no_password_error">Cannot generate key without a second password

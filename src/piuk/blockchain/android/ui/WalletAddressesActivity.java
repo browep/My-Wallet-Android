@@ -48,7 +48,6 @@ import piuk.MyRemoteWallet;
 import piuk.blockchain.android.R;
 import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.WalletApplication.AddAddressCallback;
-import piuk.blockchain.android.ui.SecondPasswordFragment.SuccessCallback;
 import piuk.blockchain.android.util.ActionBarFragment;
 import piuk.blockchain.android.util.ViewPagerTabs;
 
@@ -79,14 +78,14 @@ public final class WalletAddressesActivity extends AbstractWalletActivity {
 	protected void onResume() {
 		super.onResume();
 
-		getWalletApplication().connect();
+		application.connect();
 	}
 
 	@Override
 	protected void onPause() {
 		super.onPause();
 
-		getWalletApplication().diconnectSoon();
+		application.diconnectSoon();
 	}
 
 	@Override
@@ -253,7 +252,11 @@ public final class WalletAddressesActivity extends AbstractWalletActivity {
 	}
 
 	private void updateFragments() {
-		final String[] addressesArray = getWalletApplication().getRemoteWallet().getActiveAddresses();
+
+		if (application.getRemoteWallet() == null)
+			return;
+		
+		final String[] addressesArray = application.getRemoteWallet().getActiveAddresses();
 		final ArrayList<Address> addresses = new ArrayList<Address>(addressesArray.length);
 
 		for (final String address : addressesArray) {
@@ -338,7 +341,7 @@ public final class WalletAddressesActivity extends AbstractWalletActivity {
 	};
 
 	private void reallyGenerateAddress() {
-		getWalletApplication().addKeyToWallet(new ECKey(), null, 0,
+		application.addKeyToWallet(new ECKey(), null, 0,
 				new AddAddressCallback() {
 
 					public void onSavedAddress(String address) {
@@ -365,8 +368,11 @@ public final class WalletAddressesActivity extends AbstractWalletActivity {
 						new DialogInterface.OnClickListener() {
 							public void onClick(final DialogInterface dialog,
 									final int which) {
-								MyRemoteWallet remoteWallet = getWalletApplication()
-										.getRemoteWallet();
+
+								if (application.getRemoteWallet() == null)
+									return;
+								
+								MyRemoteWallet remoteWallet = application.getRemoteWallet();
 
 								if (remoteWallet.isDoubleEncrypted() == false) {
 									System.out.println("Not double encrypted");
@@ -374,7 +380,7 @@ public final class WalletAddressesActivity extends AbstractWalletActivity {
 									reallyGenerateAddress();
 								} else {
 									if (remoteWallet.temporySecondPassword == null) {
-										SecondPasswordFragment.show(
+										PasswordFragment.show(
 												getSupportFragmentManager(),
 												new SuccessCallback() {
 
@@ -389,7 +395,7 @@ public final class WalletAddressesActivity extends AbstractWalletActivity {
 																Toast.LENGTH_LONG)
 																.show();
 													}
-												});
+												}, PasswordFragment.PasswordTypeSecond);
 									} else {
 										System.out.println("Password Set");
 

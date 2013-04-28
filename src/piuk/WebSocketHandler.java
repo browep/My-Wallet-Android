@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2012 the original author or authors.
+application.getRemoteWallet() * Copyright 2011-2012 the original author or authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,29 +34,25 @@ import com.google.bitcoin.core.TransactionInput;
 import com.google.bitcoin.core.TransactionOutput;
 
 public class WebSocketHandler {
-	final static String URL = "ws://api.blockchain.info:8335/inv";
+	final static String URL = "ws://ws.blockchain.info/inv";
 	int nfailures = 0;
-	WalletApplication application;
-	MyBlock latestBlock;
+	static WalletApplication application;
 	boolean isConnected = false;
 	boolean isRunning = true;
-
+	long lastConnectAttempt = 0;
+	
 	private WebSocketClient client;
-
-	public MyRemoteWallet getRemoteWallet() {
-		return application.getRemoteWallet();
-	}
 
 	public int getBestChainHeight() {
 		return getChainHead().getHeight();
 	}
 
 	public MyBlock getChainHead() {
-		if (latestBlock != null) {
-			return latestBlock;
-		} else {
-			return getRemoteWallet().latestBlock;
-		}
+
+		if (application.getRemoteWallet() == null)
+			return null;
+
+		return application.getRemoteWallet().latestBlock;
 	}
 
 	final private EventListeners.EventListener walletEventListener = new EventListeners.EventListener() {
@@ -90,14 +86,18 @@ public class WebSocketHandler {
 	}
 
 	public synchronized void subscribe() {
+		if (application.getRemoteWallet() == null)
+			return;
+
 		System.out.println("Websocket subscribe");
 
 		send("{\"op\":\"blocks_sub\"}");
 
-		send("{\"op\":\"wallet_sub\",\"guid\":\""+ getRemoteWallet().getGUID() + "\"}");
+		send("{\"op\":\"wallet_sub\",\"guid\":\""+ application.getRemoteWallet().getGUID() + "\"}");
 
-		for (Map<String, Object> key : this.getRemoteWallet().getKeysMap()) {
-			send("{\"op\":\"addr_sub\", \"addr\":\""+ key.get("addr") + "\"}");
+		String[] active = application.getRemoteWallet().getActiveAddresses();
+		for (String address : active) {
+			send("{\"op\":\"addr_sub\", \"addr\":\""+ address + "\"}");
 		}
 	}
 
@@ -112,14 +112,16 @@ public class WebSocketHandler {
 		this.isRunning = false;
 
 		this.isConnected = false;
-		
-		client.disconnect();
-		
-		client = null;
+
+		if (client != null) {
+			client.disconnect();
+
+			client = null;
+		}
 
 		EventListeners.removeEventListener(walletEventListener);
 	}
-	
+
 	public static WebSocketClient newClient(final WebSocketHandler handler) throws URISyntaxException {
 		return new WebSocketClient(new URI(URL), new WebSocketClient.Listener() {
 
@@ -131,12 +133,15 @@ public class WebSocketHandler {
 
 				handler.nfailures = 0;				
 			}
- 
+
 			@Override
 			public void onMessage(String message) {
+				if (application.getRemoteWallet() == null)
+					return;
+
 				System.out.println("onMessage() text "  + message);
-				
-				MyRemoteWallet wallet = handler.getRemoteWallet();
+
+				MyRemoteWallet wallet = application.getRemoteWallet();
 
 				try {
 					System.out.println("Websocket() onMessage() " + message);
@@ -167,7 +172,10 @@ public class WebSocketHandler {
 						block.blockIndex = blockIndex;
 						block.time = time;
 
-						handler.latestBlock = block;
+
+						if (application.getRemoteWallet() != null) {					
+							application.getRemoteWallet().latestBlock = block;
+						}
 
 						List<MyTransaction> transactions = wallet.getMyTransactions();
 						List<Number> txIndexes = (List<Number>) x.get("txIndexes");
@@ -241,7 +249,7 @@ public class WebSocketHandler {
 
 						if (!newChecksum.equals(oldChecksum)) {
 							try {
-								handler.application.checkIfWalletHasUpdatedAndFetchTransactions();
+								application.checkIfWalletHasUpdatedAndFetchTransactions(application.getRemoteWallet().getTemporyPassword());
 							} catch (Exception e) {
 								e.printStackTrace();
 							}
@@ -256,7 +264,7 @@ public class WebSocketHandler {
 			@Override
 			public void onMessage(byte[] data) {
 				System.out.println("onMessage() data");
-				
+
 			}
 
 			@Override
@@ -270,26 +278,35 @@ public class WebSocketHandler {
 			public void onError(Exception error) {
 				error.printStackTrace();
 			}
-			
+
 		}, null);
 	}
 
 	public void connect() throws URISyntaxException, InterruptedException {
 
-		client = newClient(this);
-		
-		isConnected = false;
+		if (application.getRemoteWallet() == null)
+			return;
 
-		client.connect();
+		client = newClient(this);
+
+		isConnected = false;
+ 
+		lastConnectAttempt = System.currentTimeMillis();
 		
+		client.connect();
+
 		EventListeners.addEventListener(walletEventListener);
 	}
-
+ 
 	public void start() {
+
+		if (lastConnectAttempt > System.currentTimeMillis()-10000)
+			return; 
+		
 		this.isRunning = true;
 
 		System.out.println("WebSocket start()");
-
+		
 		try {
 			if (client != null)
 				stop();

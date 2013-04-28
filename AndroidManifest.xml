@@ -2,8 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="piuk.blockchain.android"
     android:installLocation="preferExternal"
-    android:versionCode="103"
-    android:versionName="3.31" >
+    android:versionCode="105"
+    android:versionName="3.33" >
 
     <uses-sdk
         android:minSdkVersion="8"
@@ -92,7 +92,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        
         <activity
             android:name="piuk.blockchain.android.ui.SendCoinsActivity"
             android:configChanges="orientation|keyboard|keyboardHidden"
@@ -139,7 +138,10 @@
         <activity
             android:name="piuk.blockchain.android.ui.PreferencesActivity"
             android:screenOrientation="behind" />
-
+        
+        <activity android:name="piuk.blockchain.android.ui.PinEntryActivity" 
+            android:screenOrientation="portrait"></activity>
+        
         <provider
             android:name="piuk.blockchain.android.AddressBookProvider"
             android:authorities="piuk.blockchain.android.address_book"

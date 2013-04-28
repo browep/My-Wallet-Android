@@ -69,6 +69,8 @@ public final class WalletTransactionsFragment extends ListFragment {
 			handler.post(new Runnable() {
 				@Override
 				public void run() {		
+					System.out.println("Receive onCoinsSent()");
+					
 					setAdapterContent();
 					
 					adapter.notifyDataSetChanged();
@@ -81,6 +83,8 @@ public final class WalletTransactionsFragment extends ListFragment {
 			handler.post(new Runnable() {
 				@Override
 				public void run() {	
+					System.out.println("Receive onCoinsReceived()");
+
 					setAdapterContent();
 
 					adapter.notifyDataSetChanged();
@@ -88,32 +92,38 @@ public final class WalletTransactionsFragment extends ListFragment {
 			});			
 		};
 
+
+		@Override
+		public void onTransactionsChanged() {
+			handler.post(new Runnable() {
+				public void run() {
+					try {
+						System.out.println("Receive onTransactionsChanged()");
+
+						setAdapterContent();
+
+						adapter.notifyDataSetChanged();
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
+			});
+		};
+		
+
 		@Override
 		public void onWalletDidChange() {				
 			handler.post(new Runnable() {
 
 				@Override
 				public void run() {
+					System.out.println("Receive onWalletDidChange()");
+
 					setAdapterContent();
 
 					adapter.notifyDataSetChanged();
 				}
 			});
-		}
-	};
-
-	private final static String KEY_MODE = "mode";
-
-	private final ContentObserver contentObserver = new ContentObserver(handler) {
-		@Override
-		public void onChange(final boolean selfChange) {
-			try {
-				setAdapterContent();
-
-				adapter.notifyDataSetChanged();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
 		}
 	};
 
@@ -232,27 +242,31 @@ public final class WalletTransactionsFragment extends ListFragment {
 		setListAdapter(adapter);
 	}
 	
-	public void setAdapterContent() {
-		
+	public synchronized void setAdapterContent() {
 		System.out.println("setAdapterContent()");
-		
+
+		if (application.getRemoteWallet() == null) {
+			System.out.print("getRemoteWallet() null");
+			return;
+		}
+				
 		adapter.clear();
 		
 		List<MyTransaction> transactions = application.getRemoteWallet().getMyTransactions();
 
+		System.out.println("transactions.size() " + transactions.size());
+
 		for (MyTransaction transaction : transactions) {
 			adapter.add(transaction);
-		}
+		}  
 	}
-
+ 
 	public void onCreate(final Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
 		EventListeners.addEventListener(eventListener);
 
 		initAdapter();
-
-		activity.getContentResolver().registerContentObserver(AddressBookProvider.CONTENT_URI, true, contentObserver);
 	}
 
 	@Override
@@ -269,9 +283,7 @@ public final class WalletTransactionsFragment extends ListFragment {
 	}
 
 	@Override
-	public void onDestroy() {
-		activity.getContentResolver().unregisterContentObserver(contentObserver);
-		
+	public void onDestroy() {		
 		EventListeners.removeEventListener(eventListener);
 
 		super.onDestroy();
@@ -286,7 +298,7 @@ public final class WalletTransactionsFragment extends ListFragment {
 
 	// workaround http://code.google.com/p/android/issues/detail?id=20065
 	private static View lastContextMenuView;
-
+ 
 	@Override
 	public void onCreateContextMenu(final ContextMenu menu, final View v,
 			final ContextMenuInfo menuInfo) {

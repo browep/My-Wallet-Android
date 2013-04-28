@@ -46,7 +46,7 @@ import org.spongycastle.crypto.params.ParametersWithIV;
 
 public class MyWallet {
 	private static final int AESBlockSize = 4;
-	private static final int PBKDF2Iterations = 10;
+	public static final int DefaultPBKDF2Iterations = 10;
 	public Map<String, Object> root;
 	public String temporyPassword;
 	public String temporySecondPassword;
@@ -112,6 +112,38 @@ public class MyWallet {
 		return (List<Map<String, Object>>) root.get("address_book");
 	}
 
+	@SuppressWarnings("unchecked")
+	public Map<String, Object> getOptions() {
+		Map<String, Object> options = (Map<String, Object>) root.get("options");
+
+		if (options == null)
+			options = Collections.emptyMap();
+
+		return options;
+	}
+
+	public int getFeePolicy() {
+		Map<String, Object> options = getOptions();
+
+		int fee_policy = 0;
+		if (options.containsKey("fee_policy")) {
+			fee_policy = Integer.valueOf(options.get("fee_policy").toString());
+		}
+
+		return fee_policy;
+	}
+
+	public int getPbkdf2Iterations() {
+		Map<String, Object> options = getOptions();
+
+		int iterations = DefaultPBKDF2Iterations;
+		if (options.containsKey("pbkdf2_iterations")) {
+			iterations = Integer.valueOf(options.get("pbkdf2_iterations").toString());
+		}
+
+		return iterations;
+	}
+
 	public boolean isDoubleEncrypted() {
 		Object double_encryption = root.get("double_encryption");
 		if (double_encryption != null)
@@ -136,6 +168,14 @@ public class MyWallet {
 		this.temporyPassword = password;
 	}
 
+	public String getTemporyPassword() {
+		return temporyPassword;
+	}
+
+	public String getTemporySecondPassword() {
+		return temporySecondPassword;
+	}
+
 	public void setTemporySecondPassword(String secondPassword) {
 		this.temporySecondPassword = secondPassword;
 	}
@@ -145,7 +185,7 @@ public class MyWallet {
 	}
 
 	public String getPayload() throws Exception {
-		return encrypt(toJSONString(), this.temporyPassword);
+		return encrypt(toJSONString(), this.temporyPassword, DefaultPBKDF2Iterations);
 	}
 
 	public ECKey decodePK(String base58Priv) throws Exception {
@@ -154,8 +194,7 @@ public class MyWallet {
 			if (this.temporySecondPassword == null)
 				throw new Exception("You must provide a second password");
 
-			base58Priv = decryptPK(base58Priv, getSharedKey(),
-					this.temporySecondPassword);
+			base58Priv = decryptPK(base58Priv, getSharedKey(), this.temporySecondPassword, this.getPbkdf2Iterations());
 		}
 
 		byte[] privBytes = Base58.decode(base58Priv);
@@ -318,8 +357,7 @@ public class MyWallet {
 			if (temporySecondPassword == null)
 				throw new Exception("You must provide a second password");
 
-			map.put("priv",
-					encryptPK(base58Priv, getSharedKey(), temporySecondPassword));
+			map.put("priv", encryptPK(base58Priv, getSharedKey(), temporySecondPassword, this.getPbkdf2Iterations()));
 
 		} else {
 			map.put("priv", base58Priv);
@@ -334,16 +372,19 @@ public class MyWallet {
 		try {
 			MessageDigest md = MessageDigest.getInstance("SHA-256");
 
-			// N Rounds of SHA256
-			byte[] data = md.digest((getSharedKey() + secondPassword)
-					.getBytes("UTF-8"));
-			for (int ii = 1; ii < PBKDF2Iterations; ++ii) {
-				data = md.digest(data);
+			{
+				// N Rounds of SHA256
+				byte[] data = md.digest((getSharedKey() + secondPassword).getBytes("UTF-8"));
+				
+				for (int ii = 1; ii < this.getPbkdf2Iterations(); ++ii) {
+					data = md.digest(data);
+				}
+
+				String dpasswordhash = new String(Hex.encode(data));
+				if (dpasswordhash.equals(getDPasswordHash()))
+					return true;
 			}
 
-			String dpasswordhash = new String(Hex.encode(data));
-			if (dpasswordhash.equals(getDPasswordHash()))
-				return true;
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -361,7 +402,7 @@ public class MyWallet {
 
 	// AES 256 PBKDF2 CBC iso10126 decryption
 	// 16 byte IV must be prepended to ciphertext - Compatible with crypto-js
-	public static String decrypt(String ciphertext, String password) throws Exception {
+	public static String decrypt(String ciphertext, String password, final int PBKDF2Iterations) throws Exception {
 		byte[] cipherdata = Base64.decode(ciphertext, Base64.NO_WRAP);
 
 		//Sperate the IV and cipher data
@@ -408,7 +449,7 @@ public class MyWallet {
 			}
 
 	// Encrypt compatible with crypto-js
-	public static String encrypt(String text, String password) throws Exception {
+	public static String encrypt(String text, String password, final int PBKDF2Iterations) throws Exception {
 
 		if (password == null)
 			throw new Exception("You must provide an ecryption password");
@@ -441,26 +482,25 @@ public class MyWallet {
 	}
 
 	// Decrypt a double encrypted private key
-	public static String decryptPK(String key, String sharedKey, String password)
+	public static String decryptPK(String key, String sharedKey, String password, final int PBKDF2Iterations)
 			throws Exception {
-		return decrypt(key, sharedKey + password);
+		return decrypt(key, sharedKey + password, PBKDF2Iterations);
 	}
 
 	// Decrypt a double encrypted private key
-	public static String encryptPK(String key, String sharedKey, String password)
+	public static String encryptPK(String key, String sharedKey, String password, final int PBKDF2Iterations)
 			throws Exception {
-		return encrypt(key, sharedKey + password);
+		return encrypt(key, sharedKey + password, PBKDF2Iterations);
 	}
 
 	// Decrypt a Wallet file and parse the JSON
 	@SuppressWarnings("unchecked")
-	public static Map<String, Object> decryptPayload(String payload,
-			String password) throws Exception {
+	public static Map<String, Object> decryptPayload(String payload, String password) throws Exception {
 		if (payload == null || payload.length() == 0 || password == null
 				|| password.length() == 0)
 			return null;
 
-		String decrypted = decrypt(payload, password);
+		String decrypted = decrypt(payload, password, DefaultPBKDF2Iterations);
 
 		if (decrypted == null || decrypted.length() == 0)
 			return null;

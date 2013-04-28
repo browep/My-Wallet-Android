@@ -62,6 +62,8 @@ public final class WelcomeFragment extends DialogFragment {
 		try {
 			hide();
 			
+			NewAccountFragment.hide();
+			
 			final DialogFragment prev = (DialogFragment) fm.findFragmentById(R.layout.welcome_dialog);
 
 			final FragmentTransaction ft = fm.beginTransaction();
@@ -77,7 +79,7 @@ public final class WelcomeFragment extends DialogFragment {
 
 			newFragment.show(ft, FRAGMENT_TAG);
 
-			if (application.getRemoteWallet().isNew()) {
+			if (application.getRemoteWallet() == null) {
 				newFragment.setCancelable(false);
 			} else {
 				newFragment.setCancelable(!application.hasDecryptionError);
@@ -119,11 +121,8 @@ public final class WelcomeFragment extends DialogFragment {
 		final WalletApplication application = (WalletApplication) getActivity()
 				.getApplication();
 
-		if (application.getRemoteWallet().isNew()) {
+		if (application.getRemoteWallet() == null) {
 			welcomeText.setText(R.string.welcome_text_no_account);
-
-			System.out.println("application.getRemoteWallet().isNew() "
-					+ application.getRemoteWallet().isNew());
 
 			dialog.setCancelable(false);
 		} else {
@@ -150,7 +149,7 @@ public final class WelcomeFragment extends DialogFragment {
 			}
 		});
 
-		if (application.getRemoteWallet().isNew()) {
+		if (application.getRemoteWallet() == null) {
 
 			newAccountButton.setVisibility(View.VISIBLE);
 

@@ -38,12 +38,15 @@ import piuk.blockchain.android.util.WalletUtils;
  */
 public class WalletBalanceWidgetProvider extends AppWidgetProvider {
 	@Override
-	public void onUpdate(final Context context,
-			final AppWidgetManager appWidgetManager, final int[] appWidgetIds) {
+	public void onUpdate(final Context context, final AppWidgetManager appWidgetManager, final int[] appWidgetIds) {
+
 		try {
 			final WalletApplication application = (WalletApplication) context
 					.getApplicationContext();
 
+			if (application.getRemoteWallet() == null)
+				return;
+		
 			BigInteger balance = application.getRemoteWallet().final_balance;
 
 			final String balanceStr = WalletUtils.formatValue(balance);

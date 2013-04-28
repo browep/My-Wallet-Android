@@ -18,15 +18,17 @@
 package piuk.blockchain.android.ui;
 
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.commons.io.IOUtils;
 
 import piuk.EventListeners;
 import piuk.blockchain.android.R;
 import piuk.blockchain.android.WalletApplication;
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.AlertDialog.Builder;
 import android.app.ProgressDialog;
@@ -34,6 +36,7 @@ import android.content.DialogInterface;
 import android.content.SharedPreferences.Editor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.preference.PreferenceManager;
@@ -54,6 +57,8 @@ import android.widget.Toast;
  */
 public final class NewAccountFragment extends DialogFragment {
 	private static final String FRAGMENT_TAG = NewAccountFragment.class.getName();
+	private static List<WeakReference<NewAccountFragment>> fragmentRefs = new ArrayList<WeakReference<NewAccountFragment>>();
+
 	private WalletApplication application;
 
 	public static Bitmap loadBitmap(String url) throws MalformedURLException,
@@ -66,6 +71,19 @@ public final class NewAccountFragment extends DialogFragment {
 		bitmap = BitmapFactory.decodeByteArray(data, 0, data.length, options);
 
 		return bitmap;
+	}
+
+
+	public static void hide() {
+		for (WeakReference<NewAccountFragment> fragmentRef : fragmentRefs) {
+			if (fragmentRef != null && fragmentRef.get() != null) {
+				try {
+					fragmentRef.get().dismissAllowingStateLoss();
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		}
 	}
 
 	public void refreshCaptcha(View view) {
@@ -128,6 +146,8 @@ public final class NewAccountFragment extends DialogFragment {
 	static NewAccountFragment instance() {
 		final NewAccountFragment fragment = new NewAccountFragment();
 
+		fragmentRefs.add(new WeakReference<NewAccountFragment>(fragment));
+
 		return fragment;
 	}
 
@@ -143,14 +163,25 @@ public final class NewAccountFragment extends DialogFragment {
 		final TextView password2 = (TextView) view.findViewById(R.id.password2);
 		final TextView captcha = (TextView) view.findViewById(R.id.captcha);
 
+		password.setTextColor(Color.BLACK);
+		password2.setTextColor(Color.BLACK);
+		captcha.setTextColor(Color.BLACK);
+
 		refreshCaptcha(view);
 
 		createButton.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
+				try {
+					application.generateNewWallet();
+				} catch (Exception e1) {
+					Toast.makeText(application, e1.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+					return;
+				}
+
 				final WalletApplication application = (WalletApplication) getActivity()
 						.getApplication();
 
-				if (password.getText().length() < 10
+				if (password.getText().length() < 11
 						|| password.getText().length() > 255) {
 					Toast.makeText(application,
 							R.string.new_account_password_length_error,
@@ -185,8 +216,7 @@ public final class NewAccountFragment extends DialogFragment {
 					@Override
 					public void run() {
 						try {
-
-							if (!application.getRemoteWallet().isNew())
+							if (application.getRemoteWallet() == null || !application.getRemoteWallet().isNew())
 								return;
 
 							application.getRemoteWallet().setTemporyPassword(password.getText().toString());
@@ -210,6 +240,12 @@ public final class NewAccountFragment extends DialogFragment {
 											R.string.new_account_success,
 											Toast.LENGTH_LONG).show();
 
+									try {
+										PinEntryActivity.clearPrefValues(application);
+									} catch (Exception e) {
+										e.printStackTrace();
+									}
+
 									Editor edit = PreferenceManager
 											.getDefaultSharedPreferences(
 													application
@@ -220,14 +256,12 @@ public final class NewAccountFragment extends DialogFragment {
 											.getRemoteWallet().getGUID());
 									edit.putString("sharedKey", application
 											.getRemoteWallet().getSharedKey());
-									edit.putString("password", password
-											.getText().toString());
+
+									AbstractWalletActivity activity = (AbstractWalletActivity) getActivity();
 
 									if (edit.commit()) {
-										application.checkIfWalletHasUpdatedAndFetchTransactions();
+										application.checkWalletStatus(activity);
 									} else {
-										Activity activity = (Activity) getActivity();
-
 										final Builder dialog = new AlertDialog.Builder(
 												activity);
 

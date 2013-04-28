@@ -45,13 +45,13 @@ public final class ExchangeRatesActivity extends AbstractWalletActivity {
 	protected void onResume() {
 		super.onResume();
 
-		getWalletApplication().connect();
+		application.connect();
 	}
 
 	@Override
 	protected void onPause() {
 		super.onPause();
 
-		getWalletApplication().diconnectSoon();
+		application.diconnectSoon();
 	}
 }

@@ -19,7 +19,6 @@ package piuk.blockchain.android.ui;
 
 import com.google.android.gcm.GCMRegistrar;
 
-import piuk.EventListeners;
 import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.R;
 import piuk.blockchain.android.WalletApplication;
@@ -35,7 +34,6 @@ import android.content.IntentFilter;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Handler;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -49,7 +47,6 @@ public final class WalletActivity extends AbstractWalletActivity {
 	private static final int REQUEST_CODE_SCAN = 0;
 	private static final int DIALOG_HELP = 0;
 	private ImageButton infoButton = null;
-	private Handler handler = new Handler();
 	AsyncTask<Void, Void, Void> mRegisterTask;
 
 	private final BroadcastReceiver mHandleMessageReceiver =
@@ -71,21 +68,10 @@ public final class WalletActivity extends AbstractWalletActivity {
 			});
 
 			builder.create().show();		// create and show the alert dialog
-			
-			System.out.println("Received " + body);
-			
-			application.checkIfWalletHasUpdatedAndFetchTransactions();
-		}
-	};
 
-	private EventListeners.EventListener eventListener = new EventListeners.EventListener() {
-		@Override
-		public void onWalletDidChange() {
-			handler.post(new Runnable() {
-				public void run() {
-					checkDialogs();
-				}
-			});
+			if (application.getRemoteWallet() != null) {
+				application.checkIfWalletHasUpdatedAndFetchTransactions(application.getRemoteWallet().getTemporyPassword());
+			}
 		}
 	};
 
@@ -98,20 +84,6 @@ public final class WalletActivity extends AbstractWalletActivity {
 			longToast(R.string.send_coins_install_qr_scanner_msg);
 		}
 	}
-
-	public void checkDialogs() {
-		WalletApplication application = (WalletApplication) getApplication();
-
-		if (application.hasDecryptionError || application.isNewWallet()) {
-			infoButton.setImageResource(R.drawable.ic_action_info_red);
-
-			WelcomeFragment.show(getSupportFragmentManager(), application);
-		} else {
-			WelcomeFragment.hide();
-
-			infoButton.setImageResource(R.drawable.ic_action_info);
-		}
-	} 
 
 	@Override
 	protected void onCreate(final Bundle savedInstanceState) {
@@ -126,22 +98,29 @@ public final class WalletActivity extends AbstractWalletActivity {
 		actionBar.getPrimaryTitleView().setOnClickListener(
 				new OnClickListener() {
 					public void onClick(final View v) {
-						WelcomeFragment.show(getSupportFragmentManager(),
-								application);
+						if (application.getRemoteWallet() == null)
+							return;
+
+						WelcomeFragment.show(getSupportFragmentManager(), application);
 					}
 				});
 
 		actionBar.getIconView().setOnClickListener(
 				new OnClickListener() {
-					public void onClick(final View v) {						
-						WelcomeFragment.show(getSupportFragmentManager(),
-								application);
+					public void onClick(final View v) {		
+						if (application.getRemoteWallet() == null)
+							return;
+
+						WelcomeFragment.show(getSupportFragmentManager(), application);
 					}
 				});
 
 		actionBar.addButton(R.drawable.ic_action_send).setOnClickListener(
 				new OnClickListener() {
 					public void onClick(final View v) {
+						if (application.getRemoteWallet() == null)
+							return;
+
 						startActivity(new Intent(WalletActivity.this,
 								SendCoinsActivity.class));
 					}
@@ -150,6 +129,9 @@ public final class WalletActivity extends AbstractWalletActivity {
 		actionBar.addButton(R.drawable.ic_action_receive).setOnClickListener(
 				new OnClickListener() {
 					public void onClick(final View v) {
+						if (application.getRemoteWallet() == null)
+							return;
+
 						startActivity(new Intent(WalletActivity.this,
 								RequestCoinsActivity.class));
 					}
@@ -160,6 +142,9 @@ public final class WalletActivity extends AbstractWalletActivity {
 		infoButton.setOnClickListener(new OnClickListener() {
 			public void onClick(final View v) {
 				WalletApplication application = (WalletApplication) getApplication();
+
+				if (application.getRemoteWallet() == null)
+					return;
 
 				Intent browserIntent = new Intent(
 						Intent.ACTION_VIEW,
@@ -175,6 +160,9 @@ public final class WalletActivity extends AbstractWalletActivity {
 		actionBar.addButton(R.drawable.ic_action_address_book)
 		.setOnClickListener(new OnClickListener() {
 			public void onClick(final View v) {
+				if (application.getRemoteWallet() == null)
+					return;
+
 				WalletAddressesActivity
 				.start(WalletActivity.this, true);
 			}
@@ -183,19 +171,21 @@ public final class WalletActivity extends AbstractWalletActivity {
 		actionBar.addButton(R.drawable.ic_action_exchange).setOnClickListener(
 				new OnClickListener() {
 					public void onClick(final View v) {
+						if (application.getRemoteWallet() == null)
+							return;
+
 						startActivity(new Intent(WalletActivity.this,
 								ExchangeRatesActivity.class));
 					}
 				});
 
+
 		registerReceiver(mHandleMessageReceiver, new IntentFilter(Constants.DISPLAY_MESSAGE_ACTION));
 
-		checkDialogs();
-		
 		registerNotifications();
 	}
 
-	
+
 	public void registerNotifications() {
 		try {
 			final String regId = GCMRegistrar.getRegistrationId(this);
@@ -209,7 +199,7 @@ public final class WalletActivity extends AbstractWalletActivity {
 			e.printStackTrace();
 		}
 	}
-	
+
 	@Override
 	protected void onDestroy() {
 		if (mRegisterTask != null) {
@@ -229,26 +219,16 @@ public final class WalletActivity extends AbstractWalletActivity {
 
 		application.connect();
 
-		if (!application.getRemoteWallet().isUptoDate(Constants.MultiAddrTimeThreshold)) {
-			application.checkIfWalletHasUpdatedAndFetchTransactions();
-		}
-
-		EventListeners.addEventListener(eventListener);
-
-		checkDialogs();
-		
 		registerNotifications();
 	}
 
 	@Override
 	protected void onPause() {
+		super.onPause();
+
 		WalletApplication application = (WalletApplication) getApplication();
 
 		application.diconnectSoon();
-
-		EventListeners.removeEventListener(eventListener);
-
-		super.onPause();
 	}
 
 	@Override

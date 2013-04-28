@@ -17,6 +17,9 @@ public class EventListeners {
 
 		public void onCoinsReceived(final MyTransaction tx, final long result) {
 		};
+		
+		public void onTransactionsChanged() {
+		};
 	}
 
 	private static final Set<WeakReference<EventListener>> listeners = new HashSet<WeakReference<EventListener>>();
@@ -46,6 +49,26 @@ public class EventListeners {
 						EventListener _listener = listener.get();
 						if (_listener != null) {
 							_listener.onCoinsReceived(tx, result);
+						}
+					}
+				}).start();
+			}
+		}
+	}
+	
+	public static void invokeOnTransactionsChanged() {
+
+		synchronized (listeners) {
+			for (final WeakReference<EventListener> listener : listeners) {
+				if (listener.get() == null)
+					return;
+
+				new Thread(new Runnable() {
+					@Override
+					public void run() {
+						EventListener _listener = listener.get();
+						if (_listener != null) {
+							_listener.onTransactionsChanged();
 						}
 					}
 				}).start();
