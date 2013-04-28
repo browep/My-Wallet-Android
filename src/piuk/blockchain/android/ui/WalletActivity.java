@@ -19,6 +19,8 @@ package piuk.blockchain.android.ui;
 
 import com.google.android.gcm.GCMRegistrar;
 
+import piuk.EventListeners;
+import piuk.MyTransaction;
 import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.R;
 import piuk.blockchain.android.WalletApplication;
@@ -34,20 +36,26 @@ import android.content.IntentFilter;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.support.v4.app.FragmentTransaction;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.Window;
 import android.webkit.WebView;
+import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.Toast;
 
 public final class WalletActivity extends AbstractWalletActivity {
 	private static final int REQUEST_CODE_SCAN = 0;
 	private static final int DIALOG_HELP = 0;
+	public static WalletActivity instance = null;
+			
 	private ImageButton infoButton = null;
 	AsyncTask<Void, Void, Void> mRegisterTask;
+	WalletTransactionsFragment transactionsFragment = null;
+	FrameLayout frameLayoutContainer = null;
 
 	private final BroadcastReceiver mHandleMessageReceiver =
 			new BroadcastReceiver() { 
@@ -89,11 +97,19 @@ public final class WalletActivity extends AbstractWalletActivity {
 	protected void onCreate(final Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
+		instance = this;
+		
 		ErrorReporter.getInstance().check(this);
 
 		setContentView(R.layout.wallet_content);
 
 		final ActionBarFragment actionBar = getActionBarFragment();
+
+		frameLayoutContainer = (FrameLayout)this.findViewById(R.id.frame_layout_container);
+
+		transactionsFragment = (WalletTransactionsFragment) getSupportFragmentManager()
+				.findFragmentById(R.id.wallet_transactions_fragment);
+
 
 		actionBar.getPrimaryTitleView().setOnClickListener(
 				new OnClickListener() {
@@ -202,6 +218,8 @@ public final class WalletActivity extends AbstractWalletActivity {
 
 	@Override
 	protected void onDestroy() {
+		instance = null;
+
 		if (mRegisterTask != null) {
 			mRegisterTask.cancel(true);
 		}
@@ -215,20 +233,7 @@ public final class WalletActivity extends AbstractWalletActivity {
 	protected void onResume() {
 		super.onResume();
 
-		WalletApplication application = (WalletApplication) getApplication();
-
-		application.connect();
-
 		registerNotifications();
-	}
-
-	@Override
-	protected void onPause() {
-		super.onPause();
-
-		WalletApplication application = (WalletApplication) getApplication();
-
-		application.diconnectSoon();
 	}
 
 	@Override

@@ -17,6 +17,10 @@
 
 package piuk.blockchain.android.ui;
 
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.List;
+
 import android.app.AlertDialog;
 import android.app.AlertDialog.Builder;
 import android.app.Dialog;
@@ -44,12 +48,24 @@ public final class PasswordFragment extends DialogFragment {
 	private static final String FRAGMENT_TAG = PasswordFragment.class
 			.getName();
 	private SuccessCallback callback = null;
+	private static List<WeakReference<PasswordFragment>> fragmentRefs = new ArrayList<WeakReference<PasswordFragment>>();
 
 	public static final int PasswordTypeMain = 1;
 	public static final int PasswordTypeSecond = 2;
 
 	private int passwordType;
 
+	public static void hide() {
+		for (WeakReference<PasswordFragment> fragmentRef : fragmentRefs) {
+			if (fragmentRef != null && fragmentRef.get() != null) {
+				try {
+					fragmentRef.get().dismissAllowingStateLoss();
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
 	public static DialogFragment show(final FragmentManager fm,
 			SuccessCallback callback, int passwordType) {
 
@@ -67,6 +83,9 @@ public final class PasswordFragment extends DialogFragment {
 
 		final PasswordFragment newFragment = instance();
 
+		if (passwordType == PasswordTypeMain) 
+			newFragment.setCancelable(false);
+
 		newFragment.show(ft, FRAGMENT_TAG);
 
 		newFragment.passwordType = passwordType;
@@ -78,6 +97,8 @@ public final class PasswordFragment extends DialogFragment {
 
 	private static PasswordFragment instance() {
 		final PasswordFragment fragment = new PasswordFragment();
+
+		fragmentRefs.add(new WeakReference<PasswordFragment>(fragment));
 
 		return fragment;
 	}
@@ -94,11 +115,11 @@ public final class PasswordFragment extends DialogFragment {
 
 		final Builder dialog = new AlertDialog.Builder(activity);
 
-		if (passwordType == PasswordTypeSecond)
+		if (passwordType == PasswordTypeSecond) 
 			dialog.setTitle(R.string.second_password_title);
 		else
 			dialog.setTitle(R.string.main_password_title);
-		
+
 		final View view = inflater.inflate(R.layout.password_dialog, null);
 
 		dialog.setView(view);
@@ -130,7 +151,7 @@ public final class PasswordFragment extends DialogFragment {
 						return;
 
 					MyRemoteWallet wallet = application.getRemoteWallet();
-					
+
 					if (passwordType == PasswordTypeSecond) {
 						String secondPassword = passwordField.getText().toString();
 
@@ -155,7 +176,7 @@ public final class PasswordFragment extends DialogFragment {
 						}
 					} else {
 						String password = passwordField.getText().toString();
-						
+
 						application.checkIfWalletHasUpdatedAndFetchTransactions(password, new SuccessCallback() {
 							@Override
 							public void onSuccess() {
@@ -171,7 +192,7 @@ public final class PasswordFragment extends DialogFragment {
 								callback.onFail();
 							}
 						});
-						
+
 					}
 				} catch (Exception e) {
 					e.printStackTrace();

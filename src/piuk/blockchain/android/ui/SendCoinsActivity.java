@@ -55,19 +55,6 @@ public final class SendCoinsActivity extends AbstractWalletActivity {
 	private static final int REQUEST_CODE_SCAN = 0;
 	public String scanPrivateKeyAddress = null;
 
-	@Override
-	protected void onResume() {
-		super.onResume();
-
-		application.connect();
-	}
-
-	@Override
-	protected void onPause() {
-		super.onPause();
-
-		application.diconnectSoon();
-	}
 
 	@Override
 	protected void onCreate(final Bundle savedInstanceState) {

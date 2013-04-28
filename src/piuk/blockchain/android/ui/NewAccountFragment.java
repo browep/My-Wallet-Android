@@ -227,8 +227,6 @@ public final class NewAccountFragment extends DialogFragment {
 
 							EventListeners.invokeWalletDidChange();
 							
-							application.hasDecryptionError = false;
-
 							handler.post(new Runnable() {
 								public void run() {
 									progressDialog.dismiss();

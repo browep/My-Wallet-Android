@@ -45,6 +45,11 @@ public class WebSocketClient {
         sTrustManagers = tm;
     }
 
+    
+    public boolean isConnected() {
+    	return !mSocket.isClosed();
+    }
+    
     public WebSocketClient(URI uri, Listener listener, List<BasicNameValuePair> extraHeaders) {
         mURI          = uri;
         mListener = listener;

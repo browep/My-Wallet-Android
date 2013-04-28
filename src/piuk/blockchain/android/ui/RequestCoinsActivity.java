@@ -56,19 +56,6 @@ public final class RequestCoinsActivity extends AbstractWalletActivity {
 				});
 	}
 
-	@Override
-	protected void onResume() {
-		super.onResume();
-
-		application.connect();
-	}
-
-	@Override
-	protected void onPause() {
-		super.onPause();
-
-		application.diconnectSoon();
-	}
 
 	@Override
 	protected Dialog onCreateDialog(final int id) {

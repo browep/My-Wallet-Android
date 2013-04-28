@@ -23,7 +23,6 @@
 			android:layout_height="wrap_content"
 			android:orientation="vertical" >
 
-
 			<fragment
 				android:id="@+id/wallet_balance_fragment"
 				android:name="piuk.blockchain.android.ui.WalletBalanceFragment"
@@ -33,6 +32,7 @@
 				android:layout_marginBottom="12dp" />
 
 			<FrameLayout
+			    android:id="@+id/frame_layout_container"
 				android:layout_width="fill_parent"
 				android:layout_height="fill_parent"
 				android:layout_weight="1"

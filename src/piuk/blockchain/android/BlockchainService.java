@@ -326,11 +326,7 @@ public class BlockchainService extends android.app.Service
 
 		try {
 			if (!webSocketHandler.isConnected()) {
-				System.out.println("connectToWebsocketIfNotConnected() really connect");
-
 				webSocketHandler.start();
-			} else {
-				System.out.println("connectToWebsocketIfNotConnected() already connected");
 			}
 		} catch (Exception e) {
 			e.printStackTrace();

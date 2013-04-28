@@ -10,6 +10,7 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.Toast;
+import piuk.EventListeners;
 import piuk.MyRemoteWallet;
 import piuk.MyWallet;
 import piuk.blockchain.android.R;
@@ -17,6 +18,8 @@ import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.WalletApplication;
 import piuk.blockchain.android.util.ActionBarFragment;
 
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.regex.Pattern;
 
 import org.spongycastle.util.encoders.Hex;
@@ -132,8 +135,8 @@ public class PairWalletActivity extends AbstractWalletActivity {
 										application.checkIfWalletHasUpdatedAndFetchTransactions(password, guid, sharedKey, new SuccessCallback(){
 
 											@Override
-											public void onSuccess() {
-												finish();													
+											public void onSuccess() {						
+												finish();
 											}
 
 											@Override

@@ -79,7 +79,7 @@ public class WebSocketHandler {
 
 	public void send(String message) {
 		try {
-			client.send(message);
+			if (client != null) client.send(message);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -103,15 +103,13 @@ public class WebSocketHandler {
 
 
 	public boolean isConnected() {
-		return this.isConnected;
+		return this.isConnected || (client != null && client.isConnected());
 	}
 
 	public void stop() {
-		System.out.println("start()");
+		System.out.println("stop()");
 
 		this.isRunning = false;
-
-		this.isConnected = false;
 
 		if (client != null) {
 			client.disconnect();
@@ -144,8 +142,6 @@ public class WebSocketHandler {
 				MyRemoteWallet wallet = application.getRemoteWallet();
 
 				try {
-					System.out.println("Websocket() onMessage() " + message);
-
 					Map<String, Object> top = (Map<String, Object>) JSONValue.parse(message);
 
 					if (top == null)
@@ -293,6 +289,8 @@ public class WebSocketHandler {
  
 		lastConnectAttempt = System.currentTimeMillis();
 		
+		System.out.println("WebSocket connect()");
+
 		client.connect();
 
 		EventListeners.addEventListener(walletEventListener);
@@ -300,7 +298,7 @@ public class WebSocketHandler {
  
 	public void start() {
 
-		if (lastConnectAttempt > System.currentTimeMillis()-10000)
+		if (lastConnectAttempt > System.currentTimeMillis()-30000)
 			return; 
 		
 		this.isRunning = true;

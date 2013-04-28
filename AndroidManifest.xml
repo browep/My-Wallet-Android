@@ -2,8 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="piuk.blockchain.android"
     android:installLocation="preferExternal"
-    android:versionCode="105"
-    android:versionName="3.33" >
+    android:versionCode="107"
+    android:versionName="3.35" >
 
     <uses-sdk
         android:minSdkVersion="8"
@@ -12,7 +12,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.BROADCAST_STICKY" />
     <uses-permission android:name="android.permission.VIBRATE" />
-
+	<uses-permission  android:name="android.permission.GET_TASKS"/>
+    
     <!-- GCM requires a Google account. -->
     <uses-permission android:name="android.permission.GET_ACCOUNTS" />
 
@@ -123,23 +124,28 @@
             android:name="piuk.blockchain.android.ui.RequestCoinsActivity"
             android:configChanges="orientation|keyboard|keyboardHidden"
             android:screenOrientation="behind"
+            android:launchMode="singleInstance"
             android:theme="@android:style/Theme.Light.NoTitleBar" />
         <activity
             android:name="piuk.blockchain.android.ui.ExchangeRatesActivity"
             android:configChanges="orientation|keyboard|keyboardHidden"
             android:screenOrientation="behind"
+            android:launchMode="singleInstance"
             android:theme="@android:style/Theme.Light.NoTitleBar" >
         </activity>
         <activity
             android:name="piuk.blockchain.android.ui.WalletAddressesActivity"
             android:configChanges="orientation|keyboard|keyboardHidden"
             android:screenOrientation="behind"
+            android:launchMode="singleInstance"
             android:theme="@android:style/Theme.Light.NoTitleBar" />
         <activity
             android:name="piuk.blockchain.android.ui.PreferencesActivity"
+            android:launchMode="singleInstance"
             android:screenOrientation="behind" />
         
-        <activity android:name="piuk.blockchain.android.ui.PinEntryActivity" 
+        <activity android:name="piuk.blockchain.android.ui.PinEntryActivity"
+            android:launchMode="singleInstance"
             android:screenOrientation="portrait"></activity>
         
         <provider

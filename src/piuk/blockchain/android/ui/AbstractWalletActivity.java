@@ -44,7 +44,6 @@ public abstract class AbstractWalletActivity extends FragmentActivity {
 	protected ActionBarFragment actionBar;
 	protected final AbstractWalletActivity self = this;
 	protected Handler handler = new Handler();
-	public static boolean isVisible = false;
 
 	private EventListeners.EventListener eventListener = new EventListeners.EventListener() {
 		@Override
@@ -72,7 +71,7 @@ public abstract class AbstractWalletActivity extends FragmentActivity {
 
 		application.checkWalletStatus(self);
 		
-		isVisible = true;
+		application.connect();
 	}
 
 	@Override
@@ -81,7 +80,7 @@ public abstract class AbstractWalletActivity extends FragmentActivity {
 
 		EventListeners.removeEventListener(eventListener);
 		
-		isVisible = false;
+		application.diconnectSoon();
 	}
 
 	@Override

@@ -9,25 +9,29 @@ Deep Linking: 	Disabled*/
 
 
 import java.io.DataOutputStream;
+import java.lang.ref.WeakReference;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.commons.io.IOUtils;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import org.spongycastle.util.encoders.Hex;
 
+import piuk.EventListeners;
+import piuk.MyTransaction;
 import piuk.MyWallet;
 import piuk.blockchain.android.R;
 import piuk.blockchain.android.WalletApplication;
 
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.content.Context;
 import android.content.SharedPreferences.Editor;
-import android.util.Log;
 import android.view.Menu;
 import android.view.View;
 import android.widget.Button;
@@ -35,6 +39,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 public class PinEntryActivity extends AbstractWalletActivity {
+	public static boolean active = false;
 	public static final int UNKNOWN = 1;
 	public static final int BEGIN_SETUP = 1;
 	public static final int CONFIRM_PIN_SETUP = 2;
@@ -42,6 +47,34 @@ public class PinEntryActivity extends AbstractWalletActivity {
 	public static final int FINISHING_SETUP = 3;
 	public static final int VALIDATING_PIN = 5;
 	public static final int PBKDF2Iterations = 2000;
+	private static List<WeakReference<PinEntryActivity>> fragmentRefs = new ArrayList<WeakReference<PinEntryActivity>>();
+
+	private EventListeners.EventListener eventListener = new EventListeners.EventListener() {
+		@Override
+		public void onWalletDidChange() {				
+			handler.post(new Runnable() {
+
+				@Override
+				public void run() {
+					System.out.println("Receive onWalletDidChange()");
+
+					begin();
+				}
+			});
+		}
+	};
+
+	public static void beginAll() {
+		for (WeakReference<PinEntryActivity> fragmentRef : fragmentRefs) {
+			if (fragmentRef != null && fragmentRef.get() != null) {
+				try {
+					((PinEntryActivity)fragmentRef.get()).begin();
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
 
 	private static final String WebROOT = "https://blockchain.info/pin-store";
 
@@ -118,8 +151,6 @@ public class PinEntryActivity extends AbstractWalletActivity {
 
 	public static JSONObject apiGetValue(String key, String pin) throws Exception {
 
-		System.out.println(pin);
-
 		StringBuilder args = new StringBuilder();
 
 		args.append("key=" + key);
@@ -172,6 +203,10 @@ public class PinEntryActivity extends AbstractWalletActivity {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+
+		fragmentRefs.add(new WeakReference<PinEntryActivity>(this));
+
+		EventListeners.addEventListener(eventListener);
 
 		appContext = this;
 		userEntered = "";
@@ -300,7 +335,7 @@ public class PinEntryActivity extends AbstractWalletActivity {
 										}
 									} catch (final Exception e) {
 										e.printStackTrace();
-										
+
 										handler.post(new Runnable() {
 											public void run() {
 												Toast.makeText(application,
@@ -396,7 +431,7 @@ public class PinEntryActivity extends AbstractWalletActivity {
 								}).start();
 							} else {
 								statusView.setText("PIN does not match");
-																
+
 								begin();
 							}
 						} else {
@@ -462,6 +497,11 @@ public class PinEntryActivity extends AbstractWalletActivity {
 	public void begin() {
 		clear();
 
+		PasswordFragment.hide();
+		WelcomeFragment.hide();
+
+		System.out.println("Enter Wallet begin()");
+
 		String pin_lookup_key = PreferenceManager.getDefaultSharedPreferences(this).getString("pin_kookup_key", null);
 		String encrypted_password = PreferenceManager.getDefaultSharedPreferences(this).getString("encrypted_password", null);
 
@@ -470,11 +510,19 @@ public class PinEntryActivity extends AbstractWalletActivity {
 
 			titleView.setText("Create New PIN");
 
-			if (application.getRemoteWallet() == null || application.hasDecryptionError) {
-				if (application.getGUID() != null && application.getSharedKey() != null) {
+			System.out.println("application.hasDecryptionError() " + application.decryptionErrors);
+			System.out.println("aapplication.getRemoteWallet()  " + application.getRemoteWallet());
+
+			if (application.getRemoteWallet() == null || application.decryptionErrors > 0) {
+				System.out.println("application.getGUID() " + application.getGUID());
+				System.out.println("application.getSharedKey() " + application.getSharedKey());
+
+				if (application.decryptionErrors <= 1 && application.getGUID() != null && application.getSharedKey() != null) {
+					System.out.println("PasswordFragment show()");
+
 					PasswordFragment.show(
 							getSupportFragmentManager(),
-							new SuccessCallback() { 
+							new SuccessCallback() {  
 								public void onSuccess() {
 									statusView.setText("Password Ok. Please create a PIN.");
 								}
@@ -483,17 +531,15 @@ public class PinEntryActivity extends AbstractWalletActivity {
 								}
 							}, PasswordFragment.PasswordTypeMain);
 				} else {
+					System.out.println("WelcomeFragment show()"); 
+
 					WelcomeFragment.show(getSupportFragmentManager(), (WalletApplication)getApplication());
 				}
-			} else {
-				WelcomeFragment.hide();
-			}
+			} 
 		} else {
 			titleView.setText("Enter PIN");	
 
 			stage = BEGIN_CHECK_PIN;
-			
-			WelcomeFragment.hide();
 		}
 	}
 
@@ -503,6 +549,27 @@ public class PinEntryActivity extends AbstractWalletActivity {
 
 		begin();
 	}
+
+	@Override
+	protected void onDestroy() {
+		super.onDestroy();
+
+		EventListeners.removeEventListener(eventListener);
+	}
+
+	@Override
+	public void onStart() {
+		super.onStart();
+		active = true;
+		begin();
+	} 
+
+	@Override
+	public void onStop() {
+		super.onStop();
+		active = false;
+	}
+
 
 	public void clear() {
 		statusView.setText("");

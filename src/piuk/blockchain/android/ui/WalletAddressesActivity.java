@@ -74,19 +74,6 @@ public final class WalletAddressesActivity extends AbstractWalletActivity {
 
 	private final Handler handler = new Handler();
 
-	@Override
-	protected void onResume() {
-		super.onResume();
-
-		application.connect();
-	}
-
-	@Override
-	protected void onPause() {
-		super.onPause();
-
-		application.diconnectSoon();
-	}
 
 	@Override
 	protected void onCreate(final Bundle savedInstanceState) {

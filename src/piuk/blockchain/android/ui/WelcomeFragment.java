@@ -82,7 +82,7 @@ public final class WelcomeFragment extends DialogFragment {
 			if (application.getRemoteWallet() == null) {
 				newFragment.setCancelable(false);
 			} else {
-				newFragment.setCancelable(!application.hasDecryptionError);
+				newFragment.setCancelable(application.decryptionErrors == 0);
 			}
 
 		} catch (Exception e) {
@@ -126,10 +126,7 @@ public final class WelcomeFragment extends DialogFragment {
 
 			dialog.setCancelable(false);
 		} else {
-			System.out.println("application.hasDecryptionError "
-					+ application.hasDecryptionError);
-
-			dialog.setCancelable(!application.hasDecryptionError);
+			dialog.setCancelable(application.decryptionErrors == 0);
 
 			welcomeText.setText(R.string.welcome_text_has_account);
 		}
@@ -141,8 +138,7 @@ public final class WelcomeFragment extends DialogFragment {
 
 					System.out.println("Start activity");
 
-					startActivity(new Intent(getActivity(),
-							PairWalletActivity.class));
+					startActivity(new Intent(getActivity(), PairWalletActivity.class));
 				} catch (Exception e) {
 					e.printStackTrace();
 				}

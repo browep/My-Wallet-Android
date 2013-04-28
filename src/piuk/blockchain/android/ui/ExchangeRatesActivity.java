@@ -40,18 +40,4 @@ public final class ExchangeRatesActivity extends AbstractWalletActivity {
 			}
 		});
 	}
-
-	@Override
-	protected void onResume() {
-		super.onResume();
-
-		application.connect();
-	}
-
-	@Override
-	protected void onPause() {
-		super.onPause();
-
-		application.diconnectSoon();
-	}
 }

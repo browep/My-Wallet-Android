@@ -62,8 +62,8 @@ public class WalletApplication extends Application {
 
 	private final Handler handler = new Handler();
 	private Timer timer;
-	public boolean hasDecryptionError = false;
-	
+	public int decryptionErrors = 0;
+
 
 	private final ServiceConnection serviceConnection = new ServiceConnection() {
 		private BlockchainService service;
@@ -101,12 +101,14 @@ public class WalletApplication extends Application {
 		edit.remove("sharedKey");
 
 		this.blockchainWallet = null;
-		this.hasDecryptionError = false;
-		
+		this.decryptionErrors = 0;
+
 		edit.commit();
 	}
-	
+
 	public void connect() {
+		System.out.println("connect()");
+
 		if (timer != null) {
 			try {
 				timer.cancel();
@@ -123,6 +125,9 @@ public class WalletApplication extends Application {
 	}
 
 	public void diconnectSoon() {
+
+		System.out.println("diconnectSoon()");
+
 		try {
 			if (timer == null) {
 				timer = new Timer();
@@ -134,18 +139,20 @@ public class WalletApplication extends Application {
 						handler.post(new Runnable() {
 							public void run() {
 								try {
+									System.out.println("diconnectSoon() set blockchainWallet = null");
+
 									blockchainWallet = null;
-									
-									hasDecryptionError = false;
-									
+
+									decryptionErrors = 0;
+
 								} catch (Exception e) {
 									e.printStackTrace();
 								}
 							}
 						});
 					}
-				}, 30000);
-				
+				}, 20000);
+
 				timer.schedule(new TimerTask() {
 
 					@Override
@@ -169,22 +176,26 @@ public class WalletApplication extends Application {
 
 	public void generateNewWallet() throws Exception {
 		this.blockchainWallet = new MyRemoteWallet();
+
+		this.decryptionErrors = 0;
 	}
 
 	public void checkWalletStatus(final AbstractWalletActivity activity) {
 
-		if (activity instanceof PinEntryActivity)
+		if (activity == null || PinEntryActivity.active)
 			return;
-		
+
 		System.out.println("checkWalletStatus()");
+
+		boolean passwordSaved = PreferenceManager.getDefaultSharedPreferences(this).contains("encrypted_password");
 		
-		if (blockchainWallet != null && !hasDecryptionError) {
+		if (blockchainWallet != null && decryptionErrors == 0 && passwordSaved) {
 			if (!blockchainWallet.isUptoDate(Constants.MultiAddrTimeThreshold)) {
 				checkIfWalletHasUpdatedAndFetchTransactions(blockchainWallet.getTemporyPassword());
 			} else {
 				System.out.println("upToDate()  " + (System.currentTimeMillis() - blockchainWallet.lastMultiAddress) + " ms");
 			}
-		} else if (blockchainWallet == null || hasDecryptionError) {
+		} else if (blockchainWallet == null || decryptionErrors > 0 || !passwordSaved) {
 
 			//Remove old password 
 			String old_password = PreferenceManager.getDefaultSharedPreferences(this).getString("password", null);
@@ -194,13 +205,15 @@ public class WalletApplication extends Application {
 
 				PreferenceManager.getDefaultSharedPreferences(this).edit().remove("password").commit();
 			}
- 
+
 			handler.post(new Runnable() {
 				@Override
 				public void run() {	
-					Intent intent = new Intent(activity, PinEntryActivity.class);
+					if (!PinEntryActivity.active) {
+						Intent intent = new Intent(activity, PinEntryActivity.class);
 
-					activity.startActivity(intent);
+						activity.startActivity(intent);
+					}
 				}
 			});
 		}	
@@ -408,22 +421,21 @@ public class WalletApplication extends Application {
 			if (callbackFinal != null) callbackFinal.onFail();
 			return;
 		}
-	
+
 		checkIfWalletHasUpdatedAndFetchTransactions(password, getGUID(), getSharedKey(), callbackFinal);
 	}
-	
+
 	public synchronized void checkIfWalletHasUpdatedAndFetchTransactions(final String password, final String guid, final String sharedKey, final SuccessCallback callbackFinal) {
-	
+
 		new Thread(new Runnable() {
 			public void run() {
 				System.out.println("checkIfWalletHasUpdatedAndFetchTransactions()");
-				
+
 				String payload = null;
 				SuccessCallback callback = callbackFinal;
 
 				try {
 					if (blockchainWallet == null) {
-
 						if (readLocalWallet(password)) {
 							System.out.println("Try success");
 
@@ -446,21 +458,22 @@ public class WalletApplication extends Application {
 					}
 
 				} catch (NotModfiedException e) {
-					if (!blockchainWallet.isUptoDate(Constants.MultiAddrTimeThreshold)) {
-						doMultiAddr();
-					} else {
-						System.out.println("Skipping doMultiAddr");
-					}
+					if (blockchainWallet != null) {
+						if (!blockchainWallet.isUptoDate(Constants.MultiAddrTimeThreshold)) {
+							doMultiAddr();
+						} else {
+							System.out.println("Skipping doMultiAddr");
+						}
 
-					if (callback != null)  {
-						handler.post(new Runnable() {
-							public void run() {
-								callbackFinal.onSuccess();
-							};
-						});
-						callback = null;
+						if (callback != null)  {
+							handler.post(new Runnable() {
+								public void run() {
+									callbackFinal.onSuccess();
+								};
+							});
+							callback = null;
+						}
 					}
-					return;
 				} catch (final Exception e) {
 					e.printStackTrace();
 
@@ -490,13 +503,16 @@ public class WalletApplication extends Application {
 				try {
 					if (blockchainWallet == null) {
 						blockchainWallet = new MyRemoteWallet(payload, password);
+
+						System.out.println("Set Wallet " + blockchainWallet);
+
 					} else {						
 						blockchainWallet.setTemporyPassword(password);
 
 						blockchainWallet.setPayload(payload);
 					}
 
-					hasDecryptionError = false;
+					decryptionErrors = 0;
 
 					if (callback != null)  {
 						handler.post(new Runnable() {
@@ -510,8 +526,11 @@ public class WalletApplication extends Application {
 					EventListeners.invokeWalletDidChange();
 
 				} catch (Exception e) {
+					e.printStackTrace();
 
-					hasDecryptionError = true;
+					decryptionErrors++;
+
+					System.out.println("checkIfWalletHasUpdatedAndFetchTransactions() Set blockchainWallet null");
 
 					blockchainWallet = null;
 
@@ -526,8 +545,6 @@ public class WalletApplication extends Application {
 
 					EventListeners.invokeWalletDidChange();
 
-					e.printStackTrace();
-
 					writeException(e);
 
 					handler.post(new Runnable() {
@@ -541,7 +558,7 @@ public class WalletApplication extends Application {
 					return;
 				}
 
-				if (hasDecryptionError)
+				if (decryptionErrors > 0)
 					return;
 
 				// Write the wallet to the cache file
@@ -759,6 +776,10 @@ public class WalletApplication extends Application {
 			if (wallet.getGUID().equals(getGUID())) {
 				this.blockchainWallet = wallet;
 
+				this.decryptionErrors = 0;
+
+				EventListeners.invokeWalletDidChange();
+
 				return true;
 			} else {
 				return false;
@@ -767,14 +788,6 @@ public class WalletApplication extends Application {
 			writeException(e);
 
 			e.printStackTrace();
-
-			handler.post(new Runnable() {
-				public void run() {
-					Toast.makeText(WalletApplication.this,
-							R.string.toast_wallet_decrypt_failed,
-							Toast.LENGTH_LONG).show();
-				}
-			});
 		}
 
 		return false;
