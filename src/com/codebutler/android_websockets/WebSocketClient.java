@@ -47,7 +47,7 @@ public class WebSocketClient {
 
     
     public boolean isConnected() {
-    	return !mSocket.isClosed();
+    	return mSocket != null && !mSocket.isClosed();
     }
     
     public WebSocketClient(URI uri, Listener listener, List<BasicNameValuePair> extraHeaders) {

@@ -47,12 +47,17 @@ import piuk.blockchain.android.WalletApplication;
  * @author Andreas Schildbach
  */
 public final class ExchangeRatesFragment extends ListFragment implements
-		LoaderManager.LoaderCallbacks<Cursor> {
+LoaderManager.LoaderCallbacks<Cursor> {
 	private WalletApplication application;
 	private SharedPreferences prefs;
 	private SimpleCursorAdapter adapter;
 
 	private final EventListeners.EventListener walletEventListener = new EventListeners.EventListener() {
+		@Override
+		public String getDescription() {
+			return "Exchange Rates Listener";
+		}
+		
 		@Override
 		public void onWalletDidChange() {
 
@@ -61,11 +66,7 @@ public final class ExchangeRatesFragment extends ListFragment implements
 					return;
 				}
 
-				getActivity().runOnUiThread(new Runnable() {
-					public void run() {
-						updateView();
-					}
-				});
+				updateView();
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -91,10 +92,10 @@ public final class ExchangeRatesFragment extends ListFragment implements
 
 		adapter = new SimpleCursorAdapter(getActivity(),
 				R.layout.exchange_rate_row, null, new String[] {
-						ExchangeRatesProvider.KEY_CURRENCY_CODE,
-						ExchangeRatesProvider.KEY_EXCHANGE_RATE }, new int[] {
-						R.id.exchange_rate_currency_code,
-						R.id.exchange_rate_value }, 0);
+			ExchangeRatesProvider.KEY_CURRENCY_CODE,
+			ExchangeRatesProvider.KEY_EXCHANGE_RATE }, new int[] {
+			R.id.exchange_rate_currency_code,
+			R.id.exchange_rate_value }, 0);
 		adapter.setViewBinder(new ViewBinder() {
 			public boolean setViewValue(final View view, final Cursor cursor,
 					final int columnIndex) {
@@ -103,11 +104,11 @@ public final class ExchangeRatesFragment extends ListFragment implements
 					return false;
 
 				BigInteger balance = (application.getRemoteWallet() == null) ? BigInteger.ZERO : application.getRemoteWallet().final_balance;
-				
+
 				final BigInteger value = new BigDecimal(balance).multiply(
 						new BigDecimal(cursor.getDouble(columnIndex)))
 						.toBigInteger();
-				
+
 				final CurrencyAmountView valueView = (CurrencyAmountView) view;
 				valueView.setCurrencyCode(null);
 				valueView.setAmount(value);
@@ -143,8 +144,8 @@ public final class ExchangeRatesFragment extends ListFragment implements
 						.getColumnIndexOrThrow(ExchangeRatesProvider.KEY_CURRENCY_CODE));
 
 		prefs.edit()
-				.putString(Constants.PREFS_KEY_EXCHANGE_CURRENCY, currencyCode)
-				.commit();
+		.putString(Constants.PREFS_KEY_EXCHANGE_CURRENCY, currencyCode)
+		.commit();
 
 		final WalletBalanceFragment walletBalanceFragment = (WalletBalanceFragment) getFragmentManager()
 				.findFragmentById(R.id.wallet_balance_fragment);

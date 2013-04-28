@@ -51,16 +51,15 @@ public class PinEntryActivity extends AbstractWalletActivity {
 
 	private EventListeners.EventListener eventListener = new EventListeners.EventListener() {
 		@Override
-		public void onWalletDidChange() {				
-			handler.post(new Runnable() {
+		public String getDescription() {
+			return "Pinentry Listener";
+		}
+		
+		@Override
+		public void onWalletDidChange() {		
+			System.out.println("Receive onWalletDidChange()");
 
-				@Override
-				public void run() {
-					System.out.println("Receive onWalletDidChange()");
-
-					begin();
-				}
-			});
+			begin();
 		}
 	};
 

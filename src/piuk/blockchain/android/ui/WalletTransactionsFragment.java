@@ -23,6 +23,7 @@ import java.util.Date;
 import java.util.List;
 
 import com.google.bitcoin.core.Address;
+import com.google.bitcoin.core.NetworkParameters;
 import com.google.bitcoin.core.ScriptException;
 import com.google.bitcoin.core.TransactionConfidence;
 import com.google.bitcoin.core.TransactionConfidence.ConfidenceType;
@@ -33,16 +34,13 @@ import piuk.blockchain.android.AddressBookProvider;
 import piuk.blockchain.android.R;
 import piuk.blockchain.android.WalletApplication;
 import android.app.Activity;
-import android.database.ContentObserver;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
-import android.support.v4.app.Fragment;
 import android.support.v4.app.ListFragment;
 import android.text.format.DateUtils;
 import android.view.ContextMenu;
-import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
@@ -63,19 +61,22 @@ public final class WalletTransactionsFragment extends ListFragment {
 	private ArrayAdapter<MyTransaction> adapter;
 	private final Handler handler = new Handler();
 
-	private EventListeners.EventListener eventListener = new EventListeners.EventListener() {
+	private final EventListeners.EventListener eventListener = new EventListeners.EventListener() {
+		@Override
+		public String getDescription() {
+			return "Wallet Transactions Listener";
+		}
+		
 		@Override
 		public void onCoinsSent(final MyTransaction tx, final long result) {
-			handler.post(new Runnable() {
-				@Override
-				public void run() {		
-					System.out.println("Receive onCoinsSent()");
 
-					setAdapterContent();
+			System.out.println("Receive onCoinsSent()");
 
-					adapter.notifyDataSetChanged();
-				}
-			});			
+			setAdapterContent();
+
+			synchronized(adapter) {
+				adapter.notifyDataSetChanged();
+			}	
 		};
 
 		@Override
@@ -87,7 +88,9 @@ public final class WalletTransactionsFragment extends ListFragment {
 
 					setAdapterContent();
 
-					adapter.notifyDataSetChanged();
+					synchronized(adapter) {
+						adapter.notifyDataSetChanged();
+					}
 				}
 			});			
 		};
@@ -102,7 +105,9 @@ public final class WalletTransactionsFragment extends ListFragment {
 
 						setAdapterContent();
 
-						adapter.notifyDataSetChanged();
+						synchronized(adapter) {
+							adapter.notifyDataSetChanged();
+						}
 					} catch (Exception e) {
 						e.printStackTrace();
 					}
@@ -110,7 +115,7 @@ public final class WalletTransactionsFragment extends ListFragment {
 			});
 		};
 
-		
+
 		@Override
 		public void onWalletDidChange() {				
 			handler.post(new Runnable() {
@@ -121,7 +126,9 @@ public final class WalletTransactionsFragment extends ListFragment {
 
 					setAdapterContent();
 
-					adapter.notifyDataSetChanged();
+					synchronized(adapter) {
+						adapter.notifyDataSetChanged();
+					}
 				}
 			});
 		}
@@ -154,88 +161,101 @@ public final class WalletTransactionsFragment extends ListFragment {
 			public View getView(final int position, View row,
 					final ViewGroup parent) {
 				try {
-					if (row == null)
-						row = getLayoutInflater(null).inflate(
-								R.layout.transaction_row, null);
+					synchronized(adapter) {
 
-					final MyTransaction tx = getItem(position);
-					final TransactionConfidence confidence = tx.getConfidence();
-					final ConfidenceType confidenceType = confidence
-							.getConfidenceType();
+						if (row == null)
+							row = getLayoutInflater(null).inflate(
+									R.layout.transaction_row, null);
 
-					try {
-						final BigInteger value = tx.getResult();
-						final boolean sent = value.signum() < 0;
+						final MyTransaction tx = getItem(position);
 
-						final int textColor;
-						if (confidenceType == ConfidenceType.NOT_SEEN_IN_CHAIN) {
-							textColor = colorInsignificant;
-						} else if (confidenceType == ConfidenceType.BUILDING) {
+						if (tx.getHash() == null) {
+							final TextView rowLabel = (TextView) row
+									.findViewById(R.id.transaction_row_address);
+							rowLabel.setTextColor(Color.BLACK);
+							rowLabel.setText("No transactions");
+							rowLabel.setTypeface(Typeface.DEFAULT);
 
-							textColor = colorSignificant;
-						} else if (confidenceType == ConfidenceType.NOT_IN_BEST_CHAIN) {
-							textColor = colorSignificant;
-						} else if (confidenceType == ConfidenceType.DEAD) {
-							textColor = Color.RED;
+							return row;
 						} else {
-							textColor = colorInsignificant;
+							final TransactionConfidence confidence = tx.getConfidence();
+							final ConfidenceType confidenceType = confidence
+									.getConfidenceType();
+
+							try {
+								final BigInteger value = tx.getResult();
+								final boolean sent = value.signum() < 0;
+
+								final int textColor;
+								if (confidenceType == ConfidenceType.NOT_SEEN_IN_CHAIN) {
+									textColor = colorInsignificant;
+								} else if (confidenceType == ConfidenceType.BUILDING) {
+
+									textColor = colorSignificant;
+								} else if (confidenceType == ConfidenceType.NOT_IN_BEST_CHAIN) {
+									textColor = colorSignificant;
+								} else if (confidenceType == ConfidenceType.DEAD) {
+									textColor = Color.RED;
+								} else {
+									textColor = colorInsignificant;
+								}
+
+								final String address;
+								if (sent)
+									if (tx.getOutputs().size() == 0)
+										address = "Unknown";
+									else
+										address = tx.getOutputs().get(0)
+										.getScriptPubKey().getToAddress()
+										.toString();
+								else if (tx.getInputs().size() == 0)
+									address = "Generation";
+								else
+									address = tx.getInputs().get(0).getFromAddress()
+									.toString();
+
+								String label = null;
+								if (tx instanceof MyTransaction
+										&& ((MyTransaction) tx).getTag() != null)
+									label = ((MyTransaction) tx).getTag();
+								else
+									label = AddressBookProvider.resolveLabel(
+											activity.getContentResolver(), address);
+
+								final TextView rowTime = (TextView) row
+										.findViewById(R.id.transaction_row_time);
+								final Date time = tx.getUpdateTime();
+								rowTime.setText(time != null ? (DateUtils.isToday(time
+										.getTime()) ? timeFormat.format(time)
+												: dateFormat.format(time)) : null);
+								rowTime.setTextColor(textColor);
+
+								final TextView rowLabel = (TextView) row
+										.findViewById(R.id.transaction_row_address);
+								rowLabel.setTextColor(textColor);
+								rowLabel.setText(label != null ? label : address);
+								rowLabel.setTypeface(label != null ? Typeface.DEFAULT
+										: Typeface.MONOSPACE);
+
+								final CurrencyAmountView rowValue = (CurrencyAmountView) row
+										.findViewById(R.id.transaction_row_value);
+								rowValue.setCurrencyCode(null);
+								rowValue.setAmountSigned(true);
+								rowValue.setTextColor(textColor);
+								rowValue.setAmount(value);
+
+								if (sent) {
+									rowValue.setTextColor(colorSent);
+								} else {
+									rowValue.setTextColor(colorReceived);
+								}
+
+								return row;
+							} catch (final ScriptException x) {
+								throw new RuntimeException(x);
+							}
 						}
-
-						final String address;
-						if (sent)
-							if (tx.getOutputs().size() == 0)
-								address = "Unknown";
-							else
-								address = tx.getOutputs().get(0)
-								.getScriptPubKey().getToAddress()
-								.toString();
-						else if (tx.getInputs().size() == 0)
-							address = "Generation";
-						else
-							address = tx.getInputs().get(0).getFromAddress()
-							.toString();
-
-						String label = null;
-						if (tx instanceof MyTransaction
-								&& ((MyTransaction) tx).getTag() != null)
-							label = ((MyTransaction) tx).getTag();
-						else
-							label = AddressBookProvider.resolveLabel(
-									activity.getContentResolver(), address);
-
-						final TextView rowTime = (TextView) row
-								.findViewById(R.id.transaction_row_time);
-						final Date time = tx.getUpdateTime();
-						rowTime.setText(time != null ? (DateUtils.isToday(time
-								.getTime()) ? timeFormat.format(time)
-										: dateFormat.format(time)) : null);
-						rowTime.setTextColor(textColor);
-
-						final TextView rowLabel = (TextView) row
-								.findViewById(R.id.transaction_row_address);
-						rowLabel.setTextColor(textColor);
-						rowLabel.setText(label != null ? label : address);
-						rowLabel.setTypeface(label != null ? Typeface.DEFAULT
-								: Typeface.MONOSPACE);
-
-						final CurrencyAmountView rowValue = (CurrencyAmountView) row
-								.findViewById(R.id.transaction_row_value);
-						rowValue.setCurrencyCode(null);
-						rowValue.setAmountSigned(true);
-						rowValue.setTextColor(textColor);
-						rowValue.setAmount(value);
-
-						if (sent) {
-							rowValue.setTextColor(colorSent);
-						} else {
-							rowValue.setTextColor(colorReceived);
-						}
-
-						return row;
-					} catch (final ScriptException x) {
-						throw new RuntimeException(x);
 					}
-
 				} catch (Exception e) {
 					return null;
 				}
@@ -247,27 +267,33 @@ public final class WalletTransactionsFragment extends ListFragment {
 		setListAdapter(adapter);
 	}
 
-	public synchronized void setAdapterContent() {
-		System.out.println("setAdapterContent()");
+	public  void setAdapterContent() {
+		synchronized(adapter) {
 
-		if (application.getRemoteWallet() == null) {
-			System.out.print("getRemoteWallet() null");
-			return;
+			if (application.getRemoteWallet() == null) {
+				return;
+			}
+
+			adapter.clear(); 
+
+			List<MyTransaction> transactions = application.getRemoteWallet().getMyTransactions();
+
+			synchronized(transactions) {
+				if (transactions.size() > 0) {
+					for (MyTransaction transaction : transactions) {
+						adapter.add(transaction);
+					}  
+				} else {
+					adapter.add(new MyTransaction(NetworkParameters.prodNet(), 0, null));
+				}
+			}
 		}
-
-		adapter.clear();
-
-		List<MyTransaction> transactions = application.getRemoteWallet().getMyTransactions();
-
-		System.out.println("transactions.size() " + transactions.size());
-
-		for (MyTransaction transaction : transactions) {
-			adapter.add(transaction);
-		}  
 	}
 
 	public void onCreate(final Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+
+		System.out.println("Add eventListener");
 
 		EventListeners.addEventListener(eventListener);
 
@@ -276,6 +302,10 @@ public final class WalletTransactionsFragment extends ListFragment {
 
 	@Override
 	public void onActivityCreated(final Bundle savedInstanceState) {
+		EventListeners.addEventListener(eventListener);
+
+		System.out.println("Add eventListener");
+
 		super.onActivityCreated(savedInstanceState);
 	}
 
@@ -284,12 +314,17 @@ public final class WalletTransactionsFragment extends ListFragment {
 			final Bundle savedInstanceState) {
 		super.onViewCreated(view, savedInstanceState);
 
+		System.out.println("Add eventListener");
+
+		EventListeners.addEventListener(eventListener);
+
 		registerForContextMenu(getListView());
 	}
 
 	@Override
 	public void onDestroy() {		
 		super.onDestroy();
+		System.out.println("Remove eventListener");
 
 		EventListeners.removeEventListener(eventListener);
 	}
@@ -297,8 +332,12 @@ public final class WalletTransactionsFragment extends ListFragment {
 	@Override
 	public void onListItemClick(final ListView l, final View v,
 			final int position, final long id) {
-		final MyTransaction tx = adapter.getItem(position);
-		editAddress(tx);
+		synchronized(adapter) {
+			final MyTransaction tx = adapter.getItem(position);
+
+			if (tx.getHash() != null)
+				editAddress(tx);
+		}
 	}
 
 	// workaround http://code.google.com/p/android/issues/detail?id=20065

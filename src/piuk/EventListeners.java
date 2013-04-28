@@ -1,14 +1,55 @@
 package piuk;
 
 import java.lang.ref.WeakReference;
-import java.math.BigInteger;
 import java.util.HashSet;
 import java.util.Set;
 
-import com.google.bitcoin.core.Transaction;
+import android.os.Handler;
 
 public class EventListeners {
-	public static class EventListener {
+	
+	public static class ListenerWeakContainer extends WeakReference<EventListener> {
+		public ListenerWeakContainer(EventListener r) {
+			super(r);
+		}
+
+		@Override
+		public int hashCode() {
+			EventListener listener = get();
+			
+			if (listener == null)
+				return 0;
+			
+			return listener.hashCode();
+		}
+		
+		@Override
+		public boolean equals(Object object) {
+			EventListener listener = get();
+			
+			if (listener == null)
+				return false;
+			
+			return listener.equals(((ListenerWeakContainer)object).get());
+		}
+	}
+	
+	final static Handler handler = new Handler();
+
+	public static abstract class EventListener {
+		
+		public abstract String getDescription();
+
+		@Override
+		public int hashCode() {
+			return getDescription().hashCode();
+		}
+		
+		@Override
+		public boolean equals(Object object) {
+			return getDescription().equals(((EventListener)object).getDescription());
+		}
+		
 		public void onWalletDidChange() {
 		};
 
@@ -22,98 +63,117 @@ public class EventListeners {
 		};
 	}
 
-	private static final Set<WeakReference<EventListener>> listeners = new HashSet<WeakReference<EventListener>>();
+	private static final Set<ListenerWeakContainer> listeners = new HashSet<ListenerWeakContainer>();
 
 	public static boolean addEventListener(EventListener listener) {
 		synchronized (listeners) {
-			return listeners.add(new WeakReference<EventListener>(listener));
+			if (listeners.add(new ListenerWeakContainer(listener))) {
+				return true;
+			} else {
+				return false;
+			}
 		}
 	} 
 
 	public static boolean removeEventListener(EventListener listener) {
 		synchronized (listeners) {
-			return listeners.remove(listener);
+			return listeners.remove(new ListenerWeakContainer(listener));
 		}
 	}
 
 	public static void invokeOnCoinsReceived(final MyTransaction tx, final long result) {
+		new Thread(new Runnable() {
+			@Override
+			public void run() {
+				synchronized (listeners) {
+					for (final ListenerWeakContainer listener : listeners) {
+						if (listener.get() == null)
+							return;
 
-		synchronized (listeners) {
-			for (final WeakReference<EventListener> listener : listeners) {
-				if (listener.get() == null)
-					return;
-
-				new Thread(new Runnable() {
-					@Override
-					public void run() {
-						EventListener _listener = listener.get();
-						if (_listener != null) {
-							_listener.onCoinsReceived(tx, result);
-						}
+						handler.post(new Runnable() {
+							@Override
+							public void run() {
+								EventListener _listener = listener.get();
+								if (_listener != null) {
+									_listener.onCoinsReceived(tx, result);
+								}
+							}
+						});
 					}
-				}).start();
+				}	
 			}
-		}
+		}).start();
 	}
 	
 	public static void invokeOnTransactionsChanged() {
+		new Thread(new Runnable() {
+			@Override
+			public void run() {
+				synchronized (listeners) {
+					for (final ListenerWeakContainer listener : listeners) {
+						if (listener.get() == null)
+							return;
 
-		synchronized (listeners) {
-			for (final WeakReference<EventListener> listener : listeners) {
-				if (listener.get() == null)
-					return;
-
-				new Thread(new Runnable() {
-					@Override
-					public void run() {
-						EventListener _listener = listener.get();
-						if (_listener != null) {
-							_listener.onTransactionsChanged();
-						}
+						handler.post(new Runnable() {
+							@Override
+							public void run() {
+								EventListener _listener = listener.get();
+								if (_listener != null) {
+									_listener.onTransactionsChanged();
+								}
+							}
+						});
 					}
-				}).start();
+				}	
 			}
-		}
+		}).start();
 	}
 
 	public static void invokeOnCoinsSent(final MyTransaction tx, final long result) {
+		new Thread(new Runnable() {
+			@Override
+			public void run() {
+				synchronized (listeners) {
+					for (final ListenerWeakContainer listener : listeners) {
+						if (listener.get() == null)
+							return;
 
-		synchronized (listeners) {
-			for (final WeakReference<EventListener> listener : listeners) {
-				if (listener.get() == null)
-					return;
-
-				new Thread(new Runnable() {
-					@Override
-					public void run() {
-						EventListener _listener = listener.get();
-						if (_listener != null) {
-							_listener.onCoinsSent(tx, result);
-						}
+						handler.post(new Runnable() {
+							@Override
+							public void run() {
+								EventListener _listener = listener.get();
+								if (_listener != null) {
+									_listener.onCoinsSent(tx, result);
+								}
+							}
+						});
 					}
-				}).start();
+				}	
 			}
-		}
+		}).start();
 	}
 
 	public static void invokeWalletDidChange() {
+		new Thread(new Runnable() {
+			@Override
+			public void run() {
+				synchronized (listeners) {
+					for (final ListenerWeakContainer listener : listeners) {
+						if (listener.get() == null)
+							return;
 
-		synchronized (listeners) {
-			for (final WeakReference<EventListener> listener : listeners) {
-
-				if (listener.get() == null)
-					return;
-
-				new Thread(new Runnable() {
-					@Override
-					public void run() {
-						EventListener _listener = listener.get();
-						if (_listener != null) {
-							_listener.onWalletDidChange();
-						}
+						handler.post(new Runnable() {
+							@Override
+							public void run() {
+								EventListener _listener = listener.get();
+								if (_listener != null) {
+									_listener.onWalletDidChange();
+								}
+							}
+						});
 					}
-				}).start();
+				}	
 			}
-		}
+		}).start();
 	}
 }

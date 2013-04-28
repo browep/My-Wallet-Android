@@ -59,6 +59,11 @@ public class WalletAddressesFragment extends ListFragment
 	private int tag_filter = 0;
 
 	private EventListeners.EventListener eventListener = new EventListeners.EventListener() {
+		@Override
+		public String getDescription() {
+			return "Wallet Addresses Listener";
+		}
+		
 	    @Override
 		public void onWalletDidChange() {
 

@@ -41,9 +41,7 @@ import android.widget.TextView;
 
 import com.google.bitcoin.core.Address;
 import com.google.bitcoin.core.ScriptException;
-import com.google.bitcoin.core.Transaction;
 import com.google.bitcoin.core.TransactionConfidence.ConfidenceType;
-import com.google.bitcoin.core.Wallet;
 
 import piuk.MyRemoteWallet;
 import piuk.MyTransaction;
@@ -86,6 +84,11 @@ public final class TransactionFragment extends Fragment
 
 	public void update(final MyTransaction tx)
 	{
+
+		final ContentResolver contentResolver = activity.getContentResolver();
+
+		final View view = getView();
+		
 		WalletApplication application = (WalletApplication) activity.getApplication();
 		
 		if (application.getRemoteWallet() == null)
@@ -107,7 +110,7 @@ public final class TransactionFragment extends Fragment
 			x.printStackTrace();
 		}
 
-		Address to = null;
+		Address to = null; 
 		boolean toMine = false;
 		try
 		{
@@ -118,10 +121,6 @@ public final class TransactionFragment extends Fragment
 		{
 			x.printStackTrace();
 		}
-
-		final ContentResolver contentResolver = activity.getContentResolver();
-
-		final View view = getView();
 
 		final Date time = tx.getUpdateTime();
 		view.findViewById(R.id.transaction_fragment_time_row).setVisibility(time != null ? View.VISIBLE : View.GONE);
@@ -199,7 +198,6 @@ public final class TransactionFragment extends Fragment
 				label = ((MyTransaction)tx).getTag();
 			else
 				label = AddressBookProvider.resolveLabel(contentResolver, from.toString());
-
 
 			final StringBuilder builder = new StringBuilder();
 

@@ -57,6 +57,11 @@ public class WebSocketHandler {
 
 	final private EventListeners.EventListener walletEventListener = new EventListeners.EventListener() {
 		@Override
+		public String getDescription() {
+			return "Websocket Listener";
+		}
+		
+		@Override
 		public void onWalletDidChange() {
 			try {
 

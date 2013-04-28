@@ -46,13 +46,15 @@ public abstract class AbstractWalletActivity extends FragmentActivity {
 	protected Handler handler = new Handler();
 
 	private EventListeners.EventListener eventListener = new EventListeners.EventListener() {
+		
+		@Override
+		public String getDescription() {
+			return getClass() + " Wallet Check Status";
+		}
+		
 		@Override
 		public void onWalletDidChange() {
-			handler.post(new Runnable() {
-				public void run() {
-					application.checkWalletStatus(self);
-				}
-			});
+			application.checkWalletStatus(self);
 		}
 	};
 
@@ -70,7 +72,7 @@ public abstract class AbstractWalletActivity extends FragmentActivity {
 		EventListeners.addEventListener(eventListener);
 
 		application.checkWalletStatus(self);
-		
+
 		application.connect();
 	}
 
@@ -79,7 +81,7 @@ public abstract class AbstractWalletActivity extends FragmentActivity {
 		super.onPause();
 
 		EventListeners.removeEventListener(eventListener);
-		
+
 		application.diconnectSoon();
 	}
 

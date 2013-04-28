@@ -19,8 +19,6 @@ package piuk.blockchain.android.ui;
 
 import com.google.android.gcm.GCMRegistrar;
 
-import piuk.EventListeners;
-import piuk.MyTransaction;
 import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.R;
 import piuk.blockchain.android.WalletApplication;
@@ -36,7 +34,6 @@ import android.content.IntentFilter;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.support.v4.app.FragmentTransaction;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -109,7 +106,6 @@ public final class WalletActivity extends AbstractWalletActivity {
 
 		transactionsFragment = (WalletTransactionsFragment) getSupportFragmentManager()
 				.findFragmentById(R.id.wallet_transactions_fragment);
-
 
 		actionBar.getPrimaryTitleView().setOnClickListener(
 				new OnClickListener() {

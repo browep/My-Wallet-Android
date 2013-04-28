@@ -57,59 +57,48 @@ LoaderManager.LoaderCallbacks<Cursor> {
 
 	private EventListeners.EventListener eventListener = new EventListeners.EventListener() {
 		@Override
-		public void onWalletDidChange() {
-			handler.post(new Runnable() {
-				public void run() {
-					try {
-						updateView();
-					} catch (Exception e) {
-						e.printStackTrace();
-					}
-				}
-			});
+		public String getDescription() {
+			return "Wallet Balance Listener";
 		}
 		
 		@Override
+		public void onWalletDidChange() {
+			try {
+				updateView();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+
+		@Override
 		public void onCoinsSent(final MyTransaction tx, final long result) {
-			handler.post(new Runnable() {
-				public void run() {
-					try {
-						updateView();
-					} catch (Exception e) {
-						e.printStackTrace();
-					}
-				}
-			});
+			try {
+				updateView();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		};
 
 		@Override
 		public void onCoinsReceived(final MyTransaction tx, final long result) {
-			handler.post(new Runnable() {
-				public void run() {
-					try {
-						updateView();
-					} catch (Exception e) {
-						e.printStackTrace();
-					}
-				}
-			});
+			try {
+				updateView();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		};
-		
+
 
 		@Override
 		public void onTransactionsChanged() {
-			handler.post(new Runnable() {
-				public void run() {
-					try {
-						updateView();
-					} catch (Exception e) {
-						e.printStackTrace();
-					}
-				}
-			});
+			try {
+				updateView();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		};
-		
-		
+
+
 	};
 
 	@Override
@@ -166,7 +155,7 @@ LoaderManager.LoaderCallbacks<Cursor> {
 
 		if (application.getRemoteWallet() == null)
 			return;
-		
+
 		viewBalance.setAmount(application.getRemoteWallet().getBalance());
 
 		String[] active = application.getRemoteWallet().getActiveAddresses();

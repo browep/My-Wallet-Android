@@ -79,17 +79,17 @@ public class WalletApplication extends Application {
 
 	private EventListeners.EventListener eventListener = new EventListeners.EventListener() {
 		@Override
+		public String getDescription() {
+			return "Main Wallet Did Change Listener";
+		}
+		
+		@Override
 		public void onWalletDidChange() {
-
-			handler.post(new Runnable() {
-				public void run() {
-					try {
-						localSaveWallet();
-					} catch (Exception e) {
-						e.printStackTrace();
-					}
-				}
-			});
+			try {
+				localSaveWallet();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 	};
 
@@ -188,7 +188,7 @@ public class WalletApplication extends Application {
 		System.out.println("checkWalletStatus()");
 
 		boolean passwordSaved = PreferenceManager.getDefaultSharedPreferences(this).contains("encrypted_password");
-		
+
 		if (blockchainWallet != null && decryptionErrors == 0 && passwordSaved) {
 			if (!blockchainWallet.isUptoDate(Constants.MultiAddrTimeThreshold)) {
 				checkIfWalletHasUpdatedAndFetchTransactions(blockchainWallet.getTemporyPassword());

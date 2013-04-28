@@ -77,28 +77,27 @@ public class BlockchainService extends android.app.Service
 	private static final int NOTIFICATION_ID_COINS_SENT = 3;
 
 	private final EventListeners.EventListener walletEventListener = new EventListeners.EventListener() {
+		@Override
+		public String getDescription() {
+			return "Blockchain Service Listener";
+		}
 
 		@Override
 		public void onCoinsSent(final MyTransaction tx, final long result)
 		{
 			System.out.println("onCoinsSent()");
 
-			handler.post(new Runnable()
-			{
-				public void run()
-				{
-					try {
-						final MyTransactionOutput output = (MyTransactionOutput) tx.getOutputs().get(0);
-						final Address to = output.getToAddress();
 
-						notifyCoinsSent(to, BigInteger.valueOf(result));
+			try {
+				final MyTransactionOutput output = (MyTransactionOutput) tx.getOutputs().get(0);
+				final Address to = output.getToAddress();
 
-						notifyWidgets();
-					} catch (Exception e) {
-						e.printStackTrace();
-					}
-				}
-			});
+				notifyCoinsSent(to, BigInteger.valueOf(result));
+
+				notifyWidgets();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 
 		@Override
@@ -305,7 +304,7 @@ public class BlockchainService extends android.app.Service
 		webSocketHandler = new WebSocketHandler(application);
 
 		connectToWebsocketIfNotConnected();
-		
+
 		timer.scheduleAtFixedRate(new TimerTask() {
 			@Override
 			public void run() {
@@ -316,7 +315,7 @@ public class BlockchainService extends android.app.Service
 					}
 				});
 			}
-			
+
 		}, 10000, 20000);
 	}
 
