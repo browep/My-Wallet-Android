@@ -16,7 +16,8 @@
         android:layout_weight="0.50"
         android:text="@string/welcome_text_has_account"
         android:textSize="@dimen/font_size_small"
-        android:textStyle="bold" />
+        android:textStyle="bold" 
+        android:textColor="#000000"/>
 
     <Button
         android:id="@+id/pair_device_button"

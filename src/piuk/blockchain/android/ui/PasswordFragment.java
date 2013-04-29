@@ -52,8 +52,19 @@ public final class PasswordFragment extends DialogFragment {
 
 	public static final int PasswordTypeMain = 1;
 	public static final int PasswordTypeSecond = 2;
+	public static final int PasswordTypeMainNoValidate = 3;
 
 	private int passwordType;
+	
+	private static String passwordResult;
+	
+	public static String getPasswordResult() {
+		String t = passwordResult; 
+		
+		passwordResult = null;
+		
+		return t;
+	}
 
 	public static void hide() {
 		for (WeakReference<PasswordFragment> fragmentRef : fragmentRefs) {
@@ -83,7 +94,7 @@ public final class PasswordFragment extends DialogFragment {
 
 		final PasswordFragment newFragment = instance();
 
-		if (passwordType == PasswordTypeMain) 
+		if (passwordType == PasswordTypeMain || passwordType == PasswordTypeMainNoValidate) 
 			newFragment.setCancelable(false);
 
 		newFragment.show(ft, FRAGMENT_TAG);
@@ -174,7 +185,7 @@ public final class PasswordFragment extends DialogFragment {
 									R.string.second_password_incorrect,
 									Toast.LENGTH_SHORT).show();
 						}
-					} else {
+					} else if (passwordType == PasswordTypeMain) {
 						String password = passwordField.getText().toString();
 
 						application.checkIfWalletHasUpdatedAndFetchTransactions(password, new SuccessCallback() {
@@ -192,7 +203,12 @@ public final class PasswordFragment extends DialogFragment {
 								callback.onFail();
 							}
 						});
+					} else {
+						passwordResult = passwordField.getText().toString();
 
+						dismiss();
+
+						callback.onSuccess();
 					}
 				} catch (Exception e) {
 					e.printStackTrace();

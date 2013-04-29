@@ -110,6 +110,7 @@ public class PinEntryActivity extends AbstractWalletActivity {
 	Button button9;
 	Button button10;
 	Button buttonDelete;
+	Button buttonBlank;
 
 	public static String postURL(String request, String urlParameters) throws Exception {
 
@@ -199,6 +200,21 @@ public class PinEntryActivity extends AbstractWalletActivity {
 		}
 	}
 
+	private void disableKeyPad(boolean enabled) {
+		button0.setEnabled(!enabled);
+		button1.setEnabled(!enabled);
+		button2.setEnabled(!enabled);
+		button3.setEnabled(!enabled);
+		button4.setEnabled(!enabled);
+		button5.setEnabled(!enabled);
+		button6.setEnabled(!enabled);
+		button7.setEnabled(!enabled);
+		button8.setEnabled(!enabled);
+		button9.setEnabled(!enabled);
+		buttonDelete.setEnabled(!enabled);
+		buttonBlank.setEnabled(!enabled);
+	}
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -257,7 +273,7 @@ public class PinEntryActivity extends AbstractWalletActivity {
 
 				Button pressedButton = (Button)v;
 
-				if (userEntered.length()<PIN_LENGTH)
+				if (userEntered.length() < PIN_LENGTH)
 				{ 
 					final String PIN = userEntered + pressedButton.getText();
 
@@ -271,11 +287,16 @@ public class PinEntryActivity extends AbstractWalletActivity {
 						if (stage == BEGIN_CHECK_PIN) {
 							stage = VALIDATING_PIN;
 
+							disableKeyPad(true);
+							
+							statusView.setText("Validating PIN");
+							
 							Toast.makeText(application, "Validating PIN", Toast.LENGTH_LONG)
 							.show();	
 
 							new Thread(new Runnable() {
 								public void run() {
+									
 									String pin_lookup_key = PreferenceManager.getDefaultSharedPreferences(application).getString("pin_kookup_key", null);
 									String encrypted_password = PreferenceManager.getDefaultSharedPreferences(application).getString("encrypted_password", null);
 
@@ -291,11 +312,13 @@ public class PinEntryActivity extends AbstractWalletActivity {
 												@Override
 												public void onSuccess() {
 													handler.post(new Runnable() {
-														public void run() {
+														public void run() {															
 															Toast.makeText(application, R.string.welcome_title, Toast.LENGTH_LONG)
 															.show();	
 
 															finish();
+															
+															disableKeyPad(false);
 														}
 													});
 												}
@@ -304,6 +327,8 @@ public class PinEntryActivity extends AbstractWalletActivity {
 												public void onFail() {
 													handler.post(new Runnable() {
 														public void run() {
+															disableKeyPad(false);
+
 															Toast.makeText(application,
 																	R.string.toast_wallet_decryption_failed, Toast.LENGTH_LONG)
 																	.show();	
@@ -320,8 +345,8 @@ public class PinEntryActivity extends AbstractWalletActivity {
 												}
 											});
 										} else if (response.get("error") != null) {
-
-											//PINIncorrect
+											
+											//"code" == 2 means the PIN is incorrect
 											if (!response.containsKey("code") || ((Number)response.get("code")).intValue() != 2) {
 												clearPrefValues(application);
 											}
@@ -337,6 +362,8 @@ public class PinEntryActivity extends AbstractWalletActivity {
 
 										handler.post(new Runnable() {
 											public void run() {
+												disableKeyPad(false);
+
 												Toast.makeText(application,
 														e.getLocalizedMessage(), Toast.LENGTH_LONG)
 														.show();	
@@ -433,8 +460,6 @@ public class PinEntryActivity extends AbstractWalletActivity {
 
 								begin();
 							}
-						} else {
-							begin();
 						}
 					}	
 				} 
@@ -490,34 +515,30 @@ public class PinEntryActivity extends AbstractWalletActivity {
 		button9.setOnClickListener(pinButtonHandler);
 
 		buttonDelete = (Button)findViewById(R.id.buttonDeleteBack);
+		
+		buttonBlank = (Button)findViewById(R.id.buttonBlank); 
 	}
 
 
 	public void begin() {
+				
+		disableKeyPad(false);
+
 		clear();
 
 		PasswordFragment.hide();
 		WelcomeFragment.hide();
 
-		System.out.println("Enter Wallet begin()");
-
 		String pin_lookup_key = PreferenceManager.getDefaultSharedPreferences(this).getString("pin_kookup_key", null);
 		String encrypted_password = PreferenceManager.getDefaultSharedPreferences(this).getString("encrypted_password", null);
 
 		if (pin_lookup_key == null || encrypted_password == null) {
+			titleView.setText("Create PIN");	
+
 			stage = BEGIN_SETUP;
 
-			titleView.setText("Create New PIN");
-
-			System.out.println("application.hasDecryptionError() " + application.decryptionErrors);
-			System.out.println("aapplication.getRemoteWallet()  " + application.getRemoteWallet());
-
 			if (application.getRemoteWallet() == null || application.decryptionErrors > 0) {
-				System.out.println("application.getGUID() " + application.getGUID());
-				System.out.println("application.getSharedKey() " + application.getSharedKey());
-
 				if (application.decryptionErrors <= 1 && application.getGUID() != null && application.getSharedKey() != null) {
-					System.out.println("PasswordFragment show()");
 
 					PasswordFragment.show(
 							getSupportFragmentManager(),
@@ -530,8 +551,6 @@ public class PinEntryActivity extends AbstractWalletActivity {
 								}
 							}, PasswordFragment.PasswordTypeMain);
 				} else {
-					System.out.println("WelcomeFragment show()"); 
-
 					WelcomeFragment.show(getSupportFragmentManager(), (WalletApplication)getApplication());
 				}
 			} 

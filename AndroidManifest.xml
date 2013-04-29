@@ -135,9 +135,10 @@
         <activity
             android:name="piuk.blockchain.android.ui.WalletAddressesActivity"
             android:configChanges="orientation|keyboard|keyboardHidden"
-            android:screenOrientation="behind"
+            android:screenOrientation="portrait"
             android:launchMode="singleInstance"
             android:theme="@android:style/Theme.Light.NoTitleBar" />
+        
         <activity
             android:name="piuk.blockchain.android.ui.PreferencesActivity"
             android:launchMode="singleInstance"
@@ -145,7 +146,8 @@
         
         <activity android:name="piuk.blockchain.android.ui.PinEntryActivity"
             android:launchMode="singleInstance"
-            android:screenOrientation="portrait"></activity>
+            android:screenOrientation="portrait"
+            android:theme="@android:style/Theme.Black.NoTitleBar" ></activity>
         
         <provider
             android:name="piuk.blockchain.android.AddressBookProvider"

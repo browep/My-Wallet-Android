@@ -12,7 +12,6 @@
         android:gravity="center"
         android:padding="5dip"
         android:text="Enter PIN"
-        android:textColor="#ffffff"
         android:textSize="30sp" />
         
     <LinearLayout
@@ -36,7 +35,6 @@
         android:text=""
         android:layout_margin="10dip"
         android:textSize="40sp"
-        android:textColor="#000000"
         android:gravity="center"
         android:background="@drawable/back"/>
     
@@ -49,7 +47,6 @@
         android:text=""
         android:layout_margin="10dip"
         android:textSize="40sp"
-        android:textColor="#000000"
         android:gravity="center"
         android:background="@drawable/back"/>
     <TextView 
@@ -61,7 +58,6 @@
         android:layout_height="50dip"
         android:layout_margin="10dip"
         android:textSize="40sp"
-        android:textColor="#000000"
         android:gravity="center"
         android:background="@drawable/back"/>
 
@@ -76,7 +72,6 @@
         android:gravity="center"
         android:password="true"
         android:text=""
-        android:textColor="#000000"
         android:textSize="40sp" />
      
     </LinearLayout>   
@@ -86,7 +81,6 @@
     	android:layout_height="wrap_content"
     	android:text=""
     	android:gravity="center"
-    	android:textColor="#ff0000"
     	android:textSize="20sp" 
     	android:padding="5dip"
         />  
@@ -112,10 +106,8 @@
             android:gravity="center"
             android:text="1"
             android:textSize="20sp"
-            android:textColor="#ffffff"
             android:padding="6dip"
             android:layout_margin="3dip"
-            android:background="@drawable/button_gradient_selector"
      >
      </Button>
      <Button
@@ -126,10 +118,8 @@
             android:gravity="center"
             android:text="2"
             android:textSize="20sp"
-            android:textColor="#ffffff"
             android:padding="6dip"
             android:layout_margin="3dip"
-            android:background="@drawable/button_gradient_selector"
      >
      </Button>
      <Button
@@ -140,10 +130,8 @@
             android:gravity="center"
             android:text="3"
             android:textSize="20sp"
-            android:textColor="#ffffff"
             android:padding="6dip"
             android:layout_margin="3dip"
-            android:background="@drawable/button_gradient_selector"
      >
      </Button>
     </TableRow>
@@ -160,10 +148,8 @@
             android:gravity="center"
             android:text="4"
             android:textSize="20sp"
-            android:textColor="#ffffff"
             android:padding="6dip"
             android:layout_margin="3dip"
-            android:background="@drawable/button_gradient_selector"
      >
      </Button>
      <Button
@@ -174,10 +160,8 @@
             android:gravity="center"
             android:text="5"
             android:textSize="20sp"
-            android:textColor="#ffffff"
             android:padding="6dip"
             android:layout_margin="3dip"
-            android:background="@drawable/button_gradient_selector"
      >
      </Button>
      <Button
@@ -188,10 +172,8 @@
             android:gravity="center"
             android:text="6"
             android:textSize="20sp"
-            android:textColor="#ffffff"
             android:padding="6dip"
             android:layout_margin="3dip"
-            android:background="@drawable/button_gradient_selector"
      >
      </Button>
     </TableRow>
@@ -208,10 +190,8 @@
             android:gravity="center"
             android:text="7"
             android:textSize="20sp"
-            android:textColor="#ffffff"
             android:padding="6dip"
             android:layout_margin="3dip"
-            android:background="@drawable/button_gradient_selector"
      >
      </Button>
      <Button
@@ -222,10 +202,8 @@
             android:gravity="center"
             android:text="8"
             android:textSize="20sp"
-            android:textColor="#ffffff"
             android:padding="6dip"
             android:layout_margin="3dip"
-            android:background="@drawable/button_gradient_selector"
      >
      </Button>
      <Button
@@ -236,10 +214,8 @@
             android:gravity="center"
             android:text="9"
             android:textSize="20sp"
-            android:textColor="#ffffff"
             android:padding="6dip"
             android:layout_margin="3dip"
-            android:background="@drawable/button_gradient_selector"
      >
      </Button>
     </TableRow>
@@ -255,10 +231,8 @@
             android:layout_height="wrap_content"
             android:gravity="center"
             android:textSize="20sp"
-            android:textColor="#ffffff"
             android:padding="6dip"
             android:layout_margin="3dip"
-            android:background="@drawable/button_gradient_selector"
      >
      </Button>
      <Button
@@ -269,10 +243,8 @@
             android:gravity="center"
             android:text="0"
             android:textSize="20sp"
-            android:textColor="#ffffff"
             android:padding="6dip"
             android:layout_margin="3dip"
-            android:background="@drawable/button_gradient_selector"
      >
      </Button>
      <Button
@@ -283,10 +255,8 @@
             android:gravity="center"
             android:text="Delete"
             android:textSize="20sp"
-            android:textColor="#ffffff"
             android:padding="6dip"
             android:layout_margin="3dip"
-            android:background="@drawable/button_gradient_selector"
      >
      </Button>
     </TableRow>

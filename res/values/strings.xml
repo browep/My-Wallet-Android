@@ -31,6 +31,10 @@
 	
 	<string name="main_password_text">Please enter your main password below.</string>
 		
+	<string name="wallet_identifier_title">Wallet Identifier</string>
+	
+	<string name="wallet_identifier_enter_text">Please enter your 36 character wallet identifier below including dashes. Two factor authentication must be disabled.</string>
+	
 	<string name="new_account_password_length_error">Password must be between 11 and 255 characters
 	</string>
 	<string name="new_account_password_mismatch_error">Passwords do not match</string>
@@ -181,13 +185,15 @@
 	<string name="should_not_be_here">You should not be here. This is a bug</string>
 	<string name="pair_wallet_title">Pair Wallet.</string>
 	<string name="pair_wallet_button">Scan QR Code.</string>
-
+	<string name="pair_wallet_manually_button">Pair Manually.</string>
+    
 	<string name="pair_wallet_step1">Step 1.</string>
-	<string name="pair_wallet_step1_content">Login to your My Wallet account on your PC or Mac.
+	<string name="pair_wallet_step1_content">Login to your My Wallet account using your web browser
+	    .
 	</string>
 
 	<string name="pair_wallet_step2">Step 2.</string>
-	<string name="pair_wallet_step2_content">Click on the [Account Details] button then choose
+	<string name="pair_wallet_step2_content">Click on the [Account Settings] button then choose
 		the [Devices] tab.</string>
 
 	<string name="pair_wallet_step3">Step 3.</string>

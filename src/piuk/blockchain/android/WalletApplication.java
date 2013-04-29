@@ -126,8 +126,6 @@ public class WalletApplication extends Application {
 
 	public void diconnectSoon() {
 
-		System.out.println("diconnectSoon()");
-
 		try {
 			if (timer == null) {
 				timer = new Timer();

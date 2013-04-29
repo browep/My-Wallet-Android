@@ -27,7 +27,10 @@ import com.google.bitcoin.core.WalletTransaction.Pool;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
+import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
+import org.json.simple.parser.JSONParser;
+
 import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.ui.SendCoinsFragment;
 import piuk.blockchain.android.ui.SendCoinsFragment.FeePolicy;
@@ -554,7 +557,7 @@ public class MyRemoteWallet extends MyWallet {
 
 
 	/**
-	 * Register this account/device pair within the server.
+	 * Get the tempoary paring encryption password
 	 * @throws Exception 
 	 *
 	 */
@@ -565,6 +568,25 @@ public class MyRemoteWallet extends MyWallet {
 		args.append("&method=pairing-encryption-password");
 
 		return postURL(WebROOT + "wallet", args.toString());
+	}
+	
+	
+	public static String getWalletManualPairing(final String guid) throws Exception {
+		StringBuilder args = new StringBuilder();
+
+		args.append("guid=" + guid);
+		args.append("&method=pairing-encryption-password");
+
+		String response = fetchURL(WebROOT + "wallet/" + guid + "?format=json&resend_code=false");
+		
+		JSONObject object = (JSONObject) new JSONParser().parse(response);
+		
+		String payload = (String) object.get("payload");
+		if (payload == null || payload.length() == 0) {
+			throw new Exception("Error Fetching Wallet Payload");
+		}
+		
+		return payload;
 	}
 
 	public synchronized boolean remoteSave(String kaptcha) throws Exception {

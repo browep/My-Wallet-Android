@@ -26,6 +26,7 @@ import org.spongycastle.util.encoders.Hex;
 
 public class PairWalletActivity extends AbstractWalletActivity {
 	private static final int REQUEST_CODE_SCAN = 0;
+	final PairWalletActivity activity = this;
 
 	@Override
 	protected void onCreate(final Bundle savedInstanceState) {
@@ -36,8 +37,6 @@ public class PairWalletActivity extends AbstractWalletActivity {
 		final ActionBarFragment actionBar = getActionBarFragment();
 
 		actionBar.setPrimaryTitle(R.string.pair_wallet_title);
-
-		// showQRReader();
 
 		actionBar.setBack(new OnClickListener() {
 			public void onClick(final View v) {
@@ -53,6 +52,114 @@ public class PairWalletActivity extends AbstractWalletActivity {
 				showQRReader();
 			}
 		});
+
+		final Button pairManuallyButton = (Button) getWindow().findViewById(
+				R.id.pair_manually_button);
+
+		pairManuallyButton.setOnClickListener(new OnClickListener() {
+			public void onClick(View v) {
+				RequestIdentifierFragment.show(getSupportFragmentManager(), new RequestIdentifierFragment.SuccessCallback() {
+					@Override
+					public void onSuccess(String guid) {
+						pairManually(guid);
+					}
+
+					@Override
+					public void onFail(String message) {
+						finish();
+
+						Toast.makeText(application, message, Toast.LENGTH_LONG).show();
+					}
+				});
+			}
+		});
+	}
+
+	public void pairManually(final String guid) {
+
+		System.out.println("pairManually()");
+
+		new Thread(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					final String payload = MyRemoteWallet.getWalletManualPairing(guid);
+					
+					handler.post(new Runnable() {
+
+						@Override
+						public void run() {
+							PasswordFragment.show(
+									getSupportFragmentManager(),
+									new SuccessCallback() {  
+										public void onSuccess() {
+											String password = PasswordFragment.getPasswordResult();
+
+											try {
+												MyWallet wallet = new MyWallet(payload, password);
+
+												String sharedKey = wallet.getSharedKey();
+
+												application.clearWallet();
+
+												PinEntryActivity.clearPrefValues(application);
+
+												Editor edit = PreferenceManager.getDefaultSharedPreferences(activity).edit();
+
+												edit.putString("guid", guid);
+												edit.putString("sharedKey", sharedKey);
+
+												edit.commit();
+
+												application.checkIfWalletHasUpdatedAndFetchTransactions(password, guid, sharedKey, new SuccessCallback(){
+													@Override
+													public void onSuccess() {						
+														finish();
+													}
+
+													@Override
+													public void onFail() {
+														finish();
+
+														Toast.makeText(application, R.string.toast_error_syncing_wallet, Toast.LENGTH_LONG)
+														.show();
+													}
+												});
+											} catch (final Exception e) {
+
+												Toast.makeText(application, e.getLocalizedMessage(), Toast.LENGTH_LONG)
+												.show();
+
+												application.writeException(e);
+
+												finish();
+											}
+
+
+										}
+										public void onFail() {							
+											WelcomeFragment.show(getSupportFragmentManager(), (WalletApplication)getApplication());
+										}
+									}, PasswordFragment.PasswordTypeMainNoValidate);
+						}
+					});
+				} catch (final Exception e) {
+					e.printStackTrace();
+
+					handler.post(new Runnable() {
+						public void run() {
+
+							Toast.makeText(application, e.getLocalizedMessage(), Toast.LENGTH_LONG)
+							.show();
+
+							application.writeException(e);
+
+							finish();
+						}
+					});
+				}
+			}
+		}).start();
 	}
 
 	@Override
@@ -89,8 +196,6 @@ public class PairWalletActivity extends AbstractWalletActivity {
 						throw new Exception("Invalid Pairing QR Code. GUID wrong length.");
 					}
 
-					final PairWalletActivity activity = this;
-
 					final String encrypted_data = components[2];
 
 					new Thread(new Runnable() {
@@ -100,7 +205,7 @@ public class PairWalletActivity extends AbstractWalletActivity {
 
 							try {
 								String temp_password = MyRemoteWallet.getPairingEncryptionPassword(guid);
-								
+
 								String decrypted = MyWallet.decrypt(encrypted_data, temp_password, MyWallet.DefaultPBKDF2Iterations);
 
 								String[] sharedKeyAndPassword = decrypted.split("\\|", Pattern.LITERAL);
@@ -119,7 +224,7 @@ public class PairWalletActivity extends AbstractWalletActivity {
 								application.clearWallet();
 
 								PinEntryActivity.clearPrefValues(application);
-								
+
 								Editor edit = PreferenceManager.getDefaultSharedPreferences(
 										activity).edit();
 
@@ -152,19 +257,12 @@ public class PairWalletActivity extends AbstractWalletActivity {
 
 							} catch (final Exception e) {
 								e.printStackTrace();
-								
+
 								handler.post(new Runnable() {
 									public void run() {
 
-										errorDialog(R.string.error_pairing_wallet,
-												"Unknown Exception caught. " + e.getLocalizedMessage(), new DialogInterface.OnClickListener() {
-											@Override
-											public void onClick(
-													DialogInterface dialog,
-													int which) {
-												finish();
-											}
-										});
+										Toast.makeText(application, e.getLocalizedMessage(), Toast.LENGTH_LONG)
+										.show();
 
 										e.printStackTrace();
 
@@ -176,14 +274,9 @@ public class PairWalletActivity extends AbstractWalletActivity {
 					}).start();
 				}
 			} catch (Exception e) {
-				errorDialog(R.string.error_pairing_wallet, "Unknown Exception caught. Please submit a bug report", new DialogInterface.OnClickListener() {
-					@Override
-					public void onClick(
-							DialogInterface dialog,
-							int which) {
-						finish();
-					}
-				});
+
+				Toast.makeText(application, e.getLocalizedMessage(), Toast.LENGTH_LONG)
+				.show();
 
 				e.printStackTrace();
 
