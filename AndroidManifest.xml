@@ -2,8 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="piuk.blockchain.android"
     android:installLocation="preferExternal"
-    android:versionCode="108"
-    android:versionName="3.36" >
+    android:versionCode="107"
+    android:versionName="3.37" >
 
     <uses-sdk
         android:minSdkVersion="8"

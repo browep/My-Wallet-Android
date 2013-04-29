@@ -23,7 +23,6 @@ import org.json.simple.parser.ParseException;
 import org.spongycastle.util.encoders.Hex;
 
 import piuk.EventListeners;
-import piuk.MyTransaction;
 import piuk.MyWallet;
 import piuk.blockchain.android.R;
 import piuk.blockchain.android.WalletApplication;
@@ -127,15 +126,16 @@ public class PinEntryActivity extends AbstractWalletActivity {
 			connection.setRequestProperty("Content-Length", "" + Integer.toString(urlParameters.getBytes().length));
 			connection.setUseCaches (false);
 
+
+			connection.setConnectTimeout(30000);
+			connection.setReadTimeout(30000);
+			
 			connection.connect();
 
 			DataOutputStream wr = new DataOutputStream(connection.getOutputStream ());
 			wr.writeBytes(urlParameters);
 			wr.flush();
 			wr.close();
-
-			connection.setConnectTimeout(30000);
-			connection.setReadTimeout(30000);
 
 			connection.setInstanceFollowRedirects(false);
 
@@ -291,9 +291,6 @@ public class PinEntryActivity extends AbstractWalletActivity {
 							
 							statusView.setText("Validating PIN");
 							
-							Toast.makeText(application, "Validating PIN", Toast.LENGTH_LONG)
-							.show();	
-
 							new Thread(new Runnable() {
 								public void run() {
 									
@@ -313,7 +310,7 @@ public class PinEntryActivity extends AbstractWalletActivity {
 												public void onSuccess() {
 													handler.post(new Runnable() {
 														public void run() {															
-															Toast.makeText(application, R.string.welcome_title, Toast.LENGTH_LONG)
+															Toast.makeText(application, "PIN Verified", Toast.LENGTH_SHORT)
 															.show();	
 
 															finish();
@@ -389,6 +386,8 @@ public class PinEntryActivity extends AbstractWalletActivity {
 
 								statusView.setText("Saving PIN. Please Wait.");
 
+								disableKeyPad(true);
+
 								new Thread(new Runnable() {
 									public void run() {
 										try {
@@ -420,10 +419,12 @@ public class PinEntryActivity extends AbstractWalletActivity {
 															}
 
 															Toast.makeText(application,
-																	R.string.toast_pin_saved, Toast.LENGTH_LONG)
+																	R.string.toast_pin_saved, Toast.LENGTH_SHORT)
 																	.show();	
 
 															finish();
+															
+															disableKeyPad(false);
 														} catch (Exception e) {
 															e.printStackTrace();
 
@@ -432,6 +433,8 @@ public class PinEntryActivity extends AbstractWalletActivity {
 																	.show();	
 
 															begin();
+															
+															disableKeyPad(false);
 														}
 													}
 												});
@@ -448,6 +451,8 @@ public class PinEntryActivity extends AbstractWalletActivity {
 													Toast.makeText(application,
 															e.getLocalizedMessage(), Toast.LENGTH_LONG)
 															.show();	
+
+													disableKeyPad(false);
 
 													begin();
 												}
@@ -534,6 +539,8 @@ public class PinEntryActivity extends AbstractWalletActivity {
 
 		if (pin_lookup_key == null || encrypted_password == null) {
 			titleView.setText("Create PIN");	
+			
+			statusView.setText("Please create a new PIN code");
 
 			stage = BEGIN_SETUP;
 

@@ -17,13 +17,21 @@
 
 package piuk.blockchain.android.ui;
 
+import java.io.DataOutputStream;
 import java.math.BigInteger;
+import java.net.HttpURLConnection;
+import java.net.URL;
+
+import org.apache.commons.io.IOUtils;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
 
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentTransaction;
@@ -32,6 +40,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -39,6 +48,7 @@ import android.widget.Toast;
 import com.google.bitcoin.core.Address;
 import com.google.bitcoin.uri.BitcoinURI;
 
+import piuk.BitcoinAddress;
 import piuk.blockchain.android.R;
 import piuk.blockchain.android.WalletApplication;
 import piuk.blockchain.android.ui.CurrencyAmountView.Listener;
@@ -52,11 +62,52 @@ import piuk.blockchain.android.util.WalletUtils;
 public final class RequestCoinsFragment extends Fragment {
 	private WalletApplication application;
 
-	private TextView addressView;
 	private ImageView qrView;
 	private Bitmap qrCodeBitmap;
 	private CurrencyAmountView amountView;
+	private Button generateSharedButton;
+	
+	private static final String WebROOT = "https://blockchain.info/api/receive";
 
+
+	public static String postURL(String request, String urlParameters) throws Exception {
+
+		URL url = new URL(request);
+		HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+		try {
+			connection.setDoOutput(true);
+			connection.setDoInput(true);
+			connection.setInstanceFollowRedirects(false);
+			connection.setRequestMethod("POST");
+			connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+			connection.setRequestProperty("charset", "utf-8");
+			connection.setRequestProperty("Accept", "application/json");
+			connection.setRequestProperty("Content-Length", "" + Integer.toString(urlParameters.getBytes().length));
+			connection.setUseCaches (false);
+
+
+			connection.setConnectTimeout(30000);
+			connection.setReadTimeout(30000);
+			
+			connection.connect();
+
+			DataOutputStream wr = new DataOutputStream(connection.getOutputStream ());
+			wr.writeBytes(urlParameters);
+			wr.flush();
+			wr.close();
+
+			connection.setInstanceFollowRedirects(false);
+
+			if (connection.getResponseCode() != 200)
+				throw new Exception(IOUtils.toString(connection.getErrorStream(), "UTF-8"));
+			else
+				return IOUtils.toString(connection.getInputStream(), "UTF-8");
+
+		} finally {
+			connection.disconnect();
+		}
+	}
+	
 	@Override
 	public View onCreateView(final LayoutInflater inflater,
 			final ViewGroup container, final Bundle savedInstanceState) {
@@ -66,29 +117,6 @@ public final class RequestCoinsFragment extends Fragment {
 		final View view = inflater.inflate(R.layout.request_coins_fragment,
 				container);
 
-		addressView = (TextView) view.findViewById(R.id.request_coins_address);
-		addressView.setOnClickListener(new OnClickListener() {
-			public void onClick(final View v) {
-				Address address = application.determineSelectedAddress();
-
-				if (address != null) {
-					ClipboardManager clipboard = (ClipboardManager) getActivity()
-							.getSystemService(Context.CLIPBOARD_SERVICE);
-					// ClipData clip = ClipData.newPlainText("Bitcoin Address",
-					// address.toString());
-					// clipboard.setPrimaryClip(clip);
-					clipboard.setText(address.toString()); // compatibility with
-															// API 10
-															// (deprecated in
-															// API 11)
-
-					Toast.makeText(getActivity(),
-							R.string.request_coins_address_copied_to_clipboard,
-							Toast.LENGTH_SHORT).show();
-				}
-			}
-		});
-
 		qrView = (ImageView) view.findViewById(R.id.request_coins_qr);
 		qrView.setOnClickListener(new OnClickListener() {
 			public void onClick(final View v) {
@@ -96,11 +124,66 @@ public final class RequestCoinsFragment extends Fragment {
 			}
 		});
 
+		
+		final Handler handler = new Handler();
+		
+		generateSharedButton = (Button)view
+				.findViewById(R.id.generate_shared_address);
+		
+		generateSharedButton.setOnClickListener(new OnClickListener() {
+
+			@Override
+			public void onClick(View v) {
+				new Thread() {
+					public void run() {
+						StringBuilder args = new StringBuilder();
+								
+						args.append("address=" + determineAddressStr());
+						args.append("&shared=true");
+						args.append("&format=plain");
+						args.append("&method=create");
+
+						try {
+							final String response = postURL(WebROOT, args.toString());
+														
+							JSONObject object = (JSONObject) new JSONParser().parse(response);
+							
+							final String address = (String)object.get("input_address");
+							
+							new BitcoinAddress(address);
+							
+							handler.post(new Runnable() {
+
+								@Override
+								public void run() {
+									updateView(address);
+									
+									Toast.makeText(application, "Generated new shared address", Toast.LENGTH_SHORT)
+									.show();
+								}
+							});
+						} catch (final Exception e) {
+							e.printStackTrace();
+							
+							handler.post(new Runnable() {
+
+								@Override
+								public void run() {									
+									Toast.makeText(application, e.getLocalizedMessage(), Toast.LENGTH_SHORT)
+									.show();
+								}
+							});
+						}
+					}
+				}.start();
+			}
+		});
+		
 		amountView = (CurrencyAmountView) view
 				.findViewById(R.id.request_coins_amount);
 		amountView.setListener(new Listener() {
 			public void changed() {
-				updateView();
+				updateView(determineAddressStr());
 			}
 
 			public void done() {
@@ -165,7 +248,7 @@ public final class RequestCoinsFragment extends Fragment {
 	public void onResume() {
 		super.onResume();
 
-		updateView();
+		updateView(determineAddressStr());
 	}
 
 	@Override
@@ -173,25 +256,21 @@ public final class RequestCoinsFragment extends Fragment {
 		super.onPause();
 	}
 
-	private void updateView() {
-		final String addressStr = determineAddressStr();
-
-		if (addressStr == null)
+	private void updateView(String address) {
+		if (address == null)
 			return;
+		
+		final BigInteger amount = amountView.getAmount();
+
+		address = BitcoinURI.convertToBitcoinURI(address, amount, null, null)
+				.toString();
 
 		if (qrCodeBitmap != null)
 			qrCodeBitmap.recycle();
 
 		final int size = (int) (256 * getResources().getDisplayMetrics().density);
-		qrCodeBitmap = WalletUtils.getQRCodeBitmap(addressStr, size);
+		qrCodeBitmap = WalletUtils.getQRCodeBitmap(address, size);
 		qrView.setImageBitmap(qrCodeBitmap);
-
-		Address address = application.determineSelectedAddress();
-		if (address != null) {
-			addressView.setText(address.toString());
-		} else {
-			addressView.setText("");
-		}
 	}
 
 	private String determineAddressStr() {
@@ -200,9 +279,6 @@ public final class RequestCoinsFragment extends Fragment {
 		if (address == null)
 			return null;
 
-		final BigInteger amount = amountView.getAmount();
-
-		return BitcoinURI.convertToBitcoinURI(address, amount, null, null)
-				.toString();
+		return address.toString();
 	}
 }

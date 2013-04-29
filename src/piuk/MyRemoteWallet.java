@@ -148,15 +148,15 @@ public class MyRemoteWallet extends MyWallet {
 			connection.setRequestProperty("Content-Length", "" + Integer.toString(urlParameters.getBytes().length));
 			connection.setUseCaches (false);
 
+			connection.setConnectTimeout(30000);
+			connection.setReadTimeout(30000);
+			
 			connection.connect();
 
 			DataOutputStream wr = new DataOutputStream(connection.getOutputStream ());
 			wr.writeBytes(urlParameters);
 			wr.flush();
 			wr.close();
-
-			connection.setConnectTimeout(30000);
-			connection.setReadTimeout(30000);
 
 			connection.setInstanceFollowRedirects(false);
 

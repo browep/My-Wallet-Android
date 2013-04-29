@@ -46,6 +46,8 @@ public class WalletUtils {
 		try {
 			final Hashtable<EncodeHintType, Object> hints = new Hashtable<EncodeHintType, Object>();
 			hints.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.H);
+			hints.put(EncodeHintType.MARGIN, 2);
+			
 			final BitMatrix result = QR_CODE_WRITER.encode(url,
 					BarcodeFormat.QR_CODE, size, size, hints);
 

@@ -33,7 +33,7 @@
 		
 	<string name="wallet_identifier_title">Wallet Identifier</string>
 	
-	<string name="wallet_identifier_enter_text">Please enter your 36 character wallet identifier below including dashes. Two factor authentication must be disabled.</string>
+	<string name="wallet_identifier_enter_text">Please enter your 36 character wallet identifier below including dashes. Two factor authentication must temporarily be disabled.</string>
 	
 	<string name="new_account_password_length_error">Password must be between 11 and 255 characters
 	</string>
@@ -159,6 +159,8 @@
 	<string name="request_coins_address_copied_to_clipboard">Bitcoin address copied to Clipboard</string>
 	<string name="request_coins_address_label">(Touch to copy to Clipboard)</string>
 
+	<string name="generate_shared_address">Generate Private Shared Address</string>
+	
 	<string name="address_book_activity_title">Address Book</string>
 	<string name="address_book_list_receiving_title">Active addresses</string>
 	<string name="address_book_list_archived_title">Archived addresses</string>

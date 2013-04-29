@@ -35,8 +35,6 @@ import android.widget.BaseAdapter;
 import android.widget.ListAdapter;
 import android.widget.ListView;
 
-import com.google.bitcoin.core.Wallet.BalanceType;
-
 import piuk.EventListeners;
 import piuk.blockchain.android.R;
 import piuk.blockchain.android.Constants;
