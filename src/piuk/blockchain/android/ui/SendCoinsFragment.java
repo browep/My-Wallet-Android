@@ -495,15 +495,22 @@ public final class SendCoinsFragment extends Fragment
 		}
 
 		@Override
-		public View newView(final Context context, final Cursor cursor, final ViewGroup parent)
+		public synchronized View newView(final Context context, final Cursor cursor, final ViewGroup parent)
 		{
+			if (cursor.isClosed())
+				return null;
+			
 			final LayoutInflater inflater = LayoutInflater.from(context);
 			return inflater.inflate(R.layout.simple_dropdown_item_2line, parent, false);
 		}
 
 		@Override
-		public void bindView(final View view, final Context context, final Cursor cursor)
+		public synchronized void bindView(final View view, final Context context, final Cursor cursor)
 		{
+
+			if (cursor.isClosed())
+				return;
+			
 			final ViewGroup viewGroup = (ViewGroup) view;
 			((TextView) viewGroup.findViewById(android.R.id.text1)).setText(cursor.getString(cursor
 					.getColumnIndexOrThrow(AddressBookProvider.KEY_LABEL)));
@@ -512,7 +519,7 @@ public final class SendCoinsFragment extends Fragment
 		}
 
 		@Override
-		public CharSequence convertToString(final Cursor cursor)
+		public synchronized CharSequence convertToString(final Cursor cursor)
 		{
 			if (cursor.isClosed())
 				return null;
@@ -521,7 +528,7 @@ public final class SendCoinsFragment extends Fragment
 		}
 
 		@Override
-		public Cursor runQueryOnBackgroundThread(final CharSequence constraint)
+		public synchronized Cursor runQueryOnBackgroundThread(final CharSequence constraint)
 		{
 			final Cursor cursor = getActivity().managedQuery(AddressBookProvider.CONTENT_URI, null, AddressBookProvider.SELECTION_QUERY, new String[] { constraint.toString() }, null);
 

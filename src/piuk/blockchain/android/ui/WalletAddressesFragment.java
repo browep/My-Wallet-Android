@@ -77,7 +77,9 @@ public class WalletAddressesFragment extends ListFragment
 	
 	private ViewPager pagerView;
 
-	public WalletAddressesFragment() {}
+	public WalletAddressesFragment() {
+		super();
+	}
 
 	public WalletAddressesFragment(int tag_filter, ViewPager pagerView) {
 		super();
@@ -95,6 +97,10 @@ public class WalletAddressesFragment extends ListFragment
 			addresses = application.getRemoteWallet().getArchivedAddresses();
 		else
 			addresses = application.getRemoteWallet().getActiveAddresses();
+		
+		if (addresses == null) {
+			addresses = new String[0];
+		}
 	}
 
 	@Override

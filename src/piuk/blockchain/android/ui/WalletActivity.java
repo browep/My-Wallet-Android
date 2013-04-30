@@ -53,11 +53,21 @@ public final class WalletActivity extends AbstractWalletActivity {
 	AsyncTask<Void, Void, Void> mRegisterTask;
 	WalletTransactionsFragment transactionsFragment = null;
 	FrameLayout frameLayoutContainer = null;
+	
+	long lastMesssageTime = 0;
 
 	private final BroadcastReceiver mHandleMessageReceiver =
 			new BroadcastReceiver() { 
 		@Override
 		public void onReceive(Context context, Intent intent) {
+			
+			//Throttle messages to once every 30 seconds 
+			if (lastMesssageTime < System.currentTimeMillis()-30000) {
+				return;
+			}
+			
+			lastMesssageTime = System.currentTimeMillis();
+			
 			String body = intent.getExtras().getString(Constants.BODY);
 			String title = intent.getExtras().getString(Constants.TITLE);
 

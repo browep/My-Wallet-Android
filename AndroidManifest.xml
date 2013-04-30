@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="piuk.blockchain.android"
     android:installLocation="preferExternal"
-    android:versionCode="108"
+    android:versionCode="109"
     android:versionName="3.38" >
 
     <uses-sdk
@@ -147,7 +147,7 @@
         <activity android:name="piuk.blockchain.android.ui.PinEntryActivity"
             android:launchMode="singleInstance"
             android:screenOrientation="portrait"
-            android:theme="@android:style/Theme.Black.NoTitleBar" ></activity>
+            android:theme="@style/Theme.MyTheme"></activity>
         
         <provider
             android:name="piuk.blockchain.android.AddressBookProvider"
