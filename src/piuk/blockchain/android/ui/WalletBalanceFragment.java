@@ -60,7 +60,7 @@ LoaderManager.LoaderCallbacks<Cursor> {
 		public String getDescription() {
 			return "Wallet Balance Listener";
 		}
-		
+
 		@Override
 		public void onWalletDidChange() {
 			try {
@@ -82,6 +82,15 @@ LoaderManager.LoaderCallbacks<Cursor> {
 		@Override
 		public void onCoinsReceived(final MyTransaction tx, final long result) {
 			try {
+				updateView();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		};
+		
+		@Override
+		public void onCurrencyChanged() {
+			try {				
 				updateView();
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -127,6 +136,14 @@ LoaderManager.LoaderCallbacks<Cursor> {
 		viewBalance = (CurrencyAmountView) view
 				.findViewById(R.id.wallet_balance);
 
+		viewBalance.setOnClickListener(new OnClickListener() {
+			public void onClick(final View v) {
+				application.setShouldDisplayLocalCurrency(!application.getShouldDisplayLocalCurrency());
+				
+				updateView();
+			}
+		});
+		
 		qrView = (ImageView) view.findViewById(R.id.request_coins_qr);
 		qrView.setOnClickListener(new OnClickListener() {
 			public void onClick(final View v) {
@@ -156,8 +173,17 @@ LoaderManager.LoaderCallbacks<Cursor> {
 		if (application.getRemoteWallet() == null)
 			return;
 
-		viewBalance.setAmount(application.getRemoteWallet().getBalance());
+		boolean displayLocal = application.getShouldDisplayLocalCurrency();
 
+		if (displayLocal && application.getRemoteWallet().currencyConversion > 0 && application.getRemoteWallet().currencyCode != null) {
+			viewBalance.setCurrencyCode(application.getRemoteWallet().currencyCode);
+
+			viewBalance.setAmount(application.getRemoteWallet().getBalance().doubleValue() / application.getRemoteWallet().currencyConversion);
+		} else {
+			viewBalance.setCurrencyCode(Constants.CURRENCY_CODE_BITCOIN);
+
+			viewBalance.setAmount(application.getRemoteWallet().getBalance());
+		}
 		String[] active = application.getRemoteWallet().getActiveAddresses();
 
 		if (active.length > 0) {
@@ -169,18 +195,6 @@ LoaderManager.LoaderCallbacks<Cursor> {
 		}
 
 		getLoaderManager().restartLoader(0, null, this);
-	}
-
-	private Runnable resetColorRunnable = new Runnable() {
-		public void run() {
-			//viewBalanceLocal.setTextColor(Color.parseColor("#888888"));
-		}
-	};
-
-	public void flashLocal() {
-		//viewBalanceLocal.setTextColor(Color.parseColor("#cc5500"));
-		handler.removeCallbacks(resetColorRunnable);
-		handler.postDelayed(resetColorRunnable, 500);
 	}
 
 	public Loader<Cursor> onCreateLoader(final int id, final Bundle args) {

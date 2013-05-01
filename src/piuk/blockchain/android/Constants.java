@@ -17,10 +17,12 @@
 
 package piuk.blockchain.android;
 
+import java.io.File;
 import java.math.BigInteger;
 
 import android.content.Context;
 import android.content.Intent;
+import android.os.Environment;
 
 import com.google.bitcoin.core.NetworkParameters;
 import com.google.bitcoin.core.Utils;
@@ -43,7 +45,7 @@ public class Constants {
 
 	static final String EXCEPTION_LOG = "exception.log";
 
-	static final boolean isAmazon = true;
+	static final boolean isAmazon = false;
 	
 	public static final String SENDER_ID = "789483738880";
 
@@ -54,6 +56,8 @@ public class Constants {
 
 	public final static long MultiAddrTimeThreshold = 10000; // 10 seconds
 
+	public static final File EXTERNAL_WALLET_BACKUP_DIR = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+	
 	private static final String WALLET_KEY_BACKUP_BASE58_PROD = "key-backup-base58";
 	private static final String WALLET_KEY_BACKUP_BASE58_TEST = "key-backup-base58-testnet";
 	public static final String WALLET_KEY_BACKUP_BASE58 = Constants.TEST ? WALLET_KEY_BACKUP_BASE58_TEST

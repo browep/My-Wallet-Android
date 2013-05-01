@@ -26,6 +26,8 @@ import piuk.EventListeners;
 import piuk.MyWallet;
 import piuk.blockchain.android.R;
 import piuk.blockchain.android.WalletApplication;
+import piuk.blockchain.android.ui.dialogs.RequestPasswordDialog;
+import piuk.blockchain.android.ui.dialogs.WelcomeDialog;
 
 import android.os.Bundle;
 import android.preference.PreferenceManager;
@@ -531,8 +533,8 @@ public class PinEntryActivity extends AbstractWalletActivity {
 
 		clear();
 
-		PasswordFragment.hide();
-		WelcomeFragment.hide();
+		RequestPasswordDialog.hide();
+		WelcomeDialog.hide();
 
 		String pin_lookup_key = PreferenceManager.getDefaultSharedPreferences(this).getString("pin_kookup_key", null);
 		String encrypted_password = PreferenceManager.getDefaultSharedPreferences(this).getString("encrypted_password", null);
@@ -547,18 +549,18 @@ public class PinEntryActivity extends AbstractWalletActivity {
 			if (application.getRemoteWallet() == null || application.decryptionErrors > 0) {
 				if (application.decryptionErrors <= 1 && application.getGUID() != null && application.getSharedKey() != null) {
 
-					PasswordFragment.show(
+					RequestPasswordDialog.show(
 							getSupportFragmentManager(),
 							new SuccessCallback() {  
 								public void onSuccess() {
 									statusView.setText("Password Ok. Please create a PIN.");
 								}
 								public void onFail() {							
-									WelcomeFragment.show(getSupportFragmentManager(), (WalletApplication)getApplication());
+									WelcomeDialog.show(getSupportFragmentManager(), (WalletApplication)getApplication());
 								}
-							}, PasswordFragment.PasswordTypeMain);
+							}, RequestPasswordDialog.PasswordTypeMain);
 				} else {
-					WelcomeFragment.show(getSupportFragmentManager(), (WalletApplication)getApplication());
+					WelcomeDialog.show(getSupportFragmentManager(), (WalletApplication)getApplication());
 				}
 			} 
 		} else {

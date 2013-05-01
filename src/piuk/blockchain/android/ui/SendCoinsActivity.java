@@ -33,16 +33,20 @@ import android.view.Window;
 import android.webkit.WebView;
 
 import com.google.bitcoin.core.Base58;
+import com.google.bitcoin.core.DumpedPrivateKey;
 import com.google.bitcoin.core.ECKey;
+import com.google.bitcoin.core.NetworkParameters;
 
 import piuk.BitcoinAddress;
 import piuk.BitcoinURI;
+import piuk.MyWallet;
 
 import com.google.bitcoin.uri.BitcoinURIParseException;
 
 import piuk.blockchain.android.R;
 import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.util.ActionBarFragment;
+import piuk.blockchain.android.util.WalletUtils;
 
 /**
  * @author Andreas Schildbach
@@ -50,9 +54,7 @@ import piuk.blockchain.android.util.ActionBarFragment;
 public final class SendCoinsActivity extends AbstractWalletActivity {
 	public static final String INTENT_EXTRA_ADDRESS = "address";
 	private static final String INTENT_EXTRA_QUERY = "query";
-	private static final int DIALOG_HELP = 0;
 	final Map<String, ECKey> temporaryPrivateKeys = new HashMap<String, ECKey>();
-	private static final int REQUEST_CODE_SCAN = 0;
 	public String scanPrivateKeyAddress = null;
 
 	@Override
@@ -74,28 +76,13 @@ public final class SendCoinsActivity extends AbstractWalletActivity {
 		actionBar.addButton(R.drawable.ic_action_qr).setOnClickListener(
 				new OnClickListener() {
 					public void onClick(final View v) {
-						showQRReader();
-					}
-				});
-		actionBar.addButton(R.drawable.ic_action_help).setOnClickListener(
-				new OnClickListener() {
-					public void onClick(final View v) {
-						showDialog(DIALOG_HELP);
+						showQRReader("uri_qr_code");
 					}
 				});
 
 		handleIntent(getIntent());
 	}
 
-	public void showQRReader() {
-		if (getPackageManager().resolveActivity(Constants.INTENT_QR_SCANNER, 0) != null) {
-			startActivityForResult(Constants.INTENT_QR_SCANNER,
-					REQUEST_CODE_SCAN);
-		} else {
-			showMarketPage(Constants.PACKAGE_NAME_ZXING);
-			longToast(R.string.send_coins_install_qr_scanner_msg);
-		}
-	}
 
 	@Override
 	protected void onNewIntent(final Intent intent) {
@@ -103,83 +90,64 @@ public final class SendCoinsActivity extends AbstractWalletActivity {
 	}
 
 	@Override
-	protected Dialog onCreateDialog(final int id) {
-		final WebView webView = new WebView(this);
-		webView.loadUrl("file:///android_asset/help_send_coins"
-				+ languagePrefix() + ".html");
-
-		final Dialog dialog = new Dialog(this);
-		dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-		dialog.setContentView(webView);
-		dialog.setCanceledOnTouchOutside(true);
-
-		return dialog;
-	}
-
-	@Override
 	public void onActivityResult(final int requestCode, final int resultCode,
 			final Intent intent) {
-		if (requestCode == REQUEST_CODE_SCAN
-				&& resultCode == RESULT_OK
-				&& "QR_CODE"
-						.equals(intent.getStringExtra("SCAN_RESULT_FORMAT"))) {
-			final String contents = intent.getStringExtra("SCAN_RESULT");
-			if (contents.matches("[a-zA-Z0-9]*")) {
-				System.out.println("Scan address " + scanPrivateKeyAddress);
 
-				if (scanPrivateKeyAddress != null) {
+		String action = super.getQRCodeAction();
 
-					try {
+		if (action == null)
+			return;
 
-						byte[] privBytes = Base58.decode(contents);
+		try {
 
-						// Prppend a zero byte to make the biginteger unsigned
-						byte[] appendZeroByte = ArrayUtils.addAll(new byte[1],
-								privBytes);
+			if (resultCode == RESULT_OK
+					&& "QR_CODE"
+					.equals(intent.getStringExtra("SCAN_RESULT_FORMAT"))) {
+				final String contents = intent.getStringExtra("SCAN_RESULT");
+				if (action.equals("private_key_qr")) {
+					System.out.println("Scanned PK " + contents);
 
-						ECKey ecKey = new ECKey(new BigInteger(appendZeroByte));
+					ECKey key = null;
 
-						if (ecKey.toAddress(Constants.NETWORK_PARAMETERS)
+					if (scanPrivateKeyAddress != null) {
+
+						String format = WalletUtils.detectPrivateKeyFormat(contents);
+
+						key = WalletUtils.parsePrivateKey(format, contents);
+
+						if (!key.toAddressCompressed(Constants.NETWORK_PARAMETERS)
+								.toString().equals(scanPrivateKeyAddress) && 
+								!key.toAddress(Constants.NETWORK_PARAMETERS)
 								.toString().equals(scanPrivateKeyAddress)) {
-							temporaryPrivateKeys.put(scanPrivateKeyAddress,
-									ecKey);
+							throw new Exception(getString(R.string.wrong_private_key));
 						} else {
-							longToast(getString(
-									R.string.wrong_private_key,
-									ecKey.toAddress(
-											Constants.NETWORK_PARAMETERS)
-											.toString()));
+							//Success
+							temporaryPrivateKeys.put(scanPrivateKeyAddress, key);
 						}
-
-					} catch (Exception e) {
-						e.printStackTrace();
+					} else {
+						updateSendCoinsFragment(contents, null);
 					}
-
-				} else {
-					updateSendCoinsFragment(contents, null);
-				}
-			} else {
-				try {
+				} else if (action.equals("uri_qr_code")) {
 
 					final BitcoinURI bitcoinUri = new BitcoinURI(contents);
 					final BitcoinAddress address = bitcoinUri.getAddress();
 
 					updateSendCoinsFragment(
 							address != null ? address.toString() : null,
-							bitcoinUri.getAmount());
-
-				} catch (final BitcoinURIParseException x) {
-					errorDialog(R.string.send_coins_uri_parse_error_title,
-							contents);
+									bitcoinUri.getAmount());
 				}
+
 			}
-		}
 
-		synchronized (temporaryPrivateKeys) {
-			temporaryPrivateKeys.notify();
-		}
+			synchronized (temporaryPrivateKeys) {
+				temporaryPrivateKeys.notify();
+			}
 
-		scanPrivateKeyAddress = null;
+			scanPrivateKeyAddress = null;
+
+		} catch (final Exception e) {
+			longToast(e.getLocalizedMessage());
+		}
 	}
 
 	private void handleIntent(final Intent intent) {

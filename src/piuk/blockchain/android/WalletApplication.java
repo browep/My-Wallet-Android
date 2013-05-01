@@ -38,9 +38,9 @@ import piuk.MyRemoteWallet;
 import piuk.MyRemoteWallet.NotModfiedException;
 import piuk.blockchain.android.R;
 import piuk.blockchain.android.ui.AbstractWalletActivity;
-import piuk.blockchain.android.ui.PasswordFragment;
 import piuk.blockchain.android.ui.PinEntryActivity;
 import piuk.blockchain.android.ui.SuccessCallback;
+import piuk.blockchain.android.ui.dialogs.RequestPasswordDialog;
 import piuk.blockchain.android.util.ErrorReporter;
 
 import java.io.FileInputStream;
@@ -82,7 +82,7 @@ public class WalletApplication extends Application {
 		public String getDescription() {
 			return "Main Wallet Did Change Listener";
 		}
-		
+
 		@Override
 		public void onWalletDidChange() {
 			try {
@@ -457,11 +457,6 @@ public class WalletApplication extends Application {
 
 				} catch (NotModfiedException e) {
 					if (blockchainWallet != null) {
-						if (!blockchainWallet.isUptoDate(Constants.MultiAddrTimeThreshold)) {
-							doMultiAddr();
-						} else {
-							System.out.println("Skipping doMultiAddr");
-						}
 
 						if (callback != null)  {
 							handler.post(new Runnable() {
@@ -470,6 +465,12 @@ public class WalletApplication extends Application {
 								};
 							});
 							callback = null;
+						}
+						
+						if (!blockchainWallet.isUptoDate(Constants.MultiAddrTimeThreshold)) {
+							doMultiAddr();
+						} else {
+							System.out.println("Skipping doMultiAddr");
 						}
 					}
 				} catch (final Exception e) {
@@ -587,6 +588,7 @@ public class WalletApplication extends Application {
 				try {
 					// Get the balance and transaction
 					doMultiAddr();
+					
 				} catch (Exception e) {
 					e.printStackTrace();
 
@@ -613,6 +615,10 @@ public class WalletApplication extends Application {
 				try {
 					writeMultiAddrCache(blockchainWallet.doMultiAddr());
 
+					//After multi addr the currency is set
+					if (blockchainWallet.currencyCode != null)
+						setCurrency(blockchainWallet.currencyCode);
+					
 					handler.post(new Runnable() {
 						public void run() {
 							notifyWidgets();
@@ -736,6 +742,18 @@ public class WalletApplication extends Application {
 		}
 	}
 
+	public boolean setCurrency(String currency) { 
+		return PreferenceManager.getDefaultSharedPreferences(this).edit().putString(Constants.PREFS_KEY_EXCHANGE_CURRENCY, currency).commit();
+	}
+	
+	public boolean setShouldDisplayLocalCurrency(boolean value) { 
+		return PreferenceManager.getDefaultSharedPreferences(this).edit().putBoolean("should_display_local_currency", value).commit();
+	}
+
+	public boolean getShouldDisplayLocalCurrency() { 
+		return PreferenceManager.getDefaultSharedPreferences(this).getBoolean("should_display_local_currency", false);
+	}
+	
 	public boolean readLocalMultiAddr() {
 		if (blockchainWallet == null)
 			return false;
@@ -748,6 +766,9 @@ public class WalletApplication extends Application {
 			String multiAddr = IOUtils.toString(multiaddrCacheFile);
 
 			blockchainWallet.parseMultiAddr(multiAddr, false);
+
+			if (blockchainWallet.currencyCode != null)
+				setCurrency(blockchainWallet.currencyCode);
 
 			return true;
 

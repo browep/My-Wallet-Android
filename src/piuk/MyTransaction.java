@@ -43,6 +43,26 @@ public class MyTransaction extends Transaction implements Serializable {
 	int txIndex;
 	public BigInteger result;
 
+	public static long getSerialversionuid() {
+		return serialVersionUID;
+	}
+
+	public Date getTime() {
+		return time;
+	}
+
+	public int getHeight() {
+		return height;
+	}
+
+	public boolean isDouble_spend() {
+		return double_spend;
+	}
+
+	public int getTxIndex() {
+		return txIndex;
+	}
+
 	public BigInteger getResult() {
 		return result;
 	}

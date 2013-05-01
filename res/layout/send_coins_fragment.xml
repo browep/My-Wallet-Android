@@ -22,6 +22,7 @@
 		android:layout_marginLeft="12dp"
 		android:layout_marginRight="12dp"
 		android:background="@drawable/edit_text"
+		android:drawableRight="@drawable/ic_input_qrcode"
 		android:completionThreshold="1"
 		android:hint="@string/send_coins_fragment_receiving_address_hint"
 		android:imeOptions="actionNext"
@@ -101,29 +102,6 @@
 			android:drawablePadding="4dp"
 			android:textSize="@dimen/font_size_xlarge" />
 	</piuk.blockchain.android.ui.CurrencyAmountView>
-
-
-
-	<!-- stretch dummy -->
-
-	<TextView
-	    android:layout_width="fill_parent"
-	    android:layout_height="wrap_content"
-	    android:layout_marginLeft="20dp"
-	    android:layout_marginRight="20dp"
-	    android:layout_marginTop="16dp"
-	    android:text="@string/send_coins_fragment_need_btc"
-	    android:textSize="@dimen/font_size_small"
-	    android:textStyle="bold" />
-
-	<Button
-	    android:id="@+id/instant_deposit"
-	    android:layout_width="144dp"
-	    android:layout_height="wrap_content"
-	    android:layout_marginLeft="20dp"
-	    android:layout_marginRight="20dp"
-	    android:layout_marginTop="8dp"
-	    android:text="@string/send_coins_fragment_instant_deposit" />
 
 	<ImageView
 		android:layout_width="wrap_content"

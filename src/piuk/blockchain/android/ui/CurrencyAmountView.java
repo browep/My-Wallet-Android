@@ -18,6 +18,7 @@
 package piuk.blockchain.android.ui;
 
 import java.math.BigInteger;
+import java.text.DecimalFormat;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -70,7 +71,7 @@ public final class CurrencyAmountView extends FrameLayout {
 	private OnClickListener contextButtonClickListener;
 
 	private final class TextViewListener implements TextWatcher,
-			OnFocusChangeListener, OnEditorActionListener {
+	OnFocusChangeListener, OnEditorActionListener {
 		public void afterTextChanged(final Editable s) {
 			// workaround for German keyboards
 			final String original = s.toString();
@@ -209,12 +210,17 @@ public final class CurrencyAmountView extends FrameLayout {
 			return null;
 	}
 
+
+	public void setAmount(final double amount) {
+		textView.setText(new DecimalFormat("#.##").format(amount));
+	}
+
 	public void setAmount(final BigInteger amount) {
 		if (amount != null)
 			textView.setText(amountSigned ? WalletUtils
 					.formatValue(amount, Constants.CURRENCY_PLUS_SIGN,
 							Constants.CURRENCY_MINUS_SIGN) : WalletUtils
-					.formatValue(amount));
+							.formatValue(amount));
 		else
 			textView.setText(null);
 	}

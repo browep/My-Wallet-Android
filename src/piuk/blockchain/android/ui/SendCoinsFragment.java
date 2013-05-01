@@ -18,13 +18,19 @@
 package piuk.blockchain.android.ui;
 
 import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.database.Cursor;
 import android.graphics.Color;
+import android.graphics.Rect;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -33,13 +39,16 @@ import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentTransaction;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Pair;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.view.View.OnTouchListener;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
-import android.widget.CursorAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -53,11 +62,11 @@ import com.google.bitcoin.core.Utils;
 import piuk.MyRemoteWallet;
 import piuk.MyRemoteWallet.SendProgress;
 import piuk.blockchain.android.R;
-import piuk.blockchain.android.AddressBookProvider;
 import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.WalletApplication;
 import piuk.blockchain.android.WalletApplication.AddAddressCallback;
 import piuk.blockchain.android.ui.CurrencyAmountView.Listener;
+import piuk.blockchain.android.ui.dialogs.RequestPasswordDialog;
 
 /**
  * @author Andreas Schildbach
@@ -74,6 +83,7 @@ public final class SendCoinsFragment extends Fragment
 	private Button viewGo;
 	private Button viewCancel;
 
+	
 	public static enum FeePolicy {
 		FeeOnlyIfNeeded,
 		FeeForce,
@@ -123,55 +133,82 @@ public final class SendCoinsFragment extends Fragment
 		final Activity activity = getActivity();
 
 		application = (WalletApplication) activity.getApplication();
-
 	}
 
+	public abstract class RightDrawableOnTouchListener implements OnTouchListener {
+	    Drawable drawable;
+	    private int fuzz = 40;
 
+	    /**
+	     * @param keyword
+	     */
+	    public RightDrawableOnTouchListener(TextView view) {
+	        super();
+	        final Drawable[] drawables = view.getCompoundDrawables();
+	        if (drawables != null && drawables.length == 4)
+	            this.drawable = drawables[2];
+	    }
 
+	    /*
+	     * (non-Javadoc)
+	     * 
+	     * @see android.view.View.OnTouchListener#onTouch(android.view.View, android.view.MotionEvent)
+	     */
+	    @Override
+	    public boolean onTouch(final View v, final MotionEvent event) {
+	    		    	 
+	        if (event.getAction() == MotionEvent.ACTION_DOWN && drawable != null) {
+		    	System.out.println("event " + event);
+
+	        	final int x = (int) event.getX();
+	            final int y = (int) event.getY();
+	            
+		    	System.out.println("x " + x);
+		    	System.out.println("y " + y);
+
+	            final Rect bounds = drawable.getBounds();
+		    	System.out.println("bounds " + bounds);
+
+	            if (x >= (v.getRight() - bounds.width() - fuzz) && x <= (v.getRight() - v.getPaddingRight() + fuzz)
+	                    && y >= (v.getPaddingTop() - fuzz) && y <= (v.getHeight() - v.getPaddingBottom()) + fuzz) {
+	                return onDrawableTouch(event);
+	            }
+	        }
+	        return false;
+	    }
+
+	    public abstract boolean onDrawableTouch(final MotionEvent event);
+
+	}
+	
 	@Override
 	public View onCreateView(final LayoutInflater inflater, final ViewGroup container, final Bundle savedInstanceState)
 	{
-		
+
 		final SendCoinsActivity activity = (SendCoinsActivity) getActivity();
 
 		final View view = inflater.inflate(R.layout.send_coins_fragment, container);
 
 		if (application.getRemoteWallet() == null)
 			return view;
-		
+
 		final BigInteger available = application.getRemoteWallet().getBalance();
 
-		Button instantDepositButton = (Button) view.findViewById(R.id.instant_deposit);
-
-		instantDepositButton.setOnClickListener(new OnClickListener() {
-			public void onClick(final View v) {
-
-				if (application.getRemoteWallet() == null)
-					return;
-				
-				WalletApplication application = (WalletApplication) activity.getApplication();
-
-				MyRemoteWallet wallet = application.getRemoteWallet();
-
-				//Don't allow deposits into new wallets
-				if (wallet == null || wallet.isNew() || wallet.getActiveAddresses().length == 0)
-					return;
-
-				String address = wallet.getActiveAddresses()[0];
-
-				String sharedKey = wallet.getSharedKey();
-
-				String guid = wallet.getGUID();
-
-				Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://blockchain.info/deposit?address="+address+"&guid="+guid+"&sharedKey="+sharedKey));
-
-				startActivity(browserIntent);
-			}
-		});
-
 		receivingAddressView = (AutoCompleteTextView) view.findViewById(R.id.send_coins_receiving_address);
-		receivingAddressView.setAdapter(new AutoCompleteAdapter(activity, null));
+
+		AutoCompleteAdapter adapter = new AutoCompleteAdapter(this.getLabelList());
+
+		receivingAddressView.setAdapter(adapter);
 		receivingAddressView.addTextChangedListener(textWatcher);
+
+		receivingAddressView.setOnTouchListener(new RightDrawableOnTouchListener(receivingAddressView) {
+	        @Override
+	        public boolean onDrawableTouch(final MotionEvent event) {
+				activity.showQRReader("uri_qr_code");
+				
+				return true;
+	        }
+	    });
 
 		receivingAddressErrorView = view.findViewById(R.id.send_coins_receiving_address_error);
 
@@ -306,8 +343,6 @@ public final class SendCoinsFragment extends Fragment
 
 				public ECKey onPrivateKeyMissing(final String address) {
 
-					System.out.println("onPrivateKeyMissing()");
-
 					handler.post(new Runnable() {
 						public void run() {
 							AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
@@ -317,7 +352,7 @@ public final class SendCoinsFragment extends Fragment
 								public void onClick(DialogInterface dialog, int id) {
 									activity.scanPrivateKeyAddress = address;
 
-									activity.showQRReader();
+									activity.showQRReader("private_key_qr");
 								}
 							})
 							.setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
@@ -353,7 +388,7 @@ public final class SendCoinsFragment extends Fragment
 
 				if (application.getRemoteWallet() == null)
 					return;
-				
+
 				final BigInteger amount = amountView.getAmount();
 				final WalletApplication application = (WalletApplication) getActivity().getApplication();
 
@@ -364,22 +399,15 @@ public final class SendCoinsFragment extends Fragment
 
 				if (application.getRemoteWallet() == null)
 					return;
-				
+
 				try {
 					MyRemoteWallet wallet = application.getRemoteWallet();
-					
-					BigInteger baseFee = null; 
-					if (wallet.getFeePolicy() == -1) {
-						baseFee = Utils.toNanoCoins("0.0001");
-					} else if (wallet.getFeePolicy() == 1) {
-						baseFee = Utils.toNanoCoins("0.001");
-					} else {
-						baseFee = Utils.toNanoCoins("0.0005");
-					}
-					
+
+					BigInteger baseFee = wallet.getBaseFee();
+
 					final BigInteger fee = (feePolicy == FeePolicy.FeeForce || wallet.getFeePolicy() == 1) ? baseFee : BigInteger.ZERO;
 
-					String addressString = receivingAddressView.getText().toString().trim();
+					String addressString = getToAddress();
 
 					try {
 						Address receivingAddress = new Address(Constants.NETWORK_PARAMETERS, addressString);
@@ -414,14 +442,14 @@ public final class SendCoinsFragment extends Fragment
 			{
 				if (application.getRemoteWallet() == null)
 					return;
-				
+
 				MyRemoteWallet remoteWallet = application.getRemoteWallet();
 
 				if (remoteWallet.isDoubleEncrypted() == false) {
 					makeTransaction(FeePolicy.FeeOnlyIfNeeded);
 				} else {
 					if (remoteWallet.temporySecondPassword == null) {
-						PasswordFragment.show(getFragmentManager(), new SuccessCallback() {
+						RequestPasswordDialog.show(getFragmentManager(), new SuccessCallback() {
 
 							public void onSuccess() {
 								makeTransaction(FeePolicy.FeeOnlyIfNeeded);
@@ -430,7 +458,7 @@ public final class SendCoinsFragment extends Fragment
 							public void onFail() {
 								Toast.makeText(application, R.string.send_no_password_error, Toast.LENGTH_LONG).show();
 							}
-						}, PasswordFragment.PasswordTypeSecond);
+						}, RequestPasswordDialog.PasswordTypeSecond);
 					} else {
 						makeTransaction(FeePolicy.FeeOnlyIfNeeded);
 					}
@@ -453,7 +481,7 @@ public final class SendCoinsFragment extends Fragment
 
 		return view;
 	}
-	
+
 	protected void onServiceBound()
 	{
 		System.out.println("service bound");
@@ -465,11 +493,17 @@ public final class SendCoinsFragment extends Fragment
 	}
 
 	@Override
+	public void onResume() {
+
+		super.onResume();
+	}
+
+	@Override
 	public void onDestroyView()
 	{
-		handler.removeCallbacks(sentRunnable);
-
 		super.onDestroyView();
+
+		handler.removeCallbacks(sentRunnable);
 	}
 
 
@@ -477,94 +511,101 @@ public final class SendCoinsFragment extends Fragment
 	public void onDestroy()
 	{
 		super.onDestroy();
-		
+
 		if (application.getRemoteWallet() == null)
 			return;
-		
+
 		//Clear the second password
 		MyRemoteWallet remoteWallet = application.getRemoteWallet();
-		
+
 		remoteWallet.setTemporySecondPassword(null);
 	}
 
-	public class AutoCompleteAdapter extends CursorAdapter
+	public class AutoCompleteAdapter extends ArrayAdapter<Pair<String, String>>
 	{
-		public AutoCompleteAdapter(final Context context, final Cursor c)
+		public AutoCompleteAdapter(List<Pair<String, String>> data)
 		{
-			super(context, c);
+			super(getActivity(), R.layout.simple_dropdown_item_2line, data);
 		}
 
 		@Override
-		public synchronized View newView(final Context context, final Cursor cursor, final ViewGroup parent)
-		{
-			if (cursor.isClosed())
-				return null;
-			
-			final LayoutInflater inflater = LayoutInflater.from(context);
-			return inflater.inflate(R.layout.simple_dropdown_item_2line, parent, false);
-		}
+		public View getView(final int position, View row, final ViewGroup parent) {
 
-		@Override
-		public synchronized void bindView(final View view, final Context context, final Cursor cursor)
-		{
+			if (row == null) {
+				row = getLayoutInflater(null).inflate(R.layout.simple_dropdown_item_2line, parent, false);
+			}
 
-			if (cursor.isClosed())
-				return;
-			
-			final ViewGroup viewGroup = (ViewGroup) view;
-			((TextView) viewGroup.findViewById(android.R.id.text1)).setText(cursor.getString(cursor
-					.getColumnIndexOrThrow(AddressBookProvider.KEY_LABEL)));
-			((TextView) viewGroup.findViewById(android.R.id.text2)).setText(cursor.getString(cursor
-					.getColumnIndexOrThrow(AddressBookProvider.KEY_ADDRESS)));
-		}
+			final Pair<String, String> pair = getItem(position);
 
-		@Override
-		public synchronized CharSequence convertToString(final Cursor cursor)
-		{
-			if (cursor.isClosed())
-				return null;
+			((TextView) row.findViewById(android.R.id.text1)).setText(pair.first);
 
-			return cursor.getString(cursor.getColumnIndexOrThrow(AddressBookProvider.KEY_ADDRESS));
-		}
+			((TextView) row.findViewById(android.R.id.text2)).setText(pair.second);
 
-		@Override
-		public synchronized Cursor runQueryOnBackgroundThread(final CharSequence constraint)
-		{
-			final Cursor cursor = getActivity().managedQuery(AddressBookProvider.CONTENT_URI, null, AddressBookProvider.SELECTION_QUERY, new String[] { constraint.toString() }, null);
-
-			if (cursor != null && cursor.isClosed())
-				return null;
-
-			return cursor;
+			return row;
 		}
 	}
+
+	public List<Pair<String, String>> getLabelList() {
+		List<Pair<String, String>> array = new ArrayList<Pair<String, String>>();
+
+		if (application.getRemoteWallet() == null) {
+			return array;
+		}
+
+		Map<String, String> labelMap = application.getRemoteWallet().getLabelMap();
+
+		synchronized(labelMap) {
+			for (Map.Entry<String, String> entry : labelMap.entrySet()) {
+				array.add(new Pair<String, String>(entry.getValue(), entry.getKey()) {
+					public String toString() {
+						return first.toString();
+					}
+				});
+			}
+		}
+
+		return array;
+	}
+
 
 	private boolean isValidEmail(String email) {
 		return android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches();
 	}
 
-	private void updateView()
-	{
-		//0 = invalid, 1 = bitcoin, 2 = email
-		int AddressType = 0;
-		try
-		{
-			final String address = receivingAddressView.getText().toString().trim();
-			if (address.length() > 0) {
-				//try {
-				new Address(Constants.NETWORK_PARAMETERS, address);
-				AddressType = 1;
-				receivingAddressErrorView.setVisibility(View.GONE);
-				//} catch (AddressFormatException e) {
-				//if (isValidEmail(address)) {
-				//	AddressType = 2;
-				//	receivingAddressErrorView.setVisibility(View.GONE);
-				//}
-				//}
+
+	public String getToAddress() {
+		final String userEntered = receivingAddressView.getText().toString().trim();
+		if (userEntered.length() > 0) {
+			try {
+				new Address(Constants.NETWORK_PARAMETERS, userEntered);
+				
+				return userEntered;
+			} catch (AddressFormatException e) {
+				List<Pair<String, String>> labels = this.getLabelList();
+				
+				for (Pair<String, String> label : labels) {
+					if (label.first.toLowerCase(Locale.ENGLISH).equals(userEntered.toLowerCase(Locale.ENGLISH))) {
+						try {
+							new Address(Constants.NETWORK_PARAMETERS, label.second);
+							
+							return label.second;
+						} catch (AddressFormatException e1) {}
+					}
+				}
 			}
 		}
-		catch (final Exception x)
-		{
+		
+		return null;
+	}
+
+	private void updateView()
+	{
+		
+		String address = getToAddress();
+		
+		if (receivingAddressView.getText().toString().trim().length() == 0 || address != null) {
+			receivingAddressErrorView.setVisibility(View.GONE);	
+		} else {
 			receivingAddressErrorView.setVisibility(View.VISIBLE);
 		}
 
@@ -575,7 +616,7 @@ public final class SendCoinsFragment extends Fragment
 
 		amountView.setEnabled(state == State.INPUT);
 
-		viewGo.setEnabled(state == State.INPUT && AddressType != 0 && validAmount);
+		viewGo.setEnabled(state == State.INPUT && address != null && validAmount);
 		if (state == State.INPUT)
 			viewGo.setText(R.string.send_coins_fragment_button_send);
 		else if (state == State.SENDING)
@@ -589,7 +630,11 @@ public final class SendCoinsFragment extends Fragment
 
 	public void update(final String receivingAddress, final BigInteger amount)
 	{
+		if (receivingAddressView == null)
+			return;
+		
 		receivingAddressView.setText(receivingAddress);
+		
 		flashReceivingAddress();
 
 		if (amount != null)

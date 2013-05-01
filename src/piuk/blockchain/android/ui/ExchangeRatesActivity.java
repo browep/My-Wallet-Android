@@ -39,5 +39,6 @@ public final class ExchangeRatesActivity extends AbstractWalletActivity {
 				finish();
 			}
 		});
+		
 	}
 }

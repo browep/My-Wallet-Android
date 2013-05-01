@@ -3,8 +3,7 @@
     android:layout_width="fill_parent"
     android:layout_height="wrap_content"
     android:layout_margin="8dp"
-    android:background="#fff"
-    android:orientation="vertical" >
+    android:orientation="vertical">
 
     <TextView
         android:id="@+id/welcome_text"
@@ -16,21 +15,20 @@
         android:layout_weight="0.50"
         android:text="@string/welcome_text_has_account"
         android:textSize="@dimen/font_size_small"
-        android:textStyle="bold" 
-        android:textColor="#000000"/>
+        android:textStyle="bold" />
 
     <Button
         android:id="@+id/pair_device_button"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_weight="0.50"
-        android:text="@string/welcome_pair_device_button" />
+        android:text="@string/welcome_pair_device_button"/>
     
     <Button
         android:id="@+id/new_account_button"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_weight="0.50"
-        android:text="@string/welcome_new_account_button" />
+        android:text="@string/welcome_new_account_button"  />
 
 </LinearLayout>

@@ -61,6 +61,9 @@ public class EventListeners {
 		
 		public void onTransactionsChanged() {
 		};
+		
+		public void onCurrencyChanged() {
+		};
 	}
 
 	private static final Set<ListenerWeakContainer> listeners = new HashSet<ListenerWeakContainer>();
@@ -168,6 +171,30 @@ public class EventListeners {
 								EventListener _listener = listener.get();
 								if (_listener != null) {
 									_listener.onWalletDidChange();
+								}
+							}
+						});
+					}
+				}	
+			}
+		}).start();
+	}
+	
+	public static void invokeCurrencyDidChange() {
+		new Thread(new Runnable() {
+			@Override
+			public void run() {
+				synchronized (listeners) {
+					for (final ListenerWeakContainer listener : listeners) {
+						if (listener.get() == null)
+							return;
+
+						handler.post(new Runnable() {
+							@Override
+							public void run() {
+								EventListener _listener = listener.get();
+								if (_listener != null) {
+									_listener.onCurrencyChanged();
 								}
 							}
 						});

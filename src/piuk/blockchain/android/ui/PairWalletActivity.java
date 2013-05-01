@@ -12,15 +12,16 @@ import android.widget.Toast;
 import piuk.MyRemoteWallet;
 import piuk.MyWallet;
 import piuk.blockchain.android.R;
-import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.WalletApplication;
+import piuk.blockchain.android.ui.dialogs.RequestIdentifierDialog;
+import piuk.blockchain.android.ui.dialogs.RequestPasswordDialog;
+import piuk.blockchain.android.ui.dialogs.WelcomeDialog;
 import piuk.blockchain.android.util.ActionBarFragment;
 import java.util.regex.Pattern;
 
 import org.spongycastle.util.encoders.Hex;
 
 public class PairWalletActivity extends AbstractWalletActivity {
-	private static final int REQUEST_CODE_SCAN = 0;
 	final PairWalletActivity activity = this;
 
 	@Override
@@ -44,7 +45,7 @@ public class PairWalletActivity extends AbstractWalletActivity {
 
 		pairDeviceButton.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
-				showQRReader();
+				showQRReader("scan_pairing_code");
 			}
 		});
 
@@ -53,7 +54,7 @@ public class PairWalletActivity extends AbstractWalletActivity {
 
 		pairManuallyButton.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
-				RequestIdentifierFragment.show(getSupportFragmentManager(), new RequestIdentifierFragment.SuccessCallback() {
+				RequestIdentifierDialog.show(getSupportFragmentManager(), new RequestIdentifierDialog.SuccessCallback() {
 					@Override
 					public void onSuccess(String guid) {
 						pairManually(guid);
@@ -72,8 +73,6 @@ public class PairWalletActivity extends AbstractWalletActivity {
 
 	public void pairManually(final String guid) {
 
-		System.out.println("pairManually()");
-
 		new Thread(new Runnable() {
 			@Override
 			public void run() {
@@ -84,11 +83,11 @@ public class PairWalletActivity extends AbstractWalletActivity {
 
 						@Override
 						public void run() {
-							PasswordFragment.show(
+							RequestPasswordDialog.show(
 									getSupportFragmentManager(),
 									new SuccessCallback() {  
 										public void onSuccess() {
-											String password = PasswordFragment.getPasswordResult();
+											String password = RequestPasswordDialog.getPasswordResult();
 
 											try {
 												MyWallet wallet = new MyWallet(payload, password);
@@ -108,7 +107,8 @@ public class PairWalletActivity extends AbstractWalletActivity {
 
 												application.checkIfWalletHasUpdatedAndFetchTransactions(password, guid, sharedKey, new SuccessCallback(){
 													@Override
-													public void onSuccess() {						
+													public void onSuccess() {
+																											
 														finish();
 													}
 
@@ -133,9 +133,9 @@ public class PairWalletActivity extends AbstractWalletActivity {
 
 										}
 										public void onFail() {							
-											WelcomeFragment.show(getSupportFragmentManager(), (WalletApplication)getApplication());
+											WelcomeDialog.show(getSupportFragmentManager(), (WalletApplication)getApplication());
 										}
-									}, PasswordFragment.PasswordTypeMainNoValidate);
+									}, RequestPasswordDialog.PasswordTypeMainNoValidate);
 						}
 					});
 				} catch (final Exception e) {
@@ -157,10 +157,17 @@ public class PairWalletActivity extends AbstractWalletActivity {
 		}).start();
 	}
 
+	
 	@Override
 	public void onActivityResult(final int requestCode, final int resultCode,
 			final Intent intent) {
-		if (requestCode == REQUEST_CODE_SCAN
+		
+		String action = super.getQRCodeAction();
+
+		if (action == null)
+			return;
+		
+		if (action.equals("scan_pairing_code")
 				&& resultCode == RESULT_OK
 				&& "QR_CODE"
 				.equals(intent.getStringExtra("SCAN_RESULT_FORMAT"))) {
@@ -235,7 +242,7 @@ public class PairWalletActivity extends AbstractWalletActivity {
 										application.checkIfWalletHasUpdatedAndFetchTransactions(password, guid, sharedKey, new SuccessCallback(){
 
 											@Override
-											public void onSuccess() {						
+											public void onSuccess() {													
 												finish();
 											}
 
@@ -277,16 +284,6 @@ public class PairWalletActivity extends AbstractWalletActivity {
 
 				application.writeException(e);
 			}
-		}
-	}
-
-	public void showQRReader() {
-		if (getPackageManager().resolveActivity(Constants.INTENT_QR_SCANNER, 0) != null) {
-			startActivityForResult(Constants.INTENT_QR_SCANNER,
-					REQUEST_CODE_SCAN);
-		} else {
-			showMarketPage(Constants.PACKAGE_NAME_ZXING);
-			longToast(R.string.send_coins_install_qr_scanner_msg);
 		}
 	}
 }

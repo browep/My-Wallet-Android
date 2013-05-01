@@ -33,6 +33,7 @@ import piuk.MyTransaction;
 import piuk.blockchain.android.AddressBookProvider;
 import piuk.blockchain.android.R;
 import piuk.blockchain.android.WalletApplication;
+import piuk.blockchain.android.ui.dialogs.TransactionSummaryDialog;
 import android.app.Activity;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -66,71 +67,27 @@ public final class WalletTransactionsFragment extends ListFragment {
 		public String getDescription() {
 			return "Wallet Transactions Listener";
 		}
-		
+
 		@Override
 		public void onCoinsSent(final MyTransaction tx, final long result) {
-
-			System.out.println("Receive onCoinsSent()");
-
 			setAdapterContent();
-
-			synchronized(adapter) {
-				adapter.notifyDataSetChanged();
-			}	
 		};
 
 		@Override
 		public void onCoinsReceived(final MyTransaction tx, final long result) {
-			handler.post(new Runnable() {
-				@Override
-				public void run() {	
-					System.out.println("Receive onCoinsReceived()");
-
-					setAdapterContent();
-
-					synchronized(adapter) {
-						adapter.notifyDataSetChanged();
-					}
-				}
-			});			
+			setAdapterContent();		
 		};
 
 
 		@Override
 		public void onTransactionsChanged() {
-			handler.post(new Runnable() {
-				public void run() {
-					try {
-						System.out.println("Receive onTransactionsChanged()");
-
-						setAdapterContent();
-
-						synchronized(adapter) {
-							adapter.notifyDataSetChanged();
-						}
-					} catch (Exception e) {
-						e.printStackTrace();
-					}
-				}
-			});
+			setAdapterContent();
 		};
 
 
 		@Override
-		public void onWalletDidChange() {				
-			handler.post(new Runnable() {
-
-				@Override
-				public void run() {
-					System.out.println("Receive onWalletDidChange()");
-
-					setAdapterContent();
-
-					synchronized(adapter) {
-						adapter.notifyDataSetChanged();
-					}
-				}
-			});
+		public void onWalletDidChange() {	
+			setAdapterContent();
 		}
 	};
 
@@ -268,25 +225,29 @@ public final class WalletTransactionsFragment extends ListFragment {
 	}
 
 	public  void setAdapterContent() {
-		synchronized(adapter) {
+		try {
+			synchronized(adapter) {
 
-			if (application.getRemoteWallet() == null) {
-				return;
-			}
+				if (application.getRemoteWallet() == null) {
+					return;
+				}
 
-			adapter.clear(); 
+				adapter.clear(); 
 
-			List<MyTransaction> transactions = application.getRemoteWallet().getMyTransactions();
+				List<MyTransaction> transactions = application.getRemoteWallet().getMyTransactions();
 
-			synchronized(transactions) {
-				if (transactions.size() > 0) {
-					for (MyTransaction transaction : transactions) {
-						adapter.add(transaction);
-					}  
-				} else {
-					adapter.add(new MyTransaction(NetworkParameters.prodNet(), 0, null));
+				synchronized(transactions) {
+					if (transactions.size() > 0) {
+						for (MyTransaction transaction : transactions) {
+							adapter.add(transaction);
+						}  
+					} else {
+						adapter.add(new MyTransaction(NetworkParameters.prodNet(), 0, null));
+					}
 				}
 			}
+		} catch (Exception e) { 
+			e.printStackTrace();
 		}
 	}
 
@@ -335,8 +296,9 @@ public final class WalletTransactionsFragment extends ListFragment {
 		synchronized(adapter) {
 			final MyTransaction tx = adapter.getItem(position);
 
-			if (tx.getHash() != null)
-				editAddress(tx);
+			if (tx != null) {
+				TransactionSummaryDialog.show(getFragmentManager(), application, tx);
+			}
 		}
 	}
 

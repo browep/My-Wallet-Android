@@ -48,6 +48,7 @@ import piuk.MyRemoteWallet;
 import piuk.blockchain.android.R;
 import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.WalletApplication.AddAddressCallback;
+import piuk.blockchain.android.ui.dialogs.RequestPasswordDialog;
 import piuk.blockchain.android.util.ActionBarFragment;
 import piuk.blockchain.android.util.ViewPagerTabs;
 
@@ -367,7 +368,7 @@ public final class WalletAddressesActivity extends AbstractWalletActivity {
 									reallyGenerateAddress();
 								} else {
 									if (remoteWallet.temporySecondPassword == null) {
-										PasswordFragment.show(
+										RequestPasswordDialog.show(
 												getSupportFragmentManager(),
 												new SuccessCallback() {
 
@@ -382,7 +383,7 @@ public final class WalletAddressesActivity extends AbstractWalletActivity {
 																Toast.LENGTH_LONG)
 																.show();
 													}
-												}, PasswordFragment.PasswordTypeSecond);
+												}, RequestPasswordDialog.PasswordTypeSecond);
 									} else {
 										System.out.println("Password Set");
 

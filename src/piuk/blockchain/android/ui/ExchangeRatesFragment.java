@@ -58,12 +58,7 @@ LoaderManager.LoaderCallbacks<Cursor> {
 		
 		@Override
 		public void onWalletDidChange() {
-
 			try {
-				if (getActivity() == null) {
-					return;
-				}
-
 				updateView();
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -114,6 +109,7 @@ LoaderManager.LoaderCallbacks<Cursor> {
 				return true;
 			}
 		});
+		
 		setListAdapter(adapter);
 
 		getLoaderManager().initLoader(0, null, this);
@@ -147,10 +143,26 @@ LoaderManager.LoaderCallbacks<Cursor> {
 
 		final WalletBalanceFragment walletBalanceFragment = (WalletBalanceFragment) getFragmentManager()
 				.findFragmentById(R.id.wallet_balance_fragment);
+		
 		if (walletBalanceFragment != null) {
 			walletBalanceFragment.updateView();
-			walletBalanceFragment.flashLocal();
 		}
+		
+		new Thread(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					application.getRemoteWallet().updateRemoteCurrency(currencyCode);
+					
+					application.doMultiAddr();
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+			
+		}).start();
+		
+		getActivity().finish();
 	}
 
 	private void updateView() {

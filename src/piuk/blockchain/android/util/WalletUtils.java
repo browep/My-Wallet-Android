@@ -24,6 +24,9 @@ import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.style.TypefaceSpan;
 import com.google.bitcoin.core.Address;
+import com.google.bitcoin.core.DumpedPrivateKey;
+import com.google.bitcoin.core.ECKey;
+import com.google.bitcoin.core.NetworkParameters;
 import com.google.bitcoin.core.Utils;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.EncodeHintType;
@@ -31,10 +34,16 @@ import com.google.zxing.WriterException;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
+
+import piuk.Hash;
+import piuk.MyWallet;
 import piuk.blockchain.android.Constants;
 
 import java.math.BigInteger;
+import java.security.MessageDigest;
 import java.util.Hashtable;
+
+import org.spongycastle.util.encoders.Hex;
 
 /**
  * @author Andreas Schildbach
@@ -42,12 +51,83 @@ import java.util.Hashtable;
 public class WalletUtils {
 	public final static QRCodeWriter QR_CODE_WRITER = new QRCodeWriter();
 
+	public static ECKey parsePrivateKey(String format, String contents) throws Exception { 
+		if (format.equals("sipa") || format.equals("compsipa")) {
+			DumpedPrivateKey pk = new DumpedPrivateKey(NetworkParameters.prodNet(), contents);
+			
+			return pk.getKey();
+		} else if (format.equals("base58")) {
+			return MyWallet.decodeBase58PK(contents);
+		} else if (format.equals("base64")) {
+			return MyWallet.decodeBase64PK(contents);
+		} else if (format.equals("hex")) {
+			return MyWallet.decodeHexPK(contents);
+		} else {
+			throw new Exception("Unable to handle format " + format);
+		}
+	}
+	
+	public static String detectPrivateKeyFormat(String key) throws Exception {
+		// 51 characters base58, always starts with a '5'
+		if (key.matches("^5[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{50}$"))
+			return "sipa";
+
+		if (key.matches("^[LK][123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{51}$"))
+			return "compsipa";
+
+		// 52 characters base58
+		if (key.matches("^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{44}$") || key.matches("^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{43}$"))
+			return "base58";
+
+		if (key.matches("^[A-Fa-f0-9]{64}$"))
+			return "hex";
+
+		if (key.matches("^[ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789=+]{44}$"))
+			return "base64";
+
+		if (key.matches("^S[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{21}$") ||
+				key.matches("^S[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{25}$") ||
+				key.matches("^S[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{29}$") ||
+				key.matches("^S[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{30}$")) {
+
+			byte[] testBytes = SHA256(key + "?").getBytes();
+
+			if (testBytes[0] == 0x00 || testBytes[0] == 0x01)
+				return "mini";
+		}
+
+		throw new Exception("Unknown Key Format");
+	}
+
+
+
+    public static String SHA256Hex(String str) {
+        try {
+            return new String(Hex.encode(MessageDigest.getInstance("SHA-256").digest(str.getBytes("UTF-8"))), "UTF-8");
+        } catch (Exception e) {
+            e.printStackTrace();
+
+            return null;
+        }
+    }
+
+    public static Hash SHA256(String str) {
+        try {
+            return new Hash(MessageDigest.getInstance("SHA-256").digest(str.getBytes("UTF-8")));
+        } catch (Exception e) {
+            e.printStackTrace();
+
+            return null;
+        }
+    }
+
+    
 	public static Bitmap getQRCodeBitmap(final String url, final int size) {
 		try {
 			final Hashtable<EncodeHintType, Object> hints = new Hashtable<EncodeHintType, Object>();
 			hints.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.H);
 			hints.put(EncodeHintType.MARGIN, 2);
-			
+
 			final BitMatrix result = QR_CODE_WRITER.encode(url,
 					BarcodeFormat.QR_CODE, size, size, hints);
 

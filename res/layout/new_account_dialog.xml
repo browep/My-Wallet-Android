@@ -3,7 +3,6 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:layout_gravity="center_horizontal"
-    android:background="#fff"
     android:orientation="vertical" >
 
     <TextView
@@ -14,8 +13,7 @@
         android:layout_marginTop="8dp"
         android:layout_weight="0.50"
         android:text="@string/password"
-        android:textAppearance="?android:attr/textAppearanceLarge"
-        android:textColor="@color/less_significant" />
+        android:textAppearance="?android:attr/textAppearanceLarge" />
 
     <EditText
         android:id="@+id/password"
@@ -26,7 +24,7 @@
         android:layout_weight="0.50"
         android:inputType="textPassword" />
 
-        <requestFocus />
+    <requestFocus />
 
     <TextView
         android:id="@+id/TextView02"
@@ -35,8 +33,7 @@
         android:layout_marginLeft="8dp"
         android:layout_weight="0.50"
         android:text="@string/password_confirm"
-        android:textAppearance="?android:attr/textAppearanceLarge"
-        android:textColor="@color/less_significant" />
+        android:textAppearance="?android:attr/textAppearanceLarge" />
 
     <EditText
         android:id="@+id/password2"
@@ -65,8 +62,7 @@
         android:layout_marginLeft="8dp"
         android:layout_weight="0.50"
         android:text="@string/captcha"
-        android:textAppearance="?android:attr/textAppearanceLarge"
-        android:textColor="@color/less_significant" />
+        android:textAppearance="?android:attr/textAppearanceLarge" />
 
     <EditText
         android:id="@+id/captcha"
@@ -78,21 +74,12 @@
         android:layout_weight="0.50"
         android:inputType="text|textPassword" />
 
-    <FrameLayout
-        android:id="@+id/frameLayout1"
+    <Button
+        android:id="@+id/create_button"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="0.50"
-        android:background="@color/significant" >
-
-        <Button
-            android:id="@+id/create_button"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center|center_vertical|top"
-            android:layout_margin="8dp"
-            android:text="@string/create_account" />
-
-    </FrameLayout>
+        android:layout_gravity="center|center_vertical|top"
+        android:layout_margin="8dp"
+        android:text="@string/create_account" />
 
 </LinearLayout>

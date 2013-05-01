@@ -19,13 +19,17 @@ package piuk.blockchain.android.ui;
 
 import java.util.Locale;
 
+import org.json.simple.JSONObject;
+
 import android.app.AlertDialog;
 import android.app.AlertDialog.Builder;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
+import android.preference.PreferenceManager;
 import android.support.v4.app.FragmentActivity;
 import android.view.View;
 import android.widget.TextView;
@@ -44,14 +48,31 @@ public abstract class AbstractWalletActivity extends FragmentActivity {
 	protected ActionBarFragment actionBar;
 	protected final AbstractWalletActivity self = this;
 	protected Handler handler = new Handler();
+	protected String qr_code_action;
+	private static final int REQUEST_CODE_SCAN = 0;
+
+	public String getQRCodeAction() {
+		return qr_code_action; 
+	}
+
+	public void showQRReader(String action) {
+		this.qr_code_action = action;
+
+		if (getPackageManager().resolveActivity(Constants.INTENT_QR_SCANNER, 0) != null) {
+			startActivityForResult(Constants.INTENT_QR_SCANNER, REQUEST_CODE_SCAN);
+		} else {
+			showMarketPage(Constants.PACKAGE_NAME_ZXING);
+			longToast(R.string.send_coins_install_qr_scanner_msg);
+		}
+	}
 
 	private EventListeners.EventListener eventListener = new EventListeners.EventListener() {
-		
+
 		@Override
 		public String getDescription() {
 			return getClass() + " Wallet Check Status";
 		}
-		
+
 		@Override
 		public void onWalletDidChange() {
 			application.checkWalletStatus(self);
@@ -113,6 +134,10 @@ public abstract class AbstractWalletActivity extends FragmentActivity {
 
 	public final void toast(final String text, final int imageResId,
 			final int duration, final Object... formatArgs) {
+
+		if (text == null)
+			return;
+
 		final View view = getLayoutInflater().inflate(
 				R.layout.transient_notification, null);
 		TextView tv = (TextView) view

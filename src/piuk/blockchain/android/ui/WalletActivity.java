@@ -17,13 +17,34 @@
 
 package piuk.blockchain.android.ui;
 
-import com.google.android.gcm.GCMRegistrar;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.Writer;
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Date;
 
+import com.google.android.gcm.GCMRegistrar;
+import com.google.bitcoin.core.Address;
+import com.google.bitcoin.core.ECKey;
+import com.google.bitcoin.core.NetworkParameters;
+import com.google.bitcoin.core.Transaction;
+
+import piuk.BitcoinAddress;
+import piuk.BitcoinURI;
+import piuk.MyRemoteWallet;
+import piuk.MyRemoteWallet.SendProgress;
 import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.R;
 import piuk.blockchain.android.WalletApplication;
+import piuk.blockchain.android.ui.SendCoinsFragment.FeePolicy;
+import piuk.blockchain.android.ui.dialogs.WelcomeDialog;
 import piuk.blockchain.android.util.ActionBarFragment;
 import piuk.blockchain.android.util.ErrorReporter;
+import piuk.blockchain.android.util.Iso8601Format;
+import piuk.blockchain.android.util.WalletUtils;
+import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.BroadcastReceiver;
@@ -38,36 +59,35 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.view.ViewConfiguration;
 import android.view.Window;
 import android.webkit.WebView;
+import android.widget.EditText;
 import android.widget.FrameLayout;
-import android.widget.ImageButton;
-import android.widget.Toast;
 
 public final class WalletActivity extends AbstractWalletActivity {
-	private static final int REQUEST_CODE_SCAN = 0;
-	private static final int DIALOG_HELP = 0;
 	public static WalletActivity instance = null;
-			
-	private ImageButton infoButton = null;
+
 	AsyncTask<Void, Void, Void> mRegisterTask;
 	WalletTransactionsFragment transactionsFragment = null;
 	FrameLayout frameLayoutContainer = null;
-	
+
+	private static final int DIALOG_EXPORT_KEYS = 1;
+
 	long lastMesssageTime = 0;
 
 	private final BroadcastReceiver mHandleMessageReceiver =
 			new BroadcastReceiver() { 
 		@Override
 		public void onReceive(Context context, Intent intent) {
-			
+
 			//Throttle messages to once every 30 seconds 
-			if (lastMesssageTime < System.currentTimeMillis()-30000) {
+			if (lastMesssageTime > System.currentTimeMillis()-30000) {
 				return;
 			}
-			
+
 			lastMesssageTime = System.currentTimeMillis();
-			
+
 			String body = intent.getExtras().getString(Constants.BODY);
 			String title = intent.getExtras().getString(Constants.TITLE);
 
@@ -90,27 +110,21 @@ public final class WalletActivity extends AbstractWalletActivity {
 		}
 	};
 
-	public void showQRReader() {
-		if (getPackageManager().resolveActivity(Constants.INTENT_QR_SCANNER, 0) != null) {
-			startActivityForResult(Constants.INTENT_QR_SCANNER,
-					REQUEST_CODE_SCAN);
-		} else {
-			showMarketPage(Constants.PACKAGE_NAME_ZXING);
-			longToast(R.string.send_coins_install_qr_scanner_msg);
-		}
-	}
 
+	@SuppressLint("NewApi")
 	@Override
 	protected void onCreate(final Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
 		instance = this;
-		
+
 		ErrorReporter.getInstance().check(this);
 
 		setContentView(R.layout.wallet_content);
 
 		final ActionBarFragment actionBar = getActionBarFragment();
+
+		actionBar.setPrimaryTitle(R.string.app_name);
 
 		frameLayoutContainer = (FrameLayout)this.findViewById(R.id.frame_layout_container);
 
@@ -123,7 +137,7 @@ public final class WalletActivity extends AbstractWalletActivity {
 						if (application.getRemoteWallet() == null)
 							return;
 
-						WelcomeFragment.show(getSupportFragmentManager(), application);
+						WelcomeDialog.show(getSupportFragmentManager(), application);
 					}
 				});
 
@@ -133,7 +147,7 @@ public final class WalletActivity extends AbstractWalletActivity {
 						if (application.getRemoteWallet() == null)
 							return;
 
-						WelcomeFragment.show(getSupportFragmentManager(), application);
+						WelcomeDialog.show(getSupportFragmentManager(), application);
 					}
 				});
 
@@ -159,48 +173,12 @@ public final class WalletActivity extends AbstractWalletActivity {
 					}
 				});
 
-		infoButton = actionBar.addButton(R.drawable.ic_action_info);
-
-		infoButton.setOnClickListener(new OnClickListener() {
-			public void onClick(final View v) {
-				WalletApplication application = (WalletApplication) getApplication();
-
-				if (application.getRemoteWallet() == null)
-					return;
-
-				Intent browserIntent = new Intent(
-						Intent.ACTION_VIEW,
-						Uri.parse("https://blockchain.info/wallet/iphone-view?guid="
-								+ application.getRemoteWallet().getGUID()
-								+ "&sharedKey="
-								+ application.getRemoteWallet().getSharedKey()));
-
-				startActivity(browserIntent);
-			}
-		});
-
-		actionBar.addButton(R.drawable.ic_action_address_book)
-		.setOnClickListener(new OnClickListener() {
-			public void onClick(final View v) {
-				if (application.getRemoteWallet() == null)
-					return;
-
-				WalletAddressesActivity
-				.start(WalletActivity.this, true);
-			}
-		});
-
-		actionBar.addButton(R.drawable.ic_action_exchange).setOnClickListener(
+		actionBar.addButton(android.R.drawable.ic_menu_more).setOnClickListener(
 				new OnClickListener() {
 					public void onClick(final View v) {
-						if (application.getRemoteWallet() == null)
-							return;
-
-						startActivity(new Intent(WalletActivity.this,
-								ExchangeRatesActivity.class));
+						openOptionsMenu();
 					}
 				});
-
 
 		registerReceiver(mHandleMessageReceiver, new IntentFilter(Constants.DISPLAY_MESSAGE_ACTION));
 
@@ -243,69 +221,359 @@ public final class WalletActivity extends AbstractWalletActivity {
 	}
 
 	@Override
-	public boolean onCreateOptionsMenu(final Menu menu) {
+	public boolean onCreateOptionsMenu(final Menu menu)
+	{
 		super.onCreateOptionsMenu(menu);
-		getMenuInflater().inflate(R.menu.wallet_options, menu);
-		menu.findItem(R.id.wallet_options_donate).setVisible(!Constants.TEST);
+
+		getMenuInflater().inflate(R.menu.main_menu, menu);
+
+		return true;
+	}
+
+	@Override
+	public boolean onPrepareOptionsMenu(final Menu menu)
+	{
+		super.onPrepareOptionsMenu(menu);
+
 		return true;
 	}
 
 	@Override
 	public boolean onOptionsItemSelected(final MenuItem item) {
+		WalletApplication application = (WalletApplication) getApplication();
+
 		switch (item.getItemId()) {
+		case R.id.menu_account_settings:
+			if (application.getRemoteWallet() == null)
+				return false; 
+
+			Intent browserIntent = new Intent(
+					Intent.ACTION_VIEW,
+					Uri.parse("https://blockchain.info/wallet/iphone-view?guid="
+							+ application.getRemoteWallet().getGUID()
+							+ "&sharedKey="
+							+ application.getRemoteWallet().getSharedKey()));
+
+			startActivity(browserIntent);
+
+			return true;
 		case R.id.wallet_options_address_book:
+			if (application.getRemoteWallet() == null)
+				return false;
+
 			WalletAddressesActivity.start(WalletActivity.this, true);
-			return true;
-
-		case R.id.wallet_options_preferences:
-			startActivity(new Intent(this, PreferencesActivity.class));
-			return true;
-
-		case R.id.wallet_options_donate:
-			final Intent intent = new Intent(this, SendCoinsActivity.class);
-			intent.putExtra(SendCoinsActivity.INTENT_EXTRA_ADDRESS,
-					Constants.DONATION_ADDRESS);
-			startActivity(intent);
-			return true;
-
-		case R.id.wallet_options_bug:
-			Intent i = new Intent(Intent.ACTION_SEND);
-			i.setType("text/plain");
-			i.putExtra(Intent.EXTRA_EMAIL, new String[] { "support@pi.uk.com" });
-			i.putExtra(Intent.EXTRA_SUBJECT, "Exception Report");
-
-			String log = application.readExceptionLog();
-			if (log != null)
-				i.putExtra(Intent.EXTRA_TEXT, log);
-
-			try {
-				startActivity(Intent.createChooser(i, "Send mail..."));
-			} catch (android.content.ActivityNotFoundException ex) {
-				Toast.makeText(this, "There are no email clients installed.",
-						Toast.LENGTH_SHORT).show();
-			}
 
 			return true;
-		case R.id.wallet_options_help:
-			showDialog(DIALOG_HELP);
+
+		case R.id.wallet_options_exchange_rates:
+
+			if (application.getRemoteWallet() == null)
+				return false;
+
+			startActivity(new Intent(WalletActivity.this,
+					ExchangeRatesActivity.class));
+
 			return true;
+		case R.id.scan_private_key:
+			if (application.getRemoteWallet() == null)
+				return false;
+
+			showQRReader("scan_private_key");
+			return true;
+		case R.id.backup_wallet:
+			showDialog(DIALOG_EXPORT_KEYS);
+			return true;
+		case R.id.buy_bitcoins:
+			openDeopositPage();
+			return true;
+		default:
+			return false;
 		}
+	}
+	
+	public void openDeopositPage() {
+		if (application.getRemoteWallet() == null)
+			return;
 
-		return false;
+		MyRemoteWallet wallet = application.getRemoteWallet();
+
+		//Don't allow deposits into new wallets
+		if (wallet == null || wallet.isNew())
+			return;
+
+		Address address = application.determineSelectedAddress();
+		
+		if (address == null)
+			return;
+
+		String sharedKey = wallet.getSharedKey();
+
+		String guid = wallet.getGUID();
+
+		Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://blockchain.info/deposit?address="+address+"&guid="+guid+"&sharedKey="+sharedKey));
+
+		startActivity(browserIntent);
 	}
 
 	@Override
-	protected Dialog onCreateDialog(final int id) {
-		final WebView webView = new WebView(this);
-		if (id == DIALOG_HELP)
-			webView.loadUrl("file:///android_asset/help" + languagePrefix()
-					+ ".html");
+	public void onActivityResult(final int requestCode, final int resultCode,
+			final Intent intent) {
 
-		final Dialog dialog = new Dialog(WalletActivity.this);
-		dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-		dialog.setContentView(webView);
-		dialog.setCanceledOnTouchOutside(true);
+		String action = super.getQRCodeAction();
+
+		if (action == null)
+			return;
+
+		if (application.getRemoteWallet() == null)
+			return;
+
+		try {
+			if (resultCode == RESULT_OK && "QR_CODE".equals(intent.getStringExtra("SCAN_RESULT_FORMAT"))) {
+
+				final String contents = intent.getStringExtra("SCAN_RESULT");
+
+				if (action.equals("scan_private_key")) {
+					String format = WalletUtils.detectPrivateKeyFormat(contents);
+
+					final ECKey key = WalletUtils.parsePrivateKey(format, contents);
+
+					final AlertDialog.Builder b = new AlertDialog.Builder(this);
+
+					b.setPositiveButton(android.R.string.yes, null);
+
+					b.setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
+						@Override
+						public void onClick(DialogInterface dialog, int which) {
+							dialog.dismiss();
+						}
+					});
+
+					b.setTitle("Scan Private Key");
+
+					b.setMessage("Fetching Balance. Please Wait");
+
+					final AlertDialog dialog = b.show();
+
+					dialog.getButton(Dialog.BUTTON1).setEnabled(false);					
+
+					new Thread() {
+						public void run() {
+							try {
+								BigInteger balance = MyRemoteWallet.getAddressBalance(key.toAddress(NetworkParameters.prodNet()).toString());
+
+								//Try compressed instead
+								if (balance.longValue() == 0) {
+									balance = MyRemoteWallet.getAddressBalance(key.toAddressCompressed(NetworkParameters.prodNet()).toString());
+								}
+
+								if (balance.longValue() == 0) {
+									b.setMessage("The Balance of this address is zero.");
+									return;
+								}
+
+								final BigInteger finalBalance = balance;
+
+								handler.post(new Runnable() {
+									@Override
+									public void run() {
+										dialog.getButton(Dialog.BUTTON1).setEnabled(true);
+
+										dialog.getButton(Dialog.BUTTON1).setOnClickListener(new OnClickListener() {
+											@Override
+											public void onClick(View v) {
+
+												try {
+													MyRemoteWallet wallet = new MyRemoteWallet();
+
+													wallet.addKey(key, null);
+
+													Address to = application.determineSelectedAddress();
+
+													if (to == null) {
+														handler.post(new Runnable() {
+															public void run() {
+																dialog.dismiss();
+															}
+														});
+
+														return;
+													}
+
+													BigInteger baseFee = wallet.getBaseFee();
+
+													wallet.sendCoinsAsync(to.toString(), finalBalance.subtract(baseFee), FeePolicy.FeeForce, baseFee, new SendProgress() {
+
+														@Override
+														public boolean onReady(
+																Transaction tx,
+																BigInteger fee,
+																FeePolicy feePolicy,
+																long priority) {
+															return true;
+														}
+
+														@Override
+														public void onSend(
+																Transaction tx,
+																String message) {
+															handler.post(new Runnable() {
+																public void run() {
+																	dialog.dismiss();
+
+																	longToast("Private Key Successfully Swept");
+																}
+															});
+														}
+
+														@Override
+														public ECKey onPrivateKeyMissing(String address) {
+															return null;
+														}
+
+														@Override
+														public void onError(final String message) {
+															handler.post(new Runnable() {
+																public void run() {
+																	dialog.dismiss();
+
+																	longToast(message);
+																}
+															});															
+														}
+
+														@Override
+														public void onProgress(String message) {}
+													});
+
+												} catch (final Exception e) {
+													e.getLocalizedMessage();
+
+													handler.post(new Runnable() {
+														public void run() {
+															dialog.dismiss();
+
+															longToast(e.getLocalizedMessage());
+														}
+													});
+												}
+											}
+										});
+
+										dialog.setMessage("The Balance of this address is "+WalletUtils.formatValue(finalBalance)+" BTC. Would you like to sweep it?");
+									}
+								});
+							} catch (final Exception e) {
+								e.printStackTrace();
+
+								handler.post(new Runnable() {
+									public void run() {
+										dialog.dismiss();
+
+										longToast(e.getLocalizedMessage());
+									}
+								});
+							}
+						}
+					}.start();
+
+				} 
+			}
+		} catch (final Exception e) {
+			e.getLocalizedMessage();
+
+			longToast(e.getLocalizedMessage());
+		}
+	}
+	
+	private Dialog createExportKeysDialog()
+	{
+		final View view = getLayoutInflater().inflate(R.layout.export_keys_dialog, null);
+
+		final AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		builder.setInverseBackgroundForced(true);
+		builder.setTitle(R.string.export_keys_dialog_title);
+		builder.setView(view);
+		builder.setPositiveButton(R.string.export_keys_dialog_button_export, new Dialog.OnClickListener()
+		{
+			public void onClick(final DialogInterface dialog, final int which)
+			{
+				exportPrivateKeys();
+			}
+		});
+		
+		builder.setNegativeButton(R.string.button_cancel, new Dialog.OnClickListener()
+		{
+			public void onClick(final DialogInterface dialog, final int which)
+			{
+				dialog.dismiss();
+			}
+		});
+		
+
+		final AlertDialog dialog = builder.create();
 
 		return dialog;
+	}
+
+	
+	private void mailPrivateKeys(final File file)
+	{
+		final Intent intent = new Intent(Intent.ACTION_SEND);
+		intent.putExtra(Intent.EXTRA_SUBJECT, getString(R.string.export_keys_dialog_mail_subject));
+		intent.putExtra(Intent.EXTRA_TEXT,
+				getString(R.string.export_keys_dialog_mail_text) + "\n\n" + String.format(Constants.WEBMARKET_APP_URL, getPackageName()) + "\n\n"
+						+ Constants.SOURCE_URL + '\n');
+		intent.setType("x-bitcoin/private-keys");
+		intent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(file));
+		startActivity(Intent.createChooser(intent, getString(R.string.export_keys_dialog_mail_intent_chooser)));
+	}
+
+	private void exportPrivateKeys()
+	{
+
+		if (application.getRemoteWallet() == null)
+			return;
+
+		try
+		{
+			Constants.EXTERNAL_WALLET_BACKUP_DIR.mkdirs();
+			final File file = new File(Constants.EXTERNAL_WALLET_BACKUP_DIR, "wallet-"
+					+ Iso8601Format.newDateFormat().format(new Date()) + ".aes.json");
+
+			final Writer cipherOut = new FileWriter(file);
+			cipherOut.write(application.getRemoteWallet().getPayload());
+			cipherOut.close();
+
+			final AlertDialog.Builder dialog = new AlertDialog.Builder(this).setInverseBackgroundForced(true).setMessage(
+					getString(R.string.export_keys_dialog_success, file));
+			dialog.setPositiveButton(R.string.export_keys_dialog_button_archive, new Dialog.OnClickListener()
+			{
+				public void onClick(final DialogInterface dialog, final int which)
+				{
+					mailPrivateKeys(file);
+				}
+			});
+			dialog.setNegativeButton(R.string.button_dismiss, null);
+			dialog.show();
+		}
+		catch (final Exception x)
+		{
+			new AlertDialog.Builder(this).setInverseBackgroundForced(true).setIcon(android.R.drawable.ic_dialog_alert)
+			.setTitle(R.string.import_export_keys_dialog_failure_title)
+			.setMessage(getString(R.string.export_keys_dialog_failure, x.getMessage())).setNeutralButton(R.string.button_dismiss, null)
+			.show();
+
+			x.printStackTrace();
+		}
+	}
+
+
+	@Override
+	protected Dialog onCreateDialog(final int id) {
+		if (id == DIALOG_EXPORT_KEYS) {
+			return createExportKeysDialog();
+		} else {
+			return null;
+		}
 	}
 }
