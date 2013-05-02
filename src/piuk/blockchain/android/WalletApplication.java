@@ -432,11 +432,11 @@ public class WalletApplication extends Application {
 				SuccessCallback callback = callbackFinal;
 
 				String localWallet = null;
-				
+
 				try {
 					if (blockchainWallet == null) {
 						localWallet = getLocalWallet();
-						
+
 						String localChecksum = makeWalletChecksum(localWallet);
 
 						if (localChecksum != null){
@@ -464,7 +464,7 @@ public class WalletApplication extends Application {
 						} else {
 							System.out.println("Skipping doMultiAddr");
 						}
-						
+
 						return;
 					} else {
 						if (readLocalWallet(localWallet, password)) {							
@@ -484,7 +484,7 @@ public class WalletApplication extends Application {
 								System.out.println("Skipping doMultiAddr");
 							}
 						}
-						
+
 						return;
 					}
 				} catch (final Exception e) {
@@ -505,7 +505,7 @@ public class WalletApplication extends Application {
 
 						readLocalMultiAddr();
 					}
-					
+
 					handler.post(new Runnable() {
 						public void run() {
 							Toast.makeText(WalletApplication.this,
@@ -834,7 +834,7 @@ public class WalletApplication extends Application {
 		return null;
 	}
 
-	
+
 	public String makeWalletChecksum(String payload) {
 		try {
 			return new String(Hex.encode(MessageDigest.getInstance("SHA-256").digest(payload.getBytes("UTF-8"))));
@@ -896,20 +896,28 @@ public class WalletApplication extends Application {
 			return null;
 
 		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-		final String defaultAddress = addresses[0];
-		final String selectedAddress = prefs.getString(Constants.PREFS_KEY_SELECTED_ADDRESS, defaultAddress);
+		final String selectedAddress = prefs.getString(Constants.PREFS_KEY_SELECTED_ADDRESS, null);
 
-		// sanity check
-		for (final String address : addresses) {
-			if (address.equals(selectedAddress)) {
-				try {
-					return new Address(Constants.NETWORK_PARAMETERS, address);
-				} catch (WrongNetworkException e) {
-					e.printStackTrace();
-				} catch (AddressFormatException e) {
-					e.printStackTrace();
+		if (selectedAddress != null) {
+			for (final String address : addresses) {
+				if (address.equals(selectedAddress)) {
+					try {
+						return new Address(Constants.NETWORK_PARAMETERS, address);
+					} catch (WrongNetworkException e) {
+						e.printStackTrace();
+					} catch (AddressFormatException e) {
+						e.printStackTrace();
+					}
 				}
 			}
+		}
+
+		try {
+			return new Address(Constants.NETWORK_PARAMETERS, addresses[0]);
+		} catch (WrongNetworkException e) {
+			e.printStackTrace();
+		} catch (AddressFormatException e) {
+			e.printStackTrace();
 		}
 
 		return null;

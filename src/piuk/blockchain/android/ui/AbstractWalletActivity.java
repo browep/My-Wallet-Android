@@ -21,8 +21,10 @@ import java.util.Locale;
 
 import org.json.simple.JSONObject;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.AlertDialog.Builder;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -31,6 +33,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.support.v4.app.FragmentActivity;
+import android.text.ClipboardManager;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -65,6 +68,16 @@ public abstract class AbstractWalletActivity extends FragmentActivity {
 			longToast(R.string.send_coins_install_qr_scanner_msg);
 		}
 	}
+	
+
+	static void handleCopyToClipboard(final Context context, final String address)
+	{
+		final ClipboardManager clipboardManager = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+		clipboardManager.setText(address);
+		
+		Toast.makeText(context, R.string.wallet_address_fragment_clipboard_msg, Toast.LENGTH_SHORT).show();
+	}
+
 
 	private EventListeners.EventListener eventListener = new EventListeners.EventListener() {
 

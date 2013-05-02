@@ -3,7 +3,6 @@
 	android:layout_width="fill_parent"
 	android:layout_height="wrap_content"
 	android:layout_margin="8dp"
-	android:background="#fff"
 	android:orientation="vertical" >
 
 	<TextView
@@ -20,8 +19,6 @@
 		android:layout_width="fill_parent"
 		android:layout_height="wrap_content"
 		android:layout_margin="8dp"
-		android:background="@drawable/edit_text"
-		android:enabled="false"
 		android:focusable="false"
 		android:textSize="@dimen/font_size_normal" />
 
@@ -39,7 +36,6 @@
 		android:layout_width="fill_parent"
 		android:layout_height="wrap_content"
 		android:layout_margin="8dp"
-		android:background="@drawable/edit_text"
 		android:singleLine="true"
 		android:textSize="@dimen/font_size_normal" />
 

@@ -24,8 +24,7 @@
             android:layout_marginTop="8dp"
             android:gravity="center_horizontal|left"
             android:text="@string/pair_wallet_step1"
-            android:textAppearance="?android:attr/textAppearanceLarge"
-            android:textColor="@color/less_significant" />
+            android:textAppearance="?android:attr/textAppearanceLarge" />
 
         <TextView
             android:id="@+id/textView1"
@@ -34,8 +33,7 @@
             android:gravity="center_horizontal|left"
             android:layout_margin="5dp"
             android:text="@string/pair_wallet_step1_content"
-            android:textAppearance="?android:attr/textAppearanceSmall"
-            android:textColor="@color/less_significant" />
+            android:textAppearance="?android:attr/textAppearanceSmall" />
 
         <TextView
             android:id="@+id/TextView03"
@@ -43,8 +41,7 @@
             android:layout_height="wrap_content"
             android:gravity="center_horizontal|left"
             android:text="@string/pair_wallet_step2"
-            android:textAppearance="?android:attr/textAppearanceLarge"
-            android:textColor="@color/less_significant" />
+            android:textAppearance="?android:attr/textAppearanceLarge"/>
 
         <TextView
             android:id="@+id/TextView01"
@@ -53,8 +50,7 @@
             android:gravity="center_horizontal|left"
             android:layout_margin="5dp"
             android:text="@string/pair_wallet_step2_content"
-            android:textAppearance="?android:attr/textAppearanceSmall"
-            android:textColor="@color/less_significant" />
+            android:textAppearance="?android:attr/textAppearanceSmall"/>
 
         <TextView
             android:id="@+id/TextView05"
@@ -62,8 +58,7 @@
             android:layout_height="wrap_content"
             android:gravity="center_horizontal|left"
             android:text="@string/pair_wallet_step3"
-            android:textAppearance="?android:attr/textAppearanceLarge"
-            android:textColor="@color/less_significant" />
+            android:textAppearance="?android:attr/textAppearanceLarge"/>
 
         <TextView
             android:id="@+id/TextView04"
@@ -72,8 +67,7 @@
             android:layout_margin="5dp"
             android:gravity="center_horizontal|left"
             android:text="@string/pair_wallet_step3_content"
-            android:textAppearance="?android:attr/textAppearanceSmall"
-            android:textColor="@color/less_significant" />
+            android:textAppearance="?android:attr/textAppearanceSmall" />
 
         <Button
             android:id="@+id/pair_qr_button"

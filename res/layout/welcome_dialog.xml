@@ -17,6 +17,7 @@
         android:layout_weight="0.50"
         android:text="@string/welcome_text_has_account"
         android:textSize="@dimen/font_size_small"
+        android:textColor="@color/insignificant"
         android:textStyle="bold" />
 
     <Button

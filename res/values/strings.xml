@@ -228,7 +228,6 @@
     <string name="notification_coins_received_msg">Received %s BTC</string>
     <string name="notification_coins_sent_msg">Sent %s BTC</string>
     <string name="notification_peers_connected_msg">%d peers connected</string>
-
     <string name="button_dismiss">Dismiss</string>
     <string name="button_cancel">Cancel</string>
     <string name="error_config">Please set the %1$s constant and recompile the app.</string>
@@ -257,6 +256,8 @@
     <string name="note_saved">Note Saved</string>
     <string name="enter_note_below">Enter the note below:</string>
     <string name="shared_send_description">Send shared routes transactions through a shared wallet for increased privacy. Shared transactions incur a %1$s fee.</string>
+    <string name="this_is_you_bitcoin_address">This Is Your Bitcoin Address</string>
+    <string name="shared_with_anyone">Share this with anyone and they can send you payments.</string>
 
     <string-array name="send_types_array">
         <item>Quick Send</item>

@@ -296,9 +296,15 @@ public final class WalletTransactionsFragment extends ListFragment {
 		synchronized(adapter) {
 			final MyTransaction tx = adapter.getItem(position);
 
-			if (tx != null) {
-				TransactionSummaryDialog.show(getFragmentManager(), application, tx);
+			if (tx == null) {
+				return;
 			}
+
+			if (tx.getHash() == null) {
+				return;
+			}
+
+			TransactionSummaryDialog.show(getFragmentManager(), application, tx);
 		}
 	}
 
@@ -326,11 +332,6 @@ public final class WalletTransactionsFragment extends ListFragment {
 		case R.id.wallet_transactions_context_edit_address:
 			editAddress(tx);
 			return true;
-
-			/*
-			 * case R.id.wallet_transactions_context_show_transaction:
-			 * TransactionActivity.show(activity, tx); return true;
-			 */
 		default:
 			return false;
 		}
@@ -338,6 +339,10 @@ public final class WalletTransactionsFragment extends ListFragment {
 
 	private void editAddress(final MyTransaction tx) {
 		try {
+			if (tx.getHash() == null) {
+				return;
+			}
+
 			final boolean sent = tx.getResult().signum() < 0;
 
 			Address address = null;

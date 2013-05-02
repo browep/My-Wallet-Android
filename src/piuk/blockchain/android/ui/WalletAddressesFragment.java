@@ -192,7 +192,7 @@ public class WalletAddressesFragment extends ListFragment
 
 			case R.id.wallet_addresses_context_copy_to_clipboard:
 			{
-				handleCopyToClipboard(address.toString());
+				AbstractWalletActivity.handleCopyToClipboard(activity, address.toString());
 				return true;
 			}
 
@@ -212,14 +212,6 @@ public class WalletAddressesFragment extends ListFragment
 		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
 		prefs.edit().putString(Constants.PREFS_KEY_SELECTED_ADDRESS, address.toString()).commit();
 	}
-
-	private void handleCopyToClipboard(final String address)
-	{
-		final ClipboardManager clipboardManager = (ClipboardManager) activity.getSystemService(Context.CLIPBOARD_SERVICE);
-		clipboardManager.setText(address);
-		((AbstractWalletActivity) activity).toast(R.string.wallet_address_fragment_clipboard_msg);
-	}
-
 
 	private void updateView()
 	{

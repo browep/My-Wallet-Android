@@ -83,6 +83,10 @@ public class ExchangeRatesProvider extends ContentProvider {
 
 			final String code = selectionArgs[0];
 			final Rate rate = exchangeRates.get(code);
+			
+			if (rate == null)
+				return null;
+			
 			cursor.newRow().add(code.hashCode()).add(code).add(rate._15m).add(rate._24hr).add(rate.symbol);
 		}
 

@@ -17,6 +17,8 @@
 
 package piuk.blockchain.android.ui;
 
+import com.google.bitcoin.core.Address;
+
 import piuk.EventListeners;
 import piuk.MyTransaction;
 import piuk.blockchain.android.Constants;
@@ -26,6 +28,8 @@ import piuk.blockchain.android.WalletApplication;
 import piuk.blockchain.android.util.QrDialog;
 import piuk.blockchain.android.util.WalletUtils;
 import android.app.Activity;
+import android.app.Dialog;
+import android.content.Context;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.graphics.Bitmap;
@@ -38,9 +42,11 @@ import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.Window;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.TextView;
 
 /**
  * @author Andreas Schildbach
@@ -106,8 +112,6 @@ LoaderManager.LoaderCallbacks<Cursor> {
 				e.printStackTrace();
 			}
 		};
-
-
 	};
 
 	@Override
@@ -127,6 +131,37 @@ LoaderManager.LoaderCallbacks<Cursor> {
 
 		getLoaderManager().initLoader(0, null, this);
 	}
+	
+	
+	public class YourAddressesDialog extends Dialog {
+		public YourAddressesDialog(final Context context, final String address, final Bitmap qrCodeBitmap) {
+			super(context);
+
+			requestWindowFeature(Window.FEATURE_NO_TITLE);
+			setContentView(R.layout.your_address_dialog);
+			
+			TextView qrCodeBitcoinAddressView = (TextView)findViewById(R.id.qr_code_bitcoin_address);
+
+			qrCodeBitcoinAddressView.setText(address);
+
+			final ImageView imageView = (ImageView) findViewById(R.id.qr_dialog_image);
+			imageView.setImageBitmap(qrCodeBitmap);
+			setCanceledOnTouchOutside(true);
+		
+			qrCodeBitcoinAddressView.setOnClickListener(new View.OnClickListener() {
+				public void onClick(final View v) {					
+					AbstractWalletActivity.handleCopyToClipboard(application, address);
+				}
+			});
+			
+			imageView.setOnClickListener(new View.OnClickListener() {
+				public void onClick(final View v) {
+					dismiss();
+				}
+			});
+		}
+	}
+
 
 	@Override
 	public View onCreateView(final LayoutInflater inflater,
@@ -143,13 +178,8 @@ LoaderManager.LoaderCallbacks<Cursor> {
 				updateView();
 			}
 		});
-		
+				
 		qrView = (ImageView) view.findViewById(R.id.request_coins_qr);
-		qrView.setOnClickListener(new OnClickListener() {
-			public void onClick(final View v) {
-				new QrDialog(getActivity(), qrCodeBitmap).show();
-			}
-		});
 
 		return view;
 	}
@@ -184,14 +214,24 @@ LoaderManager.LoaderCallbacks<Cursor> {
 
 			viewBalance.setAmount(application.getRemoteWallet().getBalance());
 		}
-		String[] active = application.getRemoteWallet().getActiveAddresses();
+		
+		Address address = application.determineSelectedAddress();
 
-		if (active.length > 0) {
+		if (address != null) {
+			final String addressString = address.toString(); 
+			
 			final int size = (int) (256 * getResources().getDisplayMetrics().density);
-			qrCodeBitmap = WalletUtils.getQRCodeBitmap(active[0], size);
+			qrCodeBitmap = WalletUtils.getQRCodeBitmap(addressString, size);
 			qrView.setImageBitmap(qrCodeBitmap);
+			
+			qrView.setOnClickListener(new OnClickListener() {
+				public void onClick(final View v) {
+					new YourAddressesDialog(getActivity(), addressString, qrCodeBitmap).show();
+				}
+			});
+
 		} else {
-			qrView.setVisibility(View.INVISIBLE);
+			qrView.setVisibility(View.GONE);
 		}
 
 		getLoaderManager().restartLoader(0, null, this);
