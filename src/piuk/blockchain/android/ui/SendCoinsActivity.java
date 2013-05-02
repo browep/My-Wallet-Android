@@ -21,26 +21,24 @@ import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.lang.ArrayUtils;
-
-import android.app.Dialog;
 import android.content.Intent;
+import android.content.res.Resources;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
+import android.view.ContextThemeWrapper;
+import android.view.Gravity;
 import android.view.View;
 import android.view.View.OnClickListener;
-import android.view.Window;
-import android.webkit.WebView;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemSelectedListener;
+import android.widget.ArrayAdapter;
+import android.widget.Spinner;
 
-import com.google.bitcoin.core.Base58;
-import com.google.bitcoin.core.DumpedPrivateKey;
 import com.google.bitcoin.core.ECKey;
-import com.google.bitcoin.core.NetworkParameters;
-
 import piuk.BitcoinAddress;
 import piuk.BitcoinURI;
-import piuk.MyWallet;
-
 import com.google.bitcoin.uri.BitcoinURIParseException;
 
 import piuk.blockchain.android.R;
@@ -48,14 +46,26 @@ import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.util.ActionBarFragment;
 import piuk.blockchain.android.util.WalletUtils;
 
-/**
- * @author Andreas Schildbach
- */
 public final class SendCoinsActivity extends AbstractWalletActivity {
+	public static final String SendTypeQuickSend = "Quick Send";
+	public static final String SendTypeCustomSend = "Custom Send";
+	public static final String SendTypeSharedSend = "Shared Send";
+
 	public static final String INTENT_EXTRA_ADDRESS = "address";
 	private static final String INTENT_EXTRA_QUERY = "query";
 	final Map<String, ECKey> temporaryPrivateKeys = new HashMap<String, ECKey>();
 	public String scanPrivateKeyAddress = null;
+	private Spinner spinner;
+	private ArrayAdapter<CharSequence> adapter;
+	private OnChangedSendTypeListener listener;
+	
+	public static interface OnChangedSendTypeListener {
+		public void onChangedSendType(String type);
+	}
+	
+	public void setOnChangedSendTypeListener(OnChangedSendTypeListener listener) {
+		this.listener = listener;
+	}
 
 	@Override
 	protected void onCreate(final Bundle savedInstanceState) {
@@ -65,24 +75,59 @@ public final class SendCoinsActivity extends AbstractWalletActivity {
 
 		final ActionBarFragment actionBar = getActionBarFragment();
 
-		actionBar.setPrimaryTitle(R.string.send_coins_activity_title);
-
 		actionBar.setBack(new OnClickListener() {
 			public void onClick(final View v) {
 				finish();
 			}
 		});
 
-		actionBar.addButton(R.drawable.ic_action_qr).setOnClickListener(
-				new OnClickListener() {
-					public void onClick(final View v) {
-						showQRReader("uri_qr_code");
-					}
-				});
+		spinner = new Spinner(this);
 
-		handleIntent(getIntent());
+		// Create an ArrayAdapter using the string array and a default spinner layout
+		adapter = ArrayAdapter.createFromResource(this,
+				R.array.send_types_array, android.R.layout.simple_spinner_item);
+
+		// Specify the layout to use when the list of choices appears
+		adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+
+		BitmapDrawable bg = (BitmapDrawable) this.getResources().getDrawable(android.R.drawable.ic_menu_more);
+
+		bg.setGravity(Gravity.CENTER);
+
+		spinner.setBackgroundDrawable(bg);
+
+		spinner.setAdapter(adapter);
+
+		actionBar.addView(spinner);
+
+		spinner.setOnItemSelectedListener(new OnItemSelectedListener() {
+			public void onItemSelected(AdapterView<?> parent, View view, 
+					int pos, long id) {
+				setSendType(getCurrentSendType());
+			}
+
+			public void onNothingSelected(AdapterView<?> parent) { }
+		});
+		
+		setSendType(getCurrentSendType());
+	}
+	
+	public void setSendType(String type) {		
+		actionBar.setPrimaryTitle(type);
+
+		if (listener != null) {
+			listener.onChangedSendType(type);
+		}
 	}
 
+	public String getCurrentSendType() {
+		CharSequence selected = (CharSequence) spinner.getSelectedItem();
+
+		if (selected == null)
+			selected = adapter.getItem(0);
+
+		return selected.toString();
+	}
 
 	@Override
 	protected void onNewIntent(final Intent intent) {

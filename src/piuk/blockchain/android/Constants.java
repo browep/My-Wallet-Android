@@ -51,10 +51,13 @@ public class Constants {
 
     public static final String DISPLAY_MESSAGE_ACTION = "piuk.blockchain.android.DISPLAY_MESSAGE";
 
+    
     public static final String TITLE = "title";
     public static final String BODY = "body";
 
 	public final static long MultiAddrTimeThreshold = 10000; // 10 seconds
+
+	public final static long COIN = 100000000;
 
 	public static final File EXTERNAL_WALLET_BACKUP_DIR = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
 	

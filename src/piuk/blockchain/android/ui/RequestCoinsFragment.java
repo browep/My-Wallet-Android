@@ -49,6 +49,7 @@ import com.google.bitcoin.core.Address;
 import com.google.bitcoin.uri.BitcoinURI;
 
 import piuk.BitcoinAddress;
+import piuk.MyRemoteWallet;
 import piuk.blockchain.android.R;
 import piuk.blockchain.android.WalletApplication;
 import piuk.blockchain.android.ui.CurrencyAmountView.Listener;
@@ -66,15 +67,12 @@ public final class RequestCoinsFragment extends Fragment {
 	private Bitmap qrCodeBitmap;
 	private CurrencyAmountView amountView;
 	private Button generateSharedButton;
-	
-	private static final String WebROOT = "https://blockchain.info/api/receive";
-
 
 	public static String postURL(String request, String urlParameters) throws Exception {
 
 		URL url = new URL(request);
 		HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-		try {
+		try { 
 			connection.setDoOutput(true);
 			connection.setDoInput(true);
 			connection.setInstanceFollowRedirects(false);
@@ -85,10 +83,9 @@ public final class RequestCoinsFragment extends Fragment {
 			connection.setRequestProperty("Content-Length", "" + Integer.toString(urlParameters.getBytes().length));
 			connection.setUseCaches (false);
 
-
 			connection.setConnectTimeout(30000);
 			connection.setReadTimeout(30000);
-			
+
 			connection.connect();
 
 			DataOutputStream wr = new DataOutputStream(connection.getOutputStream ());
@@ -107,7 +104,7 @@ public final class RequestCoinsFragment extends Fragment {
 			connection.disconnect();
 		}
 	}
-	
+
 	@Override
 	public View onCreateView(final LayoutInflater inflater,
 			final ViewGroup container, final Bundle savedInstanceState) {
@@ -124,47 +121,36 @@ public final class RequestCoinsFragment extends Fragment {
 			}
 		});
 
-		
+
 		final Handler handler = new Handler();
-		
+
 		generateSharedButton = (Button)view
 				.findViewById(R.id.generate_shared_address);
-		
+
 		generateSharedButton.setOnClickListener(new OnClickListener() {
 
 			@Override
 			public void onClick(View v) {
 				new Thread() {
 					public void run() {
-						StringBuilder args = new StringBuilder();
-								
-						args.append("address=" + determineAddressStr());
-						args.append("&shared=true");
-						args.append("&format=plain");
-						args.append("&method=create");
-
 						try {
-							final String response = postURL(WebROOT, args.toString());
-														
-							JSONObject object = (JSONObject) new JSONParser().parse(response);
-							
-							final String address = (String)object.get("input_address");
-							
+							final String address = MyRemoteWallet.generateSharedAddress(determineAddressStr());
+
 							new BitcoinAddress(address);
-							
+
 							handler.post(new Runnable() {
 
 								@Override
 								public void run() {
 									updateView(address);
-									
+
 									Toast.makeText(application, "Generated new shared address", Toast.LENGTH_SHORT)
 									.show();
 								}
 							});
 						} catch (final Exception e) {
 							e.printStackTrace();
-							
+
 							handler.post(new Runnable() {
 
 								@Override
@@ -178,7 +164,7 @@ public final class RequestCoinsFragment extends Fragment {
 				}.start();
 			}
 		});
-		
+
 		amountView = (CurrencyAmountView) view
 				.findViewById(R.id.request_coins_amount);
 		amountView.setListener(new Listener() {
@@ -191,25 +177,25 @@ public final class RequestCoinsFragment extends Fragment {
 		});
 		amountView.setContextButton(R.drawable.ic_input_calculator,
 				new OnClickListener() {
-					public void onClick(final View v) {
-						final FragmentTransaction ft = getFragmentManager()
-								.beginTransaction();
-						final Fragment prev = getFragmentManager()
-								.findFragmentByTag(
-										AmountCalculatorFragment.FRAGMENT_TAG);
-						if (prev != null)
-							ft.remove(prev);
-						ft.addToBackStack(null);
-						final DialogFragment newFragment = new AmountCalculatorFragment(
-								new AmountCalculatorFragment.Listener() {
-									public void use(final BigInteger amount) {
-										amountView.setAmount(amount);
-									}
-								});
-						newFragment.show(ft,
+			public void onClick(final View v) {
+				final FragmentTransaction ft = getFragmentManager()
+						.beginTransaction();
+				final Fragment prev = getFragmentManager()
+						.findFragmentByTag(
 								AmountCalculatorFragment.FRAGMENT_TAG);
-					}
-				});
+				if (prev != null)
+					ft.remove(prev);
+				ft.addToBackStack(null);
+				final DialogFragment newFragment = new AmountCalculatorFragment(
+						new AmountCalculatorFragment.Listener() {
+							public void use(final BigInteger amount) {
+								amountView.setAmount(amount);
+							}
+						});
+				newFragment.show(ft,
+						AmountCalculatorFragment.FRAGMENT_TAG);
+			}
+		});
 
 		return view;
 	}
@@ -227,10 +213,10 @@ public final class RequestCoinsFragment extends Fragment {
 						startActivity(Intent
 								.createChooser(
 										new Intent(Intent.ACTION_SEND)
-												.putExtra(Intent.EXTRA_TEXT,
-														determineAddressStr())
+										.putExtra(Intent.EXTRA_TEXT,
+												determineAddressStr())
 												.setType("text/plain"),
-										getActivity()
+												getActivity()
 												.getString(
 														R.string.request_coins_share_dialog_title)));
 					}
@@ -259,7 +245,7 @@ public final class RequestCoinsFragment extends Fragment {
 	private void updateView(String address) {
 		if (address == null)
 			return;
-		
+
 		final BigInteger amount = amountView.getAmount();
 
 		address = BitcoinURI.convertToBitcoinURI(address, amount, null, null)

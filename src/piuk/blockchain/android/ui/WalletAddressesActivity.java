@@ -99,6 +99,7 @@ public final class WalletAddressesActivity extends AbstractWalletActivity {
 			pagerTabs.addTabLabels(R.string.address_book_list_receiving_title,
 					R.string.address_book_list_archived_title,
 					R.string.address_book_list_sending_title);
+			
 			final ProxyOnPageChangeListener pagerListener = new ProxyOnPageChangeListener(
 					pagerTabs) {
 				@Override

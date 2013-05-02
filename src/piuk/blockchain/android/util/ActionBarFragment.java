@@ -115,19 +115,31 @@ public final class ActionBarFragment extends Fragment {
 		primaryTitleView.setSingleLine(title != null);
 	}
 
+	public ImageButton getButton(final int drawableRes) {
+		final ImageButton button = new ImageButton(getActivity());
+		button.setImageResource(drawableRes);
+		button.setBackgroundResource(R.drawable.action_bar_background);
+		button.setPadding(0, 0, 0, 0);
+		
+		return button;
+	}
+	
 	public ImageButton addButton(final int drawableRes) {
-		final LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
+		final ImageButton button = getButton(drawableRes);
+		addView(button);
+
+		return button;
+	}
+	
+	public void addView(final View viewToAdd) {
+		final LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
 				getResources().getDimensionPixelSize(
 						R.dimen.action_bar_button_width),
 				android.view.ViewGroup.LayoutParams.FILL_PARENT, 0f);
-		buttonParams.gravity = Gravity.CENTER_VERTICAL;
+		
+		params.gravity = Gravity.CENTER_VERTICAL;
 
-		final ImageButton button = new ImageButton(getActivity());
-		button.setImageResource(drawableRes);
-		button.setScaleType(ScaleType.CENTER);
-		button.setBackgroundResource(R.drawable.action_bar_background);
-		button.setPadding(0, 0, 0, 0);
-		view.addView(button, 2, buttonParams);
+		view.addView(viewToAdd, 2, params);
 
 		final ImageView separator1 = new ImageView(getActivity());
 		separator1.setImageDrawable(new ColorDrawable(Color
@@ -138,8 +150,6 @@ public final class ActionBarFragment extends Fragment {
 		separator2.setImageDrawable(new ColorDrawable(Color
 				.parseColor("#44000000")));
 		view.addView(separator2, 2, separatorParams);
-
-		return button;
 	}
 
 	public boolean removeButton(final ImageButton button) {

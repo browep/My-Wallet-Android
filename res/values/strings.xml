@@ -20,11 +20,11 @@
     <string name="toast_generated_new_wallet">Generated new wallet.</string>
     <string name="toast_pin_saved">PIN Saved.</string>
     <string name="export_keys_dialog_title">Backup Wallet</string>
-    <string name="export_keys_dialog_message">Your encrypted wallet will be written to external storage. In case of emergency wallet can be restored online at blockchain.info or using the multibit.org bitcoin client.</string>
+    <string name="export_keys_dialog_message">Your encrypted wallet will be written to external storage. In case of emergency the wallet can be restored online at blockchain.info or using the multibit.org bitcoin client.</string>
     <string name="export_keys_dialog_button_export">Export</string>
     <string name="import_export_keys_dialog_password">password</string>
     <string name="import_export_keys_dialog_show">Show password</string>
-    <string name="export_keys_dialog_success">Your private keys have been exported to\n\n%s\n\nKeep them safe, and keep your password safe!\n\nDo you want to archive your keys using an app?</string>
+    <string name="export_keys_dialog_success">Your wallet has been saved to\n\n%s\n\nKeep it safe, and keep your password safe!\n\nDo you want to archive your wallet using an app?</string>
     <string name="export_keys_dialog_failure">Your private keys could not be exported:\n%s</string>
     <string name="toast_downloading_wallet">Downloading wallet.</string>
     <string name="toast_error_downloading_transactions">Error downloading transactions.</string>
@@ -39,7 +39,7 @@
 		below.</string>
     <string name="main_password_text">Please enter your main password below.</string>
     <string name="wallet_identifier_title">Wallet Identifier</string>
-    <string name="wallet_identifier_enter_text">Please enter your 36 character wallet identifier below including dashes. Two factor authentication must temporarily be disabled.</string>
+    <string name="wallet_identifier_enter_text">Please enter your 36 character wallet identifier below including dashes. Two factor authentication must be temporarily disabled.</string>
     <string name="new_account_password_length_error">Password must be between 11 and 255 characters</string>
     <string name="new_account_password_mismatch_error">Passwords do not match</string>
     <string name="new_account_kaptcha_error">Captcha code incorrect</string>
@@ -123,6 +123,7 @@
     <string name="send_coins_parse_address_error_msg">Got invalid bitcoin address!\n(Mixing up
 		Testnet/Prodnet?)</string>
     <string name="send_coins_fragment_receiving_address_label">Pay to</string>
+    <string name="send_coins_fragment_from_address_label">From address</string>
     <string name="send_coins_fragment_receiving_address_hint">bitcoin address </string>
     <string name="send_coins_fragment_receiving_address_error">Invalid Bitcoin Address!</string>
     <string name="send_coins_fragment_available_label">Available for spending</string>
@@ -146,7 +147,7 @@
     <string name="request_coins_share_dialog_title">Share request for Bitcoins…</string>
     <string name="request_coins_address_copied_to_clipboard">Bitcoin address copied to Clipboard</string>
     <string name="request_coins_address_label">(Touch to copy to Clipboard)</string>
-    <string name="generate_shared_address">Generate Private Shared Address</string>
+    <string name="generate_shared_address">Generate Shared Address</string>
     <string name="address_book_activity_title">Address Book</string>
     <string name="address_book_list_receiving_title">Active addresses</string>
     <string name="address_book_list_archived_title">Archived addresses</string>
@@ -228,7 +229,6 @@
     <string name="notification_coins_sent_msg">Sent %s BTC</string>
     <string name="notification_peers_connected_msg">%d peers connected</string>
 
-    <!-- generic buttons -->
     <string name="button_dismiss">Dismiss</string>
     <string name="button_cancel">Cancel</string>
     <string name="error_config">Please set the %1$s constant and recompile the app.</string>
@@ -250,5 +250,18 @@
     <string name="options_exit">Exit</string>
     <string name="buy_bitcoins">Buy Bitcoins</string>
     <string name="unknown">Unknown</string>
+    <string name="add_note">Add Note</string>
+    <string name="edit_note">Edit Note</string>
+    <string name="save_note">Save Note</string>
+    <string name="please_enter_note">Please enter a note</string>
+    <string name="note_saved">Note Saved</string>
+    <string name="enter_note_below">Enter the note below:</string>
+    <string name="shared_send_description">Send shared routes transactions through a shared wallet for increased privacy. Shared transactions incur a %1$s fee.</string>
+
+    <string-array name="send_types_array">
+        <item>Quick Send</item>
+        <item>Custom Send</item>
+        <item>Shared Send</item>
+    </string-array>
 
 </resources>

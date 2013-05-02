@@ -79,14 +79,14 @@
             android:id="@+id/pair_qr_button"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="15dp"
+            android:layout_margin="5dp"
             android:text="@string/pair_wallet_button" />
         
         <Button
             android:id="@+id/pair_manually_button"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="5dp"
+            android:layout_margin="5dp"
             android:text="@string/pair_wallet_manually_button" />
 
     </LinearLayout>

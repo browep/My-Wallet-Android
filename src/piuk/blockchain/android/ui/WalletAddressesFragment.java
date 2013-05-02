@@ -88,7 +88,7 @@ public class WalletAddressesFragment extends ListFragment
 		this.pagerView = pagerView;
 	}
 
-	public void setKeys() {
+	public synchronized void setKeys() {
 
 		if (application.getRemoteWallet() == null)
 			return;
@@ -97,10 +97,6 @@ public class WalletAddressesFragment extends ListFragment
 			addresses = application.getRemoteWallet().getArchivedAddresses();
 		else
 			addresses = application.getRemoteWallet().getActiveAddresses();
-		
-		if (addresses == null) {
-			addresses = new String[0];
-		}
 	}
 
 	@Override
@@ -239,18 +235,31 @@ public class WalletAddressesFragment extends ListFragment
 	{
 		final Resources res = getResources();
 
+		@Override
 		public int getCount() {
+			if (addresses == null)
+				return 0;
+			
 			return addresses.length;
 		}
 
+		@Override
 		public Object getItem(final int position) {
+			if (addresses == null)
+				return null;
+			
 			return addresses[position];
 		}
 
+		@Override
 		public long getItemId(final int position) {
+			if (addresses == null)
+				return 0;
+			
 			return addresses[position].hashCode();
 		}
 
+		@Override
 		public View getView(final int position, View row, final ViewGroup parent) {
 			final String address = (String) getItem(position);
 

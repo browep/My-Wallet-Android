@@ -19,9 +19,11 @@ package piuk.blockchain.android.ui;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.text.DecimalFormat;
 
 import android.content.SharedPreferences;
 import android.database.Cursor;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.v4.app.ListFragment;
@@ -32,8 +34,10 @@ import android.support.v4.widget.SimpleCursorAdapter;
 import android.support.v4.widget.SimpleCursorAdapter.ViewBinder;
 import android.view.View;
 import android.widget.BaseAdapter;
+import android.widget.ImageView;
 import android.widget.ListAdapter;
 import android.widget.ListView;
+import android.widget.TextView;
 
 import piuk.EventListeners;
 import piuk.blockchain.android.R;
@@ -49,13 +53,14 @@ LoaderManager.LoaderCallbacks<Cursor> {
 	private WalletApplication application;
 	private SharedPreferences prefs;
 	private SimpleCursorAdapter adapter;
+	private final DecimalFormat format = new DecimalFormat("#.##");
 
 	private final EventListeners.EventListener walletEventListener = new EventListeners.EventListener() {
 		@Override
 		public String getDescription() {
 			return "Exchange Rates Listener";
 		}
-		
+
 		@Override
 		public void onWalletDidChange() {
 			try {
@@ -86,30 +91,59 @@ LoaderManager.LoaderCallbacks<Cursor> {
 		adapter = new SimpleCursorAdapter(getActivity(),
 				R.layout.exchange_rate_row, null, new String[] {
 			ExchangeRatesProvider.KEY_CURRENCY_CODE,
-			ExchangeRatesProvider.KEY_EXCHANGE_RATE }, new int[] {
+			ExchangeRatesProvider.KEY_EXCHANGE_RATE_15M,
+			ExchangeRatesProvider.KEY_EXCHANGE_RATE_24H,
+			ExchangeRatesProvider.KEY_EXCHANGE_RATE_SYMBOL}, new int[] {
 			R.id.exchange_rate_currency_code,
-			R.id.exchange_rate_value }, 0);
+			R.id.exchange_rate_value,
+			R.id.exchange_up_down,
+			R.id.exchange_rate_symbol}, 0);
+
 		adapter.setViewBinder(new ViewBinder() {
 			public boolean setViewValue(final View view, final Cursor cursor,
 					final int columnIndex) {
-				if (!ExchangeRatesProvider.KEY_EXCHANGE_RATE.equals(cursor
-						.getColumnName(columnIndex)))
+
+				String columnName = cursor.getColumnName(columnIndex);
+
+				if (columnName.equals(ExchangeRatesProvider.KEY_CURRENCY_CODE)) {
 					return false;
+				} else if (columnName.equals(ExchangeRatesProvider.KEY_EXCHANGE_RATE_15M)) {
+					final TextView valueView = (TextView) view;
 
-				BigInteger balance = (application.getRemoteWallet() == null) ? BigInteger.ZERO : application.getRemoteWallet().final_balance;
+					final double _15m = cursor.getDouble(columnIndex);
 
-				final BigInteger value = new BigDecimal(balance).multiply(
-						new BigDecimal(cursor.getDouble(columnIndex)))
-						.toBigInteger();
+					valueView.setText(format.format(_15m));
+					
+					return true;
+				} else if (columnName.equals(ExchangeRatesProvider.KEY_EXCHANGE_RATE_15M)) {
+					final TextView valueView = (TextView) view;
 
-				final CurrencyAmountView valueView = (CurrencyAmountView) view;
-				valueView.setCurrencyCode(null);
-				valueView.setAmount(value);
+					final String symbol = cursor.getString(columnIndex);
 
-				return true;
+					valueView.setText(symbol);
+					
+					return true;
+				} else if (columnName.equals(ExchangeRatesProvider.KEY_EXCHANGE_RATE_24H)) {
+					final ImageView image = (ImageView) view;
+					
+					double _15MValue = cursor.getDouble(cursor.getColumnIndex(ExchangeRatesProvider.KEY_EXCHANGE_RATE_15M));
+					double _24HValue = cursor.getDouble(columnIndex);
+
+					if (_15MValue > _24HValue) {
+						image.setImageResource(R.drawable.icon_up_green);
+					} else if (_15MValue < _24HValue) {
+						image.setImageResource(R.drawable.icon_down_red);
+					} else {
+						image.setImageResource(R.drawable.icon_right_black);
+					}
+
+					return true;
+				}
+				
+				return false;
 			}
 		});
-		
+
 		setListAdapter(adapter);
 
 		getLoaderManager().initLoader(0, null, this);
@@ -143,25 +177,25 @@ LoaderManager.LoaderCallbacks<Cursor> {
 
 		final WalletBalanceFragment walletBalanceFragment = (WalletBalanceFragment) getFragmentManager()
 				.findFragmentById(R.id.wallet_balance_fragment);
-		
+
 		if (walletBalanceFragment != null) {
 			walletBalanceFragment.updateView();
 		}
-		
+
 		new Thread(new Runnable() {
 			@Override
 			public void run() {
 				try {
 					application.getRemoteWallet().updateRemoteCurrency(currencyCode);
-					
+
 					application.doMultiAddr();
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
 			}
-			
+
 		}).start();
-		
+
 		getActivity().finish();
 	}
 

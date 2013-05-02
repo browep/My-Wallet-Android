@@ -24,6 +24,7 @@ import com.google.bitcoin.core.ECKey;
 import com.google.bitcoin.core.NetworkParameters;
 import com.google.bitcoin.core.Wallet;
 import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
 import org.json.simple.JSONValue;
 import org.json.simple.parser.JSONParser;
 
@@ -116,12 +117,40 @@ public class MyWallet {
 	public Map<String, Object> getOptions() {
 		Map<String, Object> options = (Map<String, Object>) root.get("options");
 
-		if (options == null)
+		if (options == null) {
 			options = Collections.emptyMap();
+			
+			root.put("options", options);
+		}
 
 		return options;
 	}
 
+
+	@SuppressWarnings("unchecked")
+	public Map<String, String> getTxNotes() {
+		Map<String, String> tx_notes = (Map<String, String>) root.get("tx_notes");
+
+		if (tx_notes == null) {
+			tx_notes = Collections.emptyMap();
+			
+			root.put("tx_notes", tx_notes);
+		}
+		
+		return tx_notes;
+	}
+	
+	public boolean addTxNote(Hash hash, String note) throws Exception {
+		//Disallow quotes and < >
+        if (StringUtils.containsAny(note, "\"'<>")) {
+            throw new Exception("Note contains invalid characters");
+        }
+        
+		getTxNotes().put(hash.toString(), note);	
+		
+		return true;
+	}
+	
 	public int getFeePolicy() {
 		Map<String, Object> options = getOptions();
 

@@ -208,7 +208,7 @@ public final class AmountCalculatorFragment extends DialogFragment implements Lo
 		if (data != null)
 		{
 			data.moveToFirst();
-			exchangeRate = data.getDouble(data.getColumnIndexOrThrow(ExchangeRatesProvider.KEY_EXCHANGE_RATE));
+			exchangeRate = data.getDouble(data.getColumnIndexOrThrow(ExchangeRatesProvider.KEY_EXCHANGE_RATE_15M));
 
 			updateAppearance();
 		}

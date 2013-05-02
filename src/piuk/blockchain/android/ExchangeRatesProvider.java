@@ -17,20 +17,18 @@
 
 package piuk.blockchain.android;
 
-import java.io.BufferedInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
+import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLConnection;
-import java.util.Iterator;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import piuk.blockchain.android.util.IOUtils;
+import org.apache.commons.io.IOUtils;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
 
 import android.content.ContentProvider;
 import android.content.ContentValues;
@@ -47,9 +45,11 @@ public class ExchangeRatesProvider extends ContentProvider {
 			+ Constants.PACKAGE_NAME + '.' + "exchange_rates");
 
 	public static final String KEY_CURRENCY_CODE = "currency_code";
-	public static final String KEY_EXCHANGE_RATE = "exchange_rate";
+	public static final String KEY_EXCHANGE_RATE_15M = "exchange_rate_15m";
+	public static final String KEY_EXCHANGE_RATE_24H = "exchange_rate_24h";
+	public static final String KEY_EXCHANGE_RATE_SYMBOL = "exchange_rate_symbol";
 
-	private Map<String, Double> exchangeRates = null;
+	private Map<String, Rate> exchangeRates = null;
 
 	@Override
 	public boolean onCreate() {
@@ -60,6 +60,7 @@ public class ExchangeRatesProvider extends ContentProvider {
 	public Cursor query(final Uri uri, final String[] projection,
 			final String selection, final String[] selectionArgs,
 			final String sortOrder) {
+
 		if (exchangeRates == null) {
 			exchangeRates = getExchangeRates();
 
@@ -68,21 +69,21 @@ public class ExchangeRatesProvider extends ContentProvider {
 		}
 
 		final MatrixCursor cursor = new MatrixCursor(new String[] {
-				BaseColumns._ID, KEY_CURRENCY_CODE, KEY_EXCHANGE_RATE });
+				BaseColumns._ID, KEY_CURRENCY_CODE, KEY_EXCHANGE_RATE_15M, KEY_EXCHANGE_RATE_24H, KEY_EXCHANGE_RATE_SYMBOL });
 
 		if (selection == null) {
-			for (final Map.Entry<String, Double> entry : exchangeRates
+			for (final Map.Entry<String, Rate> entry : exchangeRates
 					.entrySet())
 				cursor.newRow().add(entry.getKey().hashCode())
-						.add(entry.getKey()).add(entry.getValue());
+				.add(entry.getKey()).add(entry.getValue()._15m).add(entry.getValue()._24hr).add(entry.getValue().symbol);
 		} else if (selection.equals(KEY_CURRENCY_CODE)) {
 
 			if (selectionArgs == null)
 				return null;
 
 			final String code = selectionArgs[0];
-			final Double rate = exchangeRates.get(code);
-			cursor.newRow().add(code.hashCode()).add(code).add(rate);
+			final Rate rate = exchangeRates.get(code);
+			cursor.newRow().add(code.hashCode()).add(code).add(rate._15m).add(rate._24hr).add(rate.symbol);
 		}
 
 		return cursor;
@@ -110,47 +111,70 @@ public class ExchangeRatesProvider extends ContentProvider {
 		throw new UnsupportedOperationException();
 	}
 
-	private static Map<String, Double> getExchangeRates() {
+	private static String fetchURL(String URL) throws Exception {
+		URL url = new URL(URL);
+
+		HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+
 		try {
-			final URLConnection connection = new URL(
-					"http://bitcoincharts.com/t/weighted_prices.json")
-					.openConnection();
-			// https://mtgox.com/code/data/ticker.php
-			// https://bitmarket.eu/api/ticker
-			// http://bitcoincharts.com/t/weighted_prices.json
+			connection.setRequestProperty("Accept", "application/json");
+			connection.setRequestProperty("charset", "utf-8");
+			connection.setRequestMethod("GET");
+
+			connection.setConnectTimeout(30000);
+			connection.setReadTimeout(30000);
+
+			connection.setInstanceFollowRedirects(false);
 
 			connection.connect();
-			final Reader is = new InputStreamReader(new BufferedInputStream(
-					connection.getInputStream()));
-			final StringBuilder content = new StringBuilder();
-			IOUtils.copy(is, content);
-			is.close();
 
-			final Map<String, Double> rates = new TreeMap<String, Double>();
+			if (connection.getResponseCode() == 200)
+				return IOUtils.toString(connection.getInputStream(), "UTF-8");
+			else if (connection.getResponseCode() == 500 && (connection.getContentType() == null || connection.getContentType().equals("text/plain")))
+				throw new Exception("Error From Server: " +  IOUtils.toString(connection.getErrorStream(), "UTF-8"));
+			else
+				throw new Exception("Unknown response from server");
 
-			final JSONObject head = new JSONObject(content.toString());
-			for (@SuppressWarnings("unchecked")
-			final Iterator<String> i = head.keys(); i.hasNext();) {
-				final String currencyCode = i.next();
-				if (!"timestamp".equals(currencyCode)) {
-					final JSONObject o = head.getJSONObject(currencyCode);
-					double rate = o.optDouble("24h", 0);
-					if (rate == 0)
-						rate = o.optDouble("7d", 0);
-					if (rate == 0)
-						rate = o.optDouble("30d", 0);
+		} finally {
+			connection.disconnect();
+		}
+	}
 
-					if (rate != 0)
-						rates.put(currencyCode, rate);
-				}
+	public static class Rate {
+		public String symbol;
+		public double _15m;
+		public double _24hr;
+	}
+
+	private static Map<String, Rate> getExchangeRates() {
+		try {
+			String response = fetchURL("http://blockchain.info/ticker");
+
+			final Map<String, Rate> rates = new LinkedHashMap<String, Rate>();
+
+			@SuppressWarnings("unchecked")
+			final Map<String, JSONObject> root = (Map<String, JSONObject>) new JSONParser().parse(response);
+
+			List<Map.Entry<String, JSONObject>> entries = new ArrayList<Map.Entry<String, JSONObject>>(root.entrySet());
+			
+			Collections.reverse(entries);
+			
+			for (Map.Entry<String, JSONObject> entry : entries) {
+				String code = entry.getKey();
+
+				Rate rate = new Rate();
+
+				rate._15m = ((Number)entry.getValue().get("15m")).doubleValue();
+				rate._24hr = ((Number)entry.getValue().get("24h")).doubleValue();
+				rate.symbol = entry.getValue().get("symbol").toString();
+
+				rates.put(code, rate);
 			}
 
 			return rates;
-		} catch (final IOException x) {
-			x.printStackTrace();
-		} catch (final JSONException x) {
-			x.printStackTrace();
-		}
+		} catch (final Exception e) {
+			e.printStackTrace();
+		} 
 
 		return null;
 	}

@@ -19,10 +19,8 @@ package piuk.blockchain.android.ui;
 
 import java.io.File;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.io.Writer;
 import java.math.BigInteger;
-import java.util.ArrayList;
 import java.util.Date;
 
 import com.google.android.gcm.GCMRegistrar;
@@ -31,8 +29,6 @@ import com.google.bitcoin.core.ECKey;
 import com.google.bitcoin.core.NetworkParameters;
 import com.google.bitcoin.core.Transaction;
 
-import piuk.BitcoinAddress;
-import piuk.BitcoinURI;
 import piuk.MyRemoteWallet;
 import piuk.MyRemoteWallet.SendProgress;
 import piuk.blockchain.android.Constants;
@@ -59,10 +55,6 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
-import android.view.ViewConfiguration;
-import android.view.Window;
-import android.webkit.WebView;
-import android.widget.EditText;
 import android.widget.FrameLayout;
 
 public final class WalletActivity extends AbstractWalletActivity {
