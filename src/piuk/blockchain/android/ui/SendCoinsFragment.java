@@ -319,7 +319,7 @@ public final class SendCoinsFragment extends Fragment
 						e.printStackTrace();
 					}
 
-					application.doMultiAddr();
+					application.doMultiAddr(true);
 				}
 
 				public void onError(final String message) {

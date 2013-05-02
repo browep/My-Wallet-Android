@@ -338,12 +338,12 @@ public class MyRemoteWallet extends MyWallet {
 		}
 	}
 
-	public synchronized String doMultiAddr() throws Exception {
+	public synchronized String doMultiAddr(boolean notifications) throws Exception {
 		String url =  WebROOT + "multiaddr?active=" + StringUtils.join(getActiveAddresses(), "|")+ "&archived=" + StringUtils.join(getArchivedAddresses(), "|");
 
 		String response = fetchURL(url);
 
-		parseMultiAddr(response, true);
+		parseMultiAddr(response, notifications);
 
 		lastMultiAddress = System.currentTimeMillis();
 

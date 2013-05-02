@@ -282,7 +282,7 @@ public final class WalletActivity extends AbstractWalletActivity {
 			return false;
 		}
 	}
-	
+
 	public void openDeopositPage() {
 		if (application.getRemoteWallet() == null)
 			return;
@@ -294,7 +294,7 @@ public final class WalletActivity extends AbstractWalletActivity {
 			return;
 
 		Address address = application.determineSelectedAddress();
-		
+
 		if (address == null)
 			return;
 
@@ -358,16 +358,17 @@ public final class WalletActivity extends AbstractWalletActivity {
 									balance = MyRemoteWallet.getAddressBalance(key.toAddressCompressed(NetworkParameters.prodNet()).toString());
 								}
 
-								if (balance.longValue() == 0) {
-									b.setMessage("The Balance of this address is zero.");
-									return;
-								}
-
 								final BigInteger finalBalance = balance;
 
 								handler.post(new Runnable() {
 									@Override
 									public void run() {
+
+										if (finalBalance.longValue() == 0) {
+											dialog.setMessage("The Balance of this address is zero.");	
+											return;
+										}
+
 										dialog.getButton(Dialog.BUTTON1).setEnabled(true);
 
 										dialog.getButton(Dialog.BUTTON1).setOnClickListener(new OnClickListener() {
@@ -476,7 +477,7 @@ public final class WalletActivity extends AbstractWalletActivity {
 			longToast(e.getLocalizedMessage());
 		}
 	}
-	
+
 	private Dialog createExportKeysDialog()
 	{
 		final View view = getLayoutInflater().inflate(R.layout.export_keys_dialog, null);
@@ -492,7 +493,7 @@ public final class WalletActivity extends AbstractWalletActivity {
 				exportPrivateKeys();
 			}
 		});
-		
+
 		builder.setNegativeButton(R.string.button_cancel, new Dialog.OnClickListener()
 		{
 			public void onClick(final DialogInterface dialog, final int which)
@@ -500,14 +501,14 @@ public final class WalletActivity extends AbstractWalletActivity {
 				dialog.dismiss();
 			}
 		});
-		
+
 
 		final AlertDialog dialog = builder.create();
 
 		return dialog;
 	}
 
-	
+
 	private void mailPrivateKeys(final File file)
 	{
 		final Intent intent = new Intent(Intent.ACTION_SEND);

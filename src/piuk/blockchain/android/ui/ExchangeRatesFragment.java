@@ -188,7 +188,7 @@ LoaderManager.LoaderCallbacks<Cursor> {
 				try {
 					application.getRemoteWallet().updateRemoteCurrency(currencyCode);
 
-					application.doMultiAddr();
+					application.doMultiAddr(true);
 				} catch (Exception e) {
 					e.printStackTrace();
 				}

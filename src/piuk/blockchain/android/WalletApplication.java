@@ -460,7 +460,7 @@ public class WalletApplication extends Application {
 						}
 
 						if (!blockchainWallet.isUptoDate(Constants.MultiAddrTimeThreshold)) {
-							doMultiAddr();
+							doMultiAddr(true);
 						} else {
 							System.out.println("Skipping doMultiAddr");
 						}
@@ -479,7 +479,7 @@ public class WalletApplication extends Application {
 							}
 
 							if (!blockchainWallet.isUptoDate(Constants.MultiAddrTimeThreshold)) {
-								doMultiAddr();
+								doMultiAddr(false);
 							} else {
 								System.out.println("Skipping doMultiAddr");
 							}
@@ -530,9 +530,6 @@ public class WalletApplication extends Application {
 				try {
 					if (blockchainWallet == null) {
 						blockchainWallet = new MyRemoteWallet(payload, password);
-
-						System.out.println("Set Wallet " + blockchainWallet);
-
 					} else {						
 						blockchainWallet.setTemporyPassword(password);
 
@@ -557,13 +554,15 @@ public class WalletApplication extends Application {
 
 					decryptionErrors++;
 
-					System.out.println("checkIfWalletHasUpdatedAndFetchTransactions() Set blockchainWallet null");
-
 					blockchainWallet = null;
 
 					if (callback != null)  {
 						handler.post(new Runnable() {
 							public void run() {
+								Toast.makeText(WalletApplication.this,
+										R.string.toast_wallet_decryption_failed,
+										Toast.LENGTH_LONG).show();
+								
 								callbackFinal.onFail();
 							};
 						});
@@ -573,14 +572,6 @@ public class WalletApplication extends Application {
 					EventListeners.invokeWalletDidChange();
 
 					writeException(e);
-
-					handler.post(new Runnable() {
-						public void run() {
-							Toast.makeText(WalletApplication.this,
-									R.string.toast_wallet_decryption_failed,
-									Toast.LENGTH_LONG).show();
-						}
-					});
 
 					return;
 				}
@@ -615,7 +606,7 @@ public class WalletApplication extends Application {
 
 				try {
 					// Get the balance and transaction
-					doMultiAddr();
+					doMultiAddr(true);
 
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -634,14 +625,14 @@ public class WalletApplication extends Application {
 		}).start();
 	}
 
-	public void doMultiAddr() {
+	public void doMultiAddr(final boolean notifications) {
 		if (blockchainWallet == null)
 			return;
 
 		new Thread(new Runnable() {
 			public void run() {
 				try {
-					writeMultiAddrCache(blockchainWallet.doMultiAddr());
+					writeMultiAddrCache(blockchainWallet.doMultiAddr(notifications));
 
 					//After multi addr the currency is set
 					if (blockchainWallet.currencyCode != null)
