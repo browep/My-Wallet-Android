@@ -448,8 +448,12 @@ public final class SendCoinsFragment extends Fragment
 				if (sendType != null && sendType.equals(SendCoinsActivity.SendTypeCustomSend)) {
 					Pair<String, String> selected = (Pair<String, String>) sendCoinsFromSpinner.getSelectedItem();
 
-					from = new String[] {selected.first.toString()};
-				} else {
+					if (selected.first.equals("Any Address")) {
+						from = wallet.getActiveAddresses();
+					} else {
+						from = new String[] {selected.first.toString()};
+					}
+				} else { 
 					from = wallet.getActiveAddresses();
 				}
 
