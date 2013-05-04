@@ -17,7 +17,6 @@
 
 package piuk.blockchain.android;
 
-import android.app.Activity;
 import android.app.Application;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProviderInfo;
@@ -42,17 +41,15 @@ import piuk.blockchain.android.R;
 import piuk.blockchain.android.ui.AbstractWalletActivity;
 import piuk.blockchain.android.ui.PinEntryActivity;
 import piuk.blockchain.android.ui.SuccessCallback;
-import piuk.blockchain.android.ui.dialogs.RequestPasswordDialog;
 import piuk.blockchain.android.util.ErrorReporter;
 
-import java.io.FileInputStream;
+import java.io.FileInputStream; 
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.CookieHandler;
 import java.security.MessageDigest;
 import java.security.Security;
-import java.util.ArrayList;
 import java.util.Map.Entry;
 import java.util.Timer;
 import java.util.TimerTask;

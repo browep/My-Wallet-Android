@@ -114,20 +114,6 @@ public class MyWallet {
 	}
 
 	@SuppressWarnings("unchecked")
-	public Map<String, Object> getOptions() {
-		Map<String, Object> options = (Map<String, Object>) root.get("options");
-
-		if (options == null) {
-			options = Collections.emptyMap();
-			
-			root.put("options", options);
-		}
-
-		return options;
-	}
-
-
-	@SuppressWarnings("unchecked")
 	public Map<String, String> getTxNotes() {
 		Map<String, String> tx_notes = (Map<String, String>) root.get("tx_notes");
 
@@ -160,6 +146,20 @@ public class MyWallet {
 		}
 
 		return fee_policy;
+	}
+
+
+	@SuppressWarnings("unchecked")
+	public Map<String, Object> getOptions() {
+		Map<String, Object> options = (Map<String, Object>) root.get("options");
+
+		if (options == null) {
+			options = Collections.emptyMap();
+			
+			root.put("options", options);
+		}
+
+		return options;
 	}
 
 	public int getPbkdf2Iterations() {

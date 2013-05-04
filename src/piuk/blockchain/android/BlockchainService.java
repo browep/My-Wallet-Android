@@ -40,7 +40,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.ConnectivityManager;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
@@ -284,8 +283,6 @@ public class BlockchainService extends android.app.Service
 	@Override
 	public void onCreate()
 	{
-		System.out.println("service onCreate()");
-
 		super.onCreate();
 
 		nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
@@ -332,8 +329,6 @@ public class BlockchainService extends android.app.Service
 
 	public void stop() {
 		try {
-			System.out.println("Stop");
-
 			webSocketHandler.stop(); 
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -343,8 +338,6 @@ public class BlockchainService extends android.app.Service
 	@Override
 	public void onDestroy()
 	{
-		System.out.println("service onDestroy()");
-
 		EventListeners.removeEventListener(walletEventListener);
 
 		stop();

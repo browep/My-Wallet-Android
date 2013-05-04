@@ -26,9 +26,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.widget.RemoteViews;
 
-import com.google.bitcoin.core.Wallet;
-import com.google.bitcoin.core.Wallet.BalanceType;
-
 import piuk.blockchain.android.R;
 import piuk.blockchain.android.ui.WalletActivity;
 import piuk.blockchain.android.util.WalletUtils;

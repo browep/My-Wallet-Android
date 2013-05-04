@@ -51,7 +51,6 @@ public class Constants {
 
     public static final String DISPLAY_MESSAGE_ACTION = "piuk.blockchain.android.DISPLAY_MESSAGE";
 
-    
     public static final String TITLE = "title";
     public static final String BODY = "body";
 

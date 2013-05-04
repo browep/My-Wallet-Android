@@ -24,8 +24,6 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
-
 import org.apache.commons.io.IOUtils;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -37,9 +35,7 @@ import android.database.MatrixCursor;
 import android.net.Uri;
 import android.provider.BaseColumns;
 
-/**
- * @author Andreas Schildbach
- */
+
 public class ExchangeRatesProvider extends ContentProvider {
 	public static final Uri CONTENT_URI = Uri.parse("content://"
 			+ Constants.PACKAGE_NAME + '.' + "exchange_rates");

@@ -17,18 +17,10 @@
 
 package piuk.blockchain.android.ui;
 
-import android.support.v4.view.ViewPager;
-
-/**
- * @author Andreas Schildbach
- */
 public final class WalletActiveAddressesFragment extends WalletAddressesFragment
 {
-
-	public WalletActiveAddressesFragment(int tag_filter, ViewPager pagerView) {
-		super(tag_filter, pagerView);
-		// TODO Auto-generated constructor stub
+	public WalletActiveAddressesFragment() {
+		super(0);
 	}
-
 
 }

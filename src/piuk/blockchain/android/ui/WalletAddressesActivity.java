@@ -177,10 +177,9 @@ public final class WalletAddressesActivity extends AbstractWalletActivity {
 			pagerListener.onPageSelected(position);
 			pagerListener.onPageScrolled(position, 0, 0);
 
-			archivedAddressesFragment = new WalletArchivedAddressesFragment(2,
-					pager);
-			activeAddressesFragment = new WalletActiveAddressesFragment(0,
-					pager);
+			archivedAddressesFragment = new WalletArchivedAddressesFragment();
+			activeAddressesFragment = new WalletActiveAddressesFragment();
+			
 			sendingAddressesFragment = new SendingAddressesFragment();
 		}
 		/*

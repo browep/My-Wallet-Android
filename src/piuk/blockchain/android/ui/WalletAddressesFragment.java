@@ -75,17 +75,14 @@ public class WalletAddressesFragment extends ListFragment
 		}
 	};
 	
-	private ViewPager pagerView;
-
 	public WalletAddressesFragment() {
 		super();
 	}
 
-	public WalletAddressesFragment(int tag_filter, ViewPager pagerView) {
+	public WalletAddressesFragment(int tag_filter) {
 		super();
 
 		this.tag_filter = tag_filter;
-		this.pagerView = pagerView;
 	}
 
 	public synchronized void setKeys() {
@@ -165,11 +162,6 @@ public class WalletAddressesFragment extends ListFragment
 	@Override
 	public boolean onContextItemSelected(final MenuItem item)
 	{
-		if (pagerView.getCurrentItem() == 0 && tag_filter == 2)
-			return false;
-		else if (pagerView.getCurrentItem() == 1 && tag_filter == 0)
-			return false;
-
 		final AdapterContextMenuInfo menuInfo = (AdapterContextMenuInfo) item.getMenuInfo();
 
 		final String address = (String) getListView().getAdapter().getItem(menuInfo.position);

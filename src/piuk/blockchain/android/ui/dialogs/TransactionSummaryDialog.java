@@ -285,7 +285,7 @@ public final class TransactionSummaryDialog extends DialogFragment
 
 			transactionTimeView.setText(dateFormat.format(tx.getTime()));
 
-			TextView confirmationsView = (TextView) view.findViewById(R.id.transaction_confirmations);
+			final TextView confirmationsView = (TextView) view.findViewById(R.id.transaction_confirmations);
 			if (wallet.latestBlock != null) {
 				
 				if (tx.getHeight() > 0) {
@@ -356,6 +356,13 @@ public final class TransactionSummaryDialog extends DialogFragment
 										feeViewContainer.setVisibility(View.VISIBLE);
 
 										feeView.setText(WalletUtils.formatValue(BigInteger.valueOf(Long.valueOf(obj.get("fee").toString()))) + " BTC");
+									}
+									
+
+									if (obj.get("confirmations") != null) {
+										int confirmations = ((Number)obj.get("confirmations")).intValue();
+
+										confirmationsView.setText(""+confirmations);
 									}
 
 									String result_local = (String) obj.get("result_local");

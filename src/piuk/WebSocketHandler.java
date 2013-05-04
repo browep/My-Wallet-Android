@@ -112,8 +112,6 @@ public class WebSocketHandler {
 	}
 
 	public void stop() {
-		System.out.println("stop()");
-
 		this.isRunning = false;
 
 		if (client != null) {
@@ -256,7 +254,6 @@ public class WebSocketHandler {
 							}
 						}
 					}
-
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
