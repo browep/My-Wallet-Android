@@ -108,6 +108,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 	private static final String TAG = BlockchainServiceImpl.class.getSimpleName();
 
 	private final Timer timer = new Timer();
+	private Wallet wallet;
 
 	private final WalletEventListener walletEventListener = new ThrottelingWalletChangeListener(APPWIDGET_THROTTLE_MS)
 	{
@@ -119,7 +120,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 		}
 
 		@Override
-	    public void onCoinsSent(Wallet wallet, Transaction tx, BigInteger prevBalance, BigInteger newBalance) {
+		public void onCoinsSent(Wallet wallet, Transaction tx, BigInteger prevBalance, BigInteger newBalance) {
 			timer.purge();
 
 			timer.schedule(new TimerTask() {
@@ -129,8 +130,8 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 					EventListeners.invokeOnTransactionsChanged();
 				}
 			}, Constants.BLOCKCHAIN_STATE_BROADCAST_THROTTLE_MS);	
-	    }
-	    
+		}
+
 		@Override
 		public void onCoinsReceived(final Wallet wallet, final Transaction tx, final BigInteger prevBalance, final BigInteger newBalance)
 		{			
@@ -155,8 +156,6 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 				try {
 					if (!peerGroup.isRunning())
 						return;
-
-					final Wallet wallet = application.bitcoinjWallet;
 
 					if (wallet == null)
 						return;
@@ -274,14 +273,14 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 					Log.d(TAG, "acquiring wakelock");
 					wakeLock.acquire();
 
-					
+
 					Log.i(TAG, "starting peergroup");
 					peerGroup = new PeerGroup(Constants.NETWORK_PARAMETERS, blockChain);
-					
+
 					if (application.earliestKeyTime > 0)
 						peerGroup.setFastCatchupTimeSecs(application.earliestKeyTime / 1000);
 
-					peerGroup.addWallet(application.bitcoinjWallet);
+					peerGroup.addWallet(wallet);
 					peerGroup.setUserAgent(Constants.USER_AGENT, application.applicationVersionName());
 					peerGroup.addEventListener(peerConnectivityListener);
 
@@ -341,7 +340,10 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 
 					Log.i(TAG, "stopping peergroup");
 					peerGroup.removeEventListener(peerConnectivityListener);
-					peerGroup.removeWallet(application.bitcoinjWallet);
+
+					if (wallet != null)
+						peerGroup.removeWallet(wallet);
+
 					peerGroup.stop();
 					peerGroup = null;
 
@@ -450,17 +452,17 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 
 		super.onCreate();
 
+
 		try {
 			nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-
 			application = (WalletApplication) getApplication();
+			wallet = application.bitcoinjWallet;
 			prefs = PreferenceManager.getDefaultSharedPreferences(this); 
-
+ 
 			final String lockName = getPackageName() + " blockchain sync";
 
 			final PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
 			wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, lockName);
-
 
 			final int versionCode = application.applicationVersionCode();
 			prefs.edit().putInt(Constants.PREFS_KEY_LAST_VERSION, versionCode).commit();
@@ -468,6 +470,11 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 			bestChainHeightEver = prefs.getInt(Constants.PREFS_KEY_BEST_CHAIN_HEIGHT_EVER, 0);
 
 			peerConnectivityListener = new PeerConnectivityListener(); 
+
+			if (wallet == null) {
+				stopSelf();
+				return;
+			}
 
 			sendBroadcastPeerState(0);
 
@@ -484,7 +491,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 			{
 				Log.d(TAG, "blockchain does not exist, resetting wallet");
 
-				application.bitcoinjWallet.clearTransactions(0);
+				wallet.clearTransactions(0);
 			}
 
 			try
@@ -497,10 +504,10 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 					try
 					{            
 						StoredBlock stored = new StoredBlock(application.blockExplorerBlockPair.first, BigInteger.valueOf(Long.MAX_VALUE), application.blockExplorerBlockPair.second);
-						
+
 						blockStore.put(stored);
 						blockStore.setChainHead(stored);
-					  }
+					}
 					catch (final Exception x)
 					{
 						x.printStackTrace();
@@ -527,14 +534,14 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 
 			try
 			{
-				blockChain = new BlockChain(Constants.NETWORK_PARAMETERS, application.bitcoinjWallet, blockStore);
+				blockChain = new BlockChain(Constants.NETWORK_PARAMETERS, wallet, blockStore);
 			}
 			catch (final BlockStoreException x)
 			{
 				throw new Error("blockchain cannot be created", x);
 			}
 
-			application.bitcoinjWallet.addEventListener(walletEventListener);
+			wallet.addEventListener(walletEventListener);
 
 			registerReceiver(tickReceiver, new IntentFilter(Intent.ACTION_TIME_TICK));
 		} catch (Exception e) {
@@ -567,45 +574,60 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 				e.printStackTrace();
 			}
 
-			application.bitcoinjWallet.removeEventListener(walletEventListener);
+			if (wallet != null)
+				wallet.removeEventListener(walletEventListener);
 
 			if (peerGroup != null)
 			{
 				peerGroup.removeEventListener(peerConnectivityListener);
-				peerGroup.removeWallet(application.bitcoinjWallet);
-				peerGroup.stopAndWait();
+
+				if (wallet != null)
+					peerGroup.removeWallet(wallet);
+
+				peerGroup.stop();
+
+				//peerGroup.stopAndWait();
 
 				Log.i(TAG, "peergroup stopped");
 			}
 
-			peerConnectivityListener.stop();
+			if (peerConnectivityListener != null)
+				peerConnectivityListener.stop();
 
 			try {
-				unregisterReceiver(connectivityReceiver);
+				if (connectivityReceiver != null)
+					unregisterReceiver(connectivityReceiver);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
 
-			removeBroadcastPeerState();
-			removeBroadcastBlockchainState();
+			try {
+				removeBroadcastPeerState();
+				removeBroadcastBlockchainState();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 
-			prefs.edit().putInt(Constants.PREFS_KEY_BEST_CHAIN_HEIGHT_EVER, bestChainHeightEver).commit();
+			if (prefs != null)
+				prefs.edit().putInt(Constants.PREFS_KEY_BEST_CHAIN_HEIGHT_EVER, bestChainHeightEver).commit();
 
-			delayHandler.removeCallbacksAndMessages(null);
+			if (delayHandler != null)
+				delayHandler.removeCallbacksAndMessages(null);
 
 			try
 			{
-				blockStore.close();
+				if (blockStore != null)
+					blockStore.close();
 			}
-			catch (final BlockStoreException x)
+			catch (final Exception e)
 			{
-				throw new RuntimeException(x);
+				throw new RuntimeException(e);
 			}
 
 			if (application.isInP2PFallbackMode())
 				application.saveBitcoinJWallet();
 
-			if (wakeLock.isHeld())
+			if (wakeLock != null && wakeLock.isHeld())
 			{
 				Log.d(TAG, "wakelock still held, releasing");
 				wakeLock.release();

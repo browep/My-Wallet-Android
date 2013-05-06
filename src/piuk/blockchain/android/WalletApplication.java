@@ -328,7 +328,7 @@ public class WalletApplication extends Application {
 	{
 		if (blockchainWallet == null)
 			return;
-		
+
 		try {
 			if (bitcoinjWallet == null) {
 				deleteBitcoinJLocalData();
@@ -372,7 +372,8 @@ public class WalletApplication extends Application {
 						}
 					}*/
 
-					startService(blockchainServiceIntent);
+					if (!isBitcoinJServiceRunning())
+						startService(blockchainServiceIntent);
 
 					EventListeners.invokeWalletDidChange();
 				}
@@ -388,7 +389,7 @@ public class WalletApplication extends Application {
 		this.bitcoinjWallet = null;
 
 		stopService(blockchainServiceIntent);
-
+ 
 		deleteBitcoinJLocalData();
 
 		EventListeners.invokeWalletDidChange();
@@ -837,7 +838,7 @@ public class WalletApplication extends Application {
 					return;
 
 				localSaveWallet();
-				
+
 				try {
 					// Copy our labels into the address book
 					if (blockchainWallet.getLabelMap() != null) {
