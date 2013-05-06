@@ -224,7 +224,7 @@ public abstract class AbstractWalletActivity extends FragmentActivity {
 
 		EventListeners.removeEventListener(eventListener);
 
-		application.diconnectSoon();
+		application.disconnectSoon();
 	}
 
 	@Override

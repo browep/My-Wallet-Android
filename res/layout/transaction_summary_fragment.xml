@@ -15,6 +15,7 @@
         android:gravity="center_horizontal"
         android:paddingBottom="10dp"
         android:paddingTop="10dp"
+        android:textColor="@color/insignificant"
         android:textSize="21sp"
         android:textStyle="bold" />
 
@@ -30,6 +31,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:paddingRight="16dp"
+            android:textColor="@color/insignificant"
             android:textSize="18sp"
             android:textStyle="bold" />
 
@@ -39,6 +41,7 @@
             android:layout_height="wrap_content"
             android:ellipsize="end"
             android:singleLine="true"
+            android:textColor="@color/insignificant"
             android:textSize="16sp" />
     </LinearLayout>
 
@@ -53,6 +56,7 @@
             android:layout_height="wrap_content"
             android:paddingRight="16dp"
             android:text="@string/transaction_fragment_hash_label"
+            android:textColor="@color/insignificant"
             android:textSize="18sp"
             android:textStyle="bold" />
 
@@ -62,6 +66,7 @@
             android:layout_height="wrap_content"
             android:ellipsize="end"
             android:singleLine="true"
+            android:textColor="@color/insignificant"
             android:textSize="16sp" />
     </LinearLayout>
 
@@ -76,6 +81,7 @@
             android:layout_height="wrap_content"
             android:paddingRight="16dp"
             android:text="@string/transaction_fragment_time_label"
+            android:textColor="@color/insignificant"
             android:textSize="18sp"
             android:textStyle="bold" />
 
@@ -83,6 +89,7 @@
             android:id="@+id/transaction_date"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:textColor="@color/insignificant"
             android:textSize="16sp" />
     </LinearLayout>
 
@@ -97,6 +104,7 @@
             android:layout_height="wrap_content"
             android:paddingRight="16dp"
             android:text="@string/transaction_fragment_confirmations_label"
+            android:textColor="@color/insignificant"
             android:textSize="18sp"
             android:textStyle="bold" />
 
@@ -104,6 +112,7 @@
             android:id="@+id/transaction_confirmations"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:textColor="@color/insignificant"
             android:textSize="16sp" />
     </LinearLayout>
 
@@ -112,13 +121,15 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="horizontal"
-        android:padding="2dp" >
+        android:padding="2dp"
+        android:textColor="@color/insignificant" >
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:paddingRight="16dp"
             android:text="@string/transaction_fragment_fee_label"
+            android:textColor="@color/insignificant"
             android:textSize="18sp"
             android:textStyle="bold" />
 
@@ -126,6 +137,7 @@
             android:id="@+id/transaction_fee"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:textColor="@color/insignificant"
             android:textSize="16sp" />
     </LinearLayout>
 
@@ -141,6 +153,7 @@
             android:layout_height="wrap_content"
             android:paddingRight="16dp"
             android:text="@string/transaction_fragment_value_label"
+            android:textColor="@color/insignificant"
             android:textSize="18sp"
             android:textStyle="bold" />
 
@@ -148,6 +161,7 @@
             android:id="@+id/transaction_value"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:textColor="@color/insignificant"
             android:textSize="16sp" />
     </LinearLayout>
 
@@ -156,6 +170,7 @@
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:paddingTop="10dp"
+        android:textColor="@color/insignificant"
         android:textSize="16sp"
         android:textStyle="italic" />
 
@@ -163,8 +178,7 @@
         android:id="@+id/add_note_button"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:text="@string/add_note"
-        android:layout_margin="5dp"  />
-    
+        android:layout_margin="5dp"
+        android:text="@string/add_note" />
 
 </LinearLayout>

@@ -393,19 +393,15 @@ public class MyWallet {
 		}
 	}
 
+	public static class WalletOverride extends Wallet {
+		public WalletOverride(NetworkParameters params) {
+			super(params);
+		}
+	}
+	
 	public Wallet getBitcoinJWallet() throws Exception {
 		// Construct a BitcoinJ wallet containing all our private keys
-		Wallet keywallet = new Wallet(params) {
-
-			@Override
-			public ECKey findKeyFromPubHash(byte[] pubkeyHash) {
-				for (ECKey key : keychain) {
-					if (Arrays.equals(key.getPubKeyHash(), pubkeyHash)) return key;
-				}
-				return null;
-			}
-
-		};
+		Wallet keywallet = new WalletOverride(params);
 		
 		addKeysTobitoinJWallet(keywallet, true, 0);
 

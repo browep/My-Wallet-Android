@@ -44,10 +44,9 @@ public class Constants {
 			public static final String PREFS_KEY_BEST_CHAIN_HEIGHT_EVER = "best_chain_height_ever";
 			public static final String EARLIEST_KEY_TIME = "earliest_key_time";
 			public static final long REBROADCAST_TIME = 60000;
-
-			public static final String BLOCKCHAIN_DOMAIN = "blockchains.info";
+ 
+			public static final String BLOCKCHAIN_DOMAIN = "blockchain.info";
 			
-			static final String LOCAL_WALLET_FILENAME = "wallet.backup.aes.json";
 			static final String WALLET_FILENAME = "wallet.aes.json";
 
 			static final String MULTIADDR_FILENAME = "multiaddr.cache.json";
@@ -68,7 +67,7 @@ public class Constants {
 
 			public final static long MultiAddrTimeThreshold = 10000; // 10 seconds
 			public final static long NetworkErrorDisplayThreshold = 60000; // 60 seconds
-
+ 
 			public final static long COIN = 100000000;
 
 			public static final File EXTERNAL_WALLET_BACKUP_DIR = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
@@ -117,7 +116,7 @@ public class Constants {
 			public static final String DEFAULT_EXCHANGE_CURRENCY = "USD";
 			public static final int WALLET_OPERATION_STACK_SIZE = 256 * 1024;
 			public static final int BLOCKCHAIN_DOWNLOAD_THRESHOLD_MS = 5000;
-			public static final int BLOCKCHAIN_STATE_BROADCAST_THROTTLE_MS = 1000;
+			public static final int BLOCKCHAIN_STATE_BROADCAST_THROTTLE_MS = 1500;
 			public static final int BLOCKCHAIN_UPTODATE_THRESHOLD_HOURS = 1;
 			public static final int SHUTDOWN_REMOVE_NOTIFICATION_DELAY = 2000;
 
@@ -135,7 +134,6 @@ public class Constants {
 			public static final String CREDITS_BITCOINJ_URL = "http://code.google.com/p/bitcoinj/";
 			public static final String CREDITS_ZXING_URL = "http://code.google.com/p/zxing/";
 			public static final String CREDITS_BITCON_WALLET_ANDROID = "http://code.google.com/p/bitcoin-wallet/";
-			public static final String CREDITS_ICON_URL = "http://www.bitcoin.org/smf/index.php?action=profile;u=2062";
 			public static final String AUTHOR_TWITTER_URL = "http://twitter.com/android_bitcoin";
 			public static final String AUTHOR_GOOGLEPLUS_URL = "https://profiles.google.com/andreas.schildbach";
 			public static final String MARKET_APP_URL = "market://details?id=%s";

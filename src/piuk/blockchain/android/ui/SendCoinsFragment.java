@@ -227,9 +227,13 @@ public final class SendCoinsFragment extends Fragment
 			return view;
 
 		BigInteger available = null;
-		
+
 		if (application.isInP2PFallbackMode()) {
-			available = application.blockServiceWallet.getBalance(BalanceType.ESTIMATED);
+			try {
+				available = application.bitcoinjWallet.getBalance(BalanceType.ESTIMATED);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		} else {
 			available = wallet.getBalance();
 		}
@@ -471,7 +475,7 @@ public final class SendCoinsFragment extends Fragment
 					activity.longToast(R.string.only_quick_supported);
 					return;
 				}
-				
+
 				String[] from;
 				if (sendType != null && sendType.equals(SendCoinsActivity.SendTypeCustomSend)) {
 					Pair<String, String> selected = (Pair<String, String>) sendCoinsFromSpinner.getSelectedItem();
@@ -501,14 +505,14 @@ public final class SendCoinsFragment extends Fragment
 				if (application.isInP2PFallbackMode()) {
 
 					final long blockchainLag = System.currentTimeMillis() - service.blockChain.getChainHead().getHeader().getTime().getTime();
-					
+
 					final boolean blockchainUptodate = blockchainLag < Constants.BLOCKCHAIN_UPTODATE_THRESHOLD_MS;
 
 					if (!blockchainUptodate) {
 						activity.longToast(R.string.blockchain_not_upto_date);
 						return;
 					}
-					
+
 					// create spend
 					final SendRequest sendRequest = SendRequest.to(receivingAddress, amountView.getAmount());
 
@@ -518,9 +522,9 @@ public final class SendCoinsFragment extends Fragment
 					{
 						public void run()
 						{
-							final Transaction transaction = application.blockServiceWallet.sendCoinsOffline(sendRequest);
+							final Transaction transaction = application.bitcoinjWallet.sendCoinsOffline(sendRequest);
 
-													
+
 							handler.post(new Runnable()
 							{
 								public void run()
@@ -529,14 +533,10 @@ public final class SendCoinsFragment extends Fragment
 									{
 										state = State.SENDING;
 
-										EventListeners.invokeOnTransactionsChanged();
-
 										updateView();
 
 										service.broadcastTransaction(transaction);
 
-										application.saveBitcoinJWallet();
-										
 										state = State.SENT;
 
 										activity.longToast(R.string.wallet_transactions_fragment_tab_sent);
@@ -548,6 +548,8 @@ public final class SendCoinsFragment extends Fragment
 										activity.finish();
 
 										updateView();
+										
+										EventListeners.invokeOnTransactionsChanged();
 									}
 									else
 									{

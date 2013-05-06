@@ -12,6 +12,7 @@
         android:layout_height="wrap_content"
         android:layout_margin="5dp"
         android:text="@string/enter_note_below"
+        android:textColor="@color/insignificant"
         android:textSize="@dimen/font_size_small"
         android:textStyle="bold" />
 
@@ -25,11 +26,12 @@
         android:layout_weight="0.24"
         android:gravity="top|left"
         android:inputType="textCapSentences"
+        android:lines="5"
         android:maxLines="5"
-        android:lines="5" 
         android:minLines="2"
-        android:singleLine="false"
         android:scrollbars="vertical"
+        android:singleLine="false"
+        android:textColor="@color/insignificant"
         android:textSize="@dimen/font_size_small" />
 
     <Button
@@ -38,6 +40,7 @@
         android:layout_height="wrap_content"
         android:layout_margin="5dp"
         android:layout_weight="0.50"
-        android:text="@string/save_note" />
+        android:text="@string/save_note"
+        android:textColor="@color/insignificant" />
 
 </LinearLayout>

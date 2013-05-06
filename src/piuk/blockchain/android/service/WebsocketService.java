@@ -68,7 +68,8 @@ public class WebsocketService extends android.app.Service
 	private static final int NOTIFICATION_ID_CONNECTED = 0;
 	private static final int NOTIFICATION_ID_COINS_RECEIVED = 1;
 	private static final int NOTIFICATION_ID_COINS_SENT = 3;
-
+	public static boolean isRunning = false;
+	
 	private final EventListeners.EventListener walletEventListener = new EventListeners.EventListener() {
 		@Override
 		public String getDescription() {
@@ -88,7 +89,6 @@ public class WebsocketService extends android.app.Service
 		public void onCoinsSent(final Transaction tx, final long result)
 		{
 			System.out.println("onCoinsSent()");
-
 
 			try {
 				final MyTransactionOutput output = (MyTransactionOutput) tx.getOutputs().get(0);
@@ -283,6 +283,8 @@ public class WebsocketService extends android.app.Service
 	{
 		super.onCreate();
 
+		isRunning = true;
+		
 		nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
 
 		application = (WalletApplication) getApplication();
@@ -333,6 +335,8 @@ public class WebsocketService extends android.app.Service
 	@Override
 	public void onDestroy()
 	{
+		isRunning = false;
+		
 		EventListeners.removeEventListener(walletEventListener);
 
 		stop();

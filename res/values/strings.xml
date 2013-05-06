@@ -5,6 +5,7 @@
     <string name="menu_account_settings">Account Settings</string>
     <string name="menu_scan_private_key">Scan Private Key</string>
     <string name="menu_leave_p2p_mode">Leave P2P Mode</string>
+    <string name="running_in_p2p_mode">Running in P2P Mode</string>
     <string name="export_keys_dialog_button_archive">Archive</string>
     <string name="wallet_options_backup">Backup Wallet</string>
     <string name="import_export_keys_dialog_failure_title">Error</string>
@@ -281,8 +282,6 @@
     <string name="blockchain_state_replaying">Blockchain replay is in progress.</string>
     <string name="blockchain_not_upto_date">The blockchain is not up to date.</string>
     <string name="only_quick_supported">Only Quick Send is supported in P2P mode.</string>
-    <string name="blockchain_network_success">Server Connected.</string>
-    <string name="blockchain_network_success_description">The application successfully re-connected to the main server. You are currently running in P2P fallback mode, would you like to connect to Blockchain.info again instead?</string>
     <string name="no_transactions">No Transactions</string>
     <string name="unknown_error">Unknown Error</string>
 

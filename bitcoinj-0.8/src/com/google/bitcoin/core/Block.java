@@ -72,24 +72,24 @@ public class Block extends Message {
     static long fakeClock = 0;
 
     // Fields defined as part of the protocol format.
-    private long version;
-    private Sha256Hash prevBlockHash;
-    private Sha256Hash merkleRoot;
-    private long time;
-    private long difficultyTarget; // "nBits"
-    private long nonce;
+    public long version;
+    public Sha256Hash prevBlockHash;
+    public Sha256Hash merkleRoot;
+    public long time;
+    public long difficultyTarget; // "nBits"
+    public long nonce;
 
     /** If null, it means this object holds only the headers. */
-    List<Transaction> transactions;
+    public List<Transaction> transactions;
 
     /** Stores the hash of the block. If null, getHash() will recalculate it. */
-    private transient Sha256Hash hash;
+    public transient Sha256Hash hash;
 
-    private transient boolean headerParsed;
-    private transient boolean transactionsParsed;
+    public transient boolean headerParsed;
+    public transient boolean transactionsParsed;
 
-    private transient boolean headerBytesValid;
-    private transient boolean transactionBytesValid;
+    public transient boolean headerBytesValid;
+    public transient boolean transactionBytesValid;
     
     // Blocks can be encoded in a way that will use more bytes than is optimal (due to VarInts having multiple encodings)
     // MAX_BLOCK_SIZE must be compared to the optimal encoding, not the actual encoding, so when parsing, we keep track
@@ -97,7 +97,7 @@ public class Block extends Message {
     private transient int optimalEncodingMessageSize;
 
     /** Special case constructor, used for the genesis node, cloneAsHeader and unit tests. */
-    Block(NetworkParameters params) {
+    public Block(NetworkParameters params) {
         super(params);
         // Set up a few basic things. We are not complete after this though.
         version = 1;

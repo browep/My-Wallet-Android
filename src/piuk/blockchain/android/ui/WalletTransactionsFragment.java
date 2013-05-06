@@ -163,7 +163,7 @@ public final class WalletTransactionsFragment extends ListFragment {
 								if (tx instanceof MyTransaction) {
 									value = ((MyTransaction)tx).getResult();
 								} else {
-									value = tx.getValue(application.blockServiceWallet);
+									value = tx.getValue(application.bitcoinjWallet);
 								}
 
 								final boolean sent = value.signum() < 0;
@@ -172,7 +172,6 @@ public final class WalletTransactionsFragment extends ListFragment {
 								if (confidenceType == ConfidenceType.NOT_SEEN_IN_CHAIN) {
 									textColor = colorInsignificant;
 								} else if (confidenceType == ConfidenceType.BUILDING) {
-
 									textColor = colorSignificant;
 								} else if (confidenceType == ConfidenceType.NOT_IN_BEST_CHAIN) {
 									textColor = colorSignificant;
@@ -267,7 +266,7 @@ public final class WalletTransactionsFragment extends ListFragment {
 				List<Transaction> transactions = null;
 
 				if (application.isInP2PFallbackMode())
-					transactions = application.blockServiceWallet.getTransactionsByTime();
+					transactions = application.bitcoinjWallet.getTransactionsByTime();
 				else
 					transactions = (List)application.getRemoteWallet().getMyTransactions();
 

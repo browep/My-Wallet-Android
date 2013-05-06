@@ -20,11 +20,15 @@ package piuk.blockchain.android.ui;
 import java.util.Date;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.google.bitcoin.core.Transaction;
+
+import piuk.EventListeners;
 import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.R;
 import piuk.blockchain.android.service.BlockchainService;
 
 import android.app.Activity;
+import android.app.Application;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -50,13 +54,23 @@ public final class BlockchainStateFragment extends Fragment implements OnSharedP
 	private SharedPreferences prefs;
 
 	private TextView progressView;
-	private View replayingView;
 
 	private int download;
 	private Date bestChainDate;
-	private boolean replaying;
 
 	private final Handler delayMessageHandler = new Handler();
+	
+	private final EventListeners.EventListener eventListener = new EventListeners.EventListener() {
+		@Override
+		public String getDescription() {
+			return "Blockchain State Listener";
+		}
+
+		@Override
+		public void onWalletDidChange() {	
+			updateView();
+		}
+	};
 
 	private final class BlockchainBroadcastReceiver extends BroadcastReceiver
 	{
@@ -67,7 +81,6 @@ public final class BlockchainStateFragment extends Fragment implements OnSharedP
 		{
 			download = intent.getIntExtra(BlockchainService.ACTION_BLOCKCHAIN_STATE_DOWNLOAD, BlockchainService.ACTION_BLOCKCHAIN_STATE_DOWNLOAD_OK);
 			bestChainDate = (Date) intent.getSerializableExtra(BlockchainService.ACTION_BLOCKCHAIN_STATE_BEST_CHAIN_DATE);
-			replaying = intent.getBooleanExtra(BlockchainService.ACTION_BLOCKCHAIN_STATE_REPLAYING, false);
 
 			if (active.get())
 				updateView();
@@ -88,11 +101,11 @@ public final class BlockchainStateFragment extends Fragment implements OnSharedP
 	@Override
 	public View onCreateView(final LayoutInflater inflater, final ViewGroup container, final Bundle savedInstanceState)
 	{
+		EventListeners.addEventListener(eventListener);
+
 		final View view = inflater.inflate(R.layout.blockchain_state_fragment, container);
 
 		progressView = (TextView) view.findViewById(R.id.blockchain_state_progress);
-
-		replayingView = view.findViewById(R.id.blockchain_state_replaying);
 
 		return view;
 	}
@@ -120,6 +133,8 @@ public final class BlockchainStateFragment extends Fragment implements OnSharedP
 	@Override
 	public void onDestroy()
 	{
+		EventListeners.removeEventListener(eventListener);
+
 		delayMessageHandler.removeCallbacksAndMessages(null);
 
 		super.onDestroy();
@@ -130,7 +145,7 @@ public final class BlockchainStateFragment extends Fragment implements OnSharedP
 		final boolean showProgress;
 
 		AbstractWalletActivity activity = (AbstractWalletActivity) this.getActivity();
-		
+
 		if (!activity.application.isInP2PFallbackMode()) {
 			showProgress = false;
 		} else if (download != BlockchainService.ACTION_BLOCKCHAIN_STATE_DOWNLOAD_OK)
@@ -192,18 +207,20 @@ public final class BlockchainStateFragment extends Fragment implements OnSharedP
 			showProgress = false;
 		}
 
-		final boolean showReplaying = replaying;
+		progressView.setVisibility(activity.application.isInP2PFallbackMode() ? View.VISIBLE : View.GONE);
 
-		progressView.setVisibility(showProgress ? View.VISIBLE : View.GONE);
-		replayingView.setVisibility(showReplaying ? View.VISIBLE : View.GONE);
+		if (activity.application.isInP2PFallbackMode() && !showProgress) {
+			progressView.setText(R.string.running_in_p2p_mode);
+		} 
 
-		getView().setVisibility(showProgress || showReplaying ? View.VISIBLE : View.GONE);
+		getView().setVisibility(activity.application.isInP2PFallbackMode() ? View.VISIBLE : View.GONE);
+
 	}
 
 	@Override
 	public void onSharedPreferenceChanged(SharedPreferences sharedPreferences,
 			String key) {
 		// TODO Auto-generated method stub
-		
+
 	}
 }

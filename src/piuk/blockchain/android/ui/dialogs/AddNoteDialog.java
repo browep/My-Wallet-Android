@@ -154,6 +154,11 @@ public final class AddNoteDialog extends DialogFragment {
 
 							@Override
 							public void onFail() {
+								
+								Toast.makeText(getActivity().getApplication(),
+										R.string.toast_error_syncing_wallet,
+										Toast.LENGTH_SHORT).show();
+
 								dismiss();
 							}
 						});

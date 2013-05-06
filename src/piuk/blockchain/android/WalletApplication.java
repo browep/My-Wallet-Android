@@ -17,6 +17,7 @@
 
 package piuk.blockchain.android;
 
+import android.annotation.SuppressLint;
 import android.app.ActivityManager;
 import android.app.ActivityManager.RunningServiceInfo;
 import android.app.Application;
@@ -28,11 +29,16 @@ import android.content.pm.PackageManager.NameNotFoundException;
 import android.net.ConnectivityManager;
 import android.os.Handler;
 import android.preference.PreferenceManager;
+import android.util.Pair;
 import android.widget.Toast;
 import com.google.bitcoin.core.*;
+import com.google.bitcoin.core.Wallet.AutosaveEventListener;
+import com.google.bitcoin.store.WalletExtensionSerializer;
 import com.google.bitcoin.store.WalletProtobufSerializer;
 
 import org.apache.commons.io.IOUtils;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
 import org.spongycastle.util.encoders.Hex;
 
 import piuk.BitcoinAddress;
@@ -40,6 +46,7 @@ import piuk.EventListeners;
 import piuk.Hash;
 import piuk.MyRemoteWallet;
 import piuk.MyRemoteWallet.NotModfiedException;
+import piuk.MyWallet;
 import piuk.blockchain.android.R;
 import piuk.blockchain.android.service.BlockchainServiceImpl;
 import piuk.blockchain.android.service.WebsocketService;
@@ -55,6 +62,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.CookieHandler;
+import java.net.CookieManager;
 import java.security.MessageDigest;
 import java.security.Security;
 import java.text.SimpleDateFormat;
@@ -62,8 +70,10 @@ import java.util.Map.Entry;
 import java.util.Date;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+@SuppressLint("SimpleDateFormat")
 public class WalletApplication extends Application {
 	private MyRemoteWallet blockchainWallet;
 
@@ -73,7 +83,9 @@ public class WalletApplication extends Application {
 	private Intent blockchainServiceIntent;
 	private Intent websocketServiceIntent;
 	public boolean didEncounterFatalPINServerError = false;
-	public Wallet blockServiceWallet;
+	public Wallet bitcoinjWallet;
+	public Pair<Block, Integer> blockExplorerBlockPair;
+	public long earliestKeyTime;
 
 	private final BroadcastReceiver broadcastReceiver = new BroadcastReceiver()
 	{
@@ -97,23 +109,11 @@ public class WalletApplication extends Application {
 		}
 	};
 
-	private EventListeners.EventListener eventListener = new EventListeners.EventListener() {
-		@Override
-		public String getDescription() {
-			return "Main Wallet Did Change Listener";
-		}
-
-		@Override
-		public void onWalletDidChange() {
-			try {
-				localSaveWallet();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		}
-	};
-
 	public void clearWallet() {
+
+		if (this.isInP2PFallbackMode())
+			this.leaveP2PMode();
+
 		Editor edit = PreferenceManager.getDefaultSharedPreferences(
 				this).edit();
 
@@ -128,8 +128,6 @@ public class WalletApplication extends Application {
 	}
 
 	public void connect() {
-		System.out.println("connect()");
-
 		if (timer != null) {
 			try {
 				timer.cancel();
@@ -148,14 +146,44 @@ public class WalletApplication extends Application {
 
 		registerReceiver(broadcastReceiver, intentFilter);
 
-		startService(websocketServiceIntent);
+		if (!WebsocketService.isRunning)
+			startService(websocketServiceIntent);
 	}
 
-	public long esimateFirstSeenFromBlockExplorer() throws Exception {
+	public Integer getLatestHeightFromBlockExplorer() throws Exception {
+		return Integer.valueOf(WalletUtils.fetchURL("http://blockexplorer.com/q/getblockcount"));
+	}
+
+	public Pair<Block, Integer> getLatestBlockHeaderFromBlockExplorer(Integer blockHeight) throws Exception {
+
+		String hash = WalletUtils.fetchURL("http://blockexplorer.com/q/getblockhash/"+blockHeight);
+
+		JSONObject obj = (JSONObject) new JSONParser().parse(WalletUtils.fetchURL("http://blockexplorer.com/rawblock/"+hash));
+
+		Block block = new Block(Constants.NETWORK_PARAMETERS);
+
+		block.version = ((Number)obj.get("ver")).longValue();
+		block.prevBlockHash = new Sha256Hash((String)obj.get("prev_block"));
+		block.merkleRoot = new Sha256Hash((String)obj.get("mrkl_root"));
+		block.time = ((Number)obj.get("time")).longValue();		
+		block.difficultyTarget = ((Number)obj.get("bits")).longValue();		
+		block.nonce = ((Number)obj.get("nonce")).longValue();		
+
+		block.hash = new Sha256Hash((String)obj.get("hash"));
+
+		block.headerParsed = true;
+		block.transactionsParsed = true;
+		block.headerBytesValid = true;
+		block.transactionBytesValid = true;
+
+		return new Pair<Block, Integer>(block, blockHeight);
+	}
+
+	public long estimateFirstSeenFromBlockExplorer() throws Exception {
 		SimpleDateFormat format = new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");
 
 		long earliest = 0;
-		for (ECKey key : blockServiceWallet.getKeys()) {
+		for (ECKey key : bitcoinjWallet.getKeys()) {
 			try {
 
 				String url = "http://blockexplorer.com/q/addressfirstseen/" + key.toAddress(Constants.NETWORK_PARAMETERS).toString();
@@ -185,11 +213,15 @@ public class WalletApplication extends Application {
 	//BitcoinJ Temp Wallet
 	public void saveBitcoinJWallet()
 	{
+
+		if (bitcoinjWallet == null)
+			return;
+
 		try
 		{
 			File walletFile = getFileStreamPath(Constants.WALLET_FILENAME_PROTOBUF);
 
-			blockServiceWallet.saveToFile(walletFile);
+			bitcoinjWallet.saveToFile(walletFile);
 		}
 		catch (final IOException x)
 		{
@@ -197,9 +229,28 @@ public class WalletApplication extends Application {
 		}
 	}
 
+	private static final class WalletAutosaveEventListener implements AutosaveEventListener
+	{
+		public boolean caughtException(final Throwable throwable)
+		{
+
+			throwable.printStackTrace();
+			return true;
+		}
+
+		public void onBeforeAutoSave(final File file)
+		{
+		}
+
+		public void onAfterAutoSave(final File file)
+		{
+		}
+	}
+
 	//BitcoinJ Temp Wallet
 	private void loadBitcoinJWallet()
 	{
+
 		File walletFile = getFileStreamPath(Constants.WALLET_FILENAME_PROTOBUF);
 
 		if (walletFile.exists())
@@ -210,7 +261,24 @@ public class WalletApplication extends Application {
 			{
 				walletStream = new FileInputStream(walletFile);
 
-				blockServiceWallet = new WalletProtobufSerializer().readWallet(walletStream);
+				WalletProtobufSerializer serializer = new WalletProtobufSerializer();
+
+				serializer.setWalletExtensionSerializer(new WalletExtensionSerializer() {
+					public Wallet newWallet(NetworkParameters params) {
+						return new MyWallet.WalletOverride(params);
+					}
+				});
+
+
+				Wallet wallet = serializer.readWallet(walletStream); 
+
+				if (wallet.getKeychainSize() > 0) {
+
+					bitcoinjWallet = wallet;
+
+					bitcoinjWallet.autosaveToFile(walletFile, 1, TimeUnit.SECONDS, new WalletAutosaveEventListener());
+				}
+
 			}
 			catch (final Exception e)
 			{
@@ -259,29 +327,50 @@ public class WalletApplication extends Application {
 	public void startBlockchainService()
 	{
 		try {
-			if (blockServiceWallet == null) {
+			if (bitcoinjWallet == null) {
 				if (blockchainWallet == null)
 					return;
 
 				deleteBitcoinJLocalData();
 
-				this.blockServiceWallet = blockchainWallet.getBitcoinJWallet();
+				this.bitcoinjWallet = blockchainWallet.getBitcoinJWallet();
 			} 
-
-			final Application application = this;
 
 			new Thread(new Runnable() {
 
 				@Override
 				public void run() {
+					earliestKeyTime = 0;
+					blockExplorerBlockPair = null;
 
 					try {
-						long firstSeen = esimateFirstSeenFromBlockExplorer();
-
-						PreferenceManager.getDefaultSharedPreferences(application).edit().putLong(Constants.EARLIEST_KEY_TIME, firstSeen).commit();
+						earliestKeyTime = estimateFirstSeenFromBlockExplorer();
 					} catch (Exception e) {
-						e.printStackTrace();
+						e.printStackTrace(); 
 					}
+
+					/*if (earliestKeyTime > 0) {
+						try {
+
+							Integer height = getLatestHeightFromBlockExplorer();
+
+							long elapsedSeconds = ((System.currentTimeMillis() - earliestKeyTime) / 1000);
+
+							for (int ii = 0; ii < 10; ++ii) {								
+								//One block every 10 minutes (600 seconds)
+								int estimatedHeight = height - (ii*10000) - (int)(elapsedSeconds / 600);
+
+								Pair<Block, Integer> pair = getLatestBlockHeaderFromBlockExplorer(estimatedHeight);
+
+								if (pair.first.getTime().getTime() < earliestKeyTime) {
+									blockExplorerBlockPair = pair;
+									break;
+								}
+							}
+						} catch (Exception e1) {
+							e1.printStackTrace();
+						}
+					}*/
 
 					startService(blockchainServiceIntent);
 
@@ -296,7 +385,7 @@ public class WalletApplication extends Application {
 	}
 
 	public void leaveP2PMode() {
-		this.blockServiceWallet = null;
+		this.bitcoinjWallet = null;
 
 		stopService(blockchainServiceIntent);
 
@@ -305,11 +394,11 @@ public class WalletApplication extends Application {
 		EventListeners.invokeWalletDidChange();
 	}
 
-	public void diconnectSoon() {
+	public void disconnectSoon() {
 
 		try {
 			if (timer == null) {
-				timer = new Timer();
+				timer = new Timer(); 
 
 				timer.schedule(new TimerTask() {
 
@@ -317,6 +406,9 @@ public class WalletApplication extends Application {
 					public void run() {
 						handler.post(new Runnable() {
 							public void run() {
+								if (WebsocketService.isRunning)
+									stopService(websocketServiceIntent);
+
 								unregisterReceiver(broadcastReceiver);
 
 								AbstractWalletActivity.lastDisplayedNetworkError = 0;
@@ -326,7 +418,7 @@ public class WalletApplication extends Application {
 							}
 						});
 					}
-				}, 1000);
+				}, 5000);
 
 				timer.schedule(new TimerTask() {
 
@@ -346,22 +438,6 @@ public class WalletApplication extends Application {
 						});
 					}
 				}, 20000);
-
-				timer.schedule(new TimerTask() {
-
-					@Override
-					public void run() {
-						handler.post(new Runnable() {
-							public void run() {
-								try {
-									stopService(websocketServiceIntent);
-								} catch (Exception e) {
-									e.printStackTrace();
-								}
-							}
-						});
-					}
-				}, 2000);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -426,12 +502,9 @@ public class WalletApplication extends Application {
 		blockchainServiceIntent = new Intent(this, BlockchainServiceImpl.class);
 		websocketServiceIntent = new Intent(this, WebsocketService.class);
 
-		try {
+		try { 
 			// Need to save session cookie for kaptcha
-			@SuppressWarnings("rawtypes")
-			Class aClass = getClass().getClassLoader().loadClass("java.net.CookieManager");
-
-			CookieHandler.setDefault((CookieHandler) aClass.newInstance());
+			CookieHandler.setDefault(new CookieManager());
 
 			Security.addProvider(new org.spongycastle.jce.provider.BouncyCastleProvider());
 
@@ -440,8 +513,6 @@ public class WalletApplication extends Application {
 		}
 
 		loadBitcoinJWallet();
-
-		EventListeners.addEventListener(eventListener);
 
 		connect();
 	}
@@ -532,7 +603,7 @@ public class WalletApplication extends Application {
 	}
 
 	public boolean isInP2PFallbackMode() {
-		return blockServiceWallet != null;
+		return bitcoinjWallet != null;
 	}
 
 	public void unRegisterForNotifications(final String registration_id) {
@@ -765,16 +836,8 @@ public class WalletApplication extends Application {
 				if (decryptionErrors > 0)
 					return;
 
-				// Write the wallet to the cache file
-				try {
-					FileOutputStream file = openFileOutput(
-							Constants.WALLET_FILENAME, Constants.WALLET_MODE);
-					file.write(payload.getBytes("UTF-8"));
-					file.close();
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-
+				localSaveWallet();
+				
 				try {
 					// Copy our labels into the address book
 					if (blockchainWallet.getLabelMap() != null) {
@@ -1090,7 +1153,7 @@ public class WalletApplication extends Application {
 				return;
 
 			FileOutputStream file = openFileOutput(
-					Constants.LOCAL_WALLET_FILENAME, Constants.WALLET_MODE);
+					Constants.WALLET_FILENAME, Constants.WALLET_MODE);
 
 			file.write(blockchainWallet.getPayload().getBytes());
 

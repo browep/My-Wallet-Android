@@ -17,6 +17,8 @@
 
 package piuk.blockchain.android.ui;
 
+import java.math.BigInteger;
+
 import com.google.bitcoin.core.Address;
 import com.google.bitcoin.core.Transaction;
 import com.google.bitcoin.core.Wallet.BalanceType;
@@ -88,7 +90,6 @@ LoaderManager.LoaderCallbacks<Cursor> {
 		public void onCurrencyChanged() {
 			updateView();
 		};
-
 
 		@Override
 		public void onTransactionsChanged() {
@@ -185,11 +186,20 @@ LoaderManager.LoaderCallbacks<Cursor> {
 		try {
 			if (application.getRemoteWallet() == null)
 				return;
+			
+			System.out.println("updateView()");
 
 			if (application.isInP2PFallbackMode()) {
 				viewBalance.setCurrencyCode(Constants.CURRENCY_CODE_BITCOIN);
 
-				viewBalance.setAmount(application.blockServiceWallet.getBalance(BalanceType.ESTIMATED));
+				try {
+					viewBalance.setAmount(application.bitcoinjWallet.getBalance(BalanceType.ESTIMATED));
+				} catch (Exception e) {
+					e.printStackTrace();
+					
+					viewBalance.setAmount(BigInteger.ZERO);
+				}
+
 			} else {
 				boolean displayLocal = application.getShouldDisplayLocalCurrency();
 

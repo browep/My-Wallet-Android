@@ -5,8 +5,10 @@
 
     <style name="Theme.MyLight" parent="@android:style/Theme.Light.NoTitleBar" />
 
-    <style name="Theme.Dialog" parent="@android:style/Theme.Dialog" />
-    
+    <style name="Theme.Dialog" parent="@android:style/Theme.Dialog">
+        <item name="android:buttonStyle">@android:style/Theme.Black.NoTitleBar</item>
+    </style>
+
     <style name="Theme.MyPIN" parent="@android:style/Theme.Black.NoTitleBar" />
 
 </resources>

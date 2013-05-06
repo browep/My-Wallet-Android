@@ -29,6 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.lang.Exception;
 import java.math.BigInteger;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -334,7 +335,7 @@ public class Wallet implements Serializable, BlockChainListener {
             lock.unlock();
         }
     }
-    
+
     /**
      * Returns the number of keys in the keychain.
      */
@@ -530,8 +531,8 @@ public class Wallet implements Serializable, BlockChainListener {
                 if (!(obj instanceof WalletSaveRequest)) return false;
                 WalletSaveRequest w = (WalletSaveRequest) obj;
                 return w.startTimeMs == startTimeMs &&
-                       w.requestedDelayMs == requestedDelayMs &&
-                       w.wallet == wallet;
+                        w.requestedDelayMs == requestedDelayMs &&
+                        w.wallet == wallet;
             }
 
             @Override
@@ -682,7 +683,7 @@ public class Wallet implements Serializable, BlockChainListener {
             stream.close();
         }
     }
-    
+
     public boolean isConsistent() {
         lock.lock();
         try {
@@ -743,7 +744,7 @@ public class Wallet implements Serializable, BlockChainListener {
         stream.reset();
 
         Wallet wallet;
-        
+
         if (serialization) {
             ObjectInputStream ois = null;
             try {
@@ -757,7 +758,7 @@ public class Wallet implements Serializable, BlockChainListener {
         } else {
             wallet = new WalletProtobufSerializer().readWallet(stream);
         }
-        
+
         if (!wallet.isConsistent()) {
             log.error("Loaded an inconsistent wallet");
         }
@@ -796,7 +797,7 @@ public class Wallet implements Serializable, BlockChainListener {
             lock.unlock();
         }
     }
-    
+
     /**
      * Called by the {@link BlockChain} when we receive a new filtered block that contains a transactions previously
      * received by a call to @{link receivePending}.<p>
@@ -953,8 +954,8 @@ public class Wallet implements Serializable, BlockChainListener {
         lock.lock();
         try {
             return tx.getValueSentFromMe(this).compareTo(BigInteger.ZERO) > 0 ||
-                   tx.getValueSentToMe(this).compareTo(BigInteger.ZERO) > 0 ||
-                   findDoubleSpendAgainstPending(tx) != null;
+                    tx.getValueSentToMe(this).compareTo(BigInteger.ZERO) > 0 ||
+                    findDoubleSpendAgainstPending(tx) != null;
         } finally {
             lock.unlock();
         }
@@ -1270,7 +1271,7 @@ public class Wallet implements Serializable, BlockChainListener {
                     // 1) The double-spent tx is confirmed and thus this tx has no effect .... or
                     // 2) Both txns are pending, neither has priority. Miners will decide in a few minutes which won.
                     log.warn("Saw double spend from another pending transaction, ignoring tx {}",
-                             tx.getHashAsString());
+                            tx.getHashAsString());
                     log.warn("  offending input is input {}", i);
                     return;
                 }
@@ -1373,7 +1374,6 @@ public class Wallet implements Serializable, BlockChainListener {
      * @param includeInactive If true, transactions that are on side chains (are unspendable) are included.
      */
     public Set<Transaction> getTransactions(boolean includeDead, boolean includeInactive) {
-        lock.lock();
         try {
             Set<Transaction> all = new HashSet<Transaction>();
             all.addAll(unspent.values());
@@ -1384,9 +1384,11 @@ public class Wallet implements Serializable, BlockChainListener {
             if (includeInactive)
                 all.addAll(inactive.values());
             return all;
-        } finally {
-            lock.unlock();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
+
+        return new HashSet<Transaction>();
     }
 
     /**
@@ -1446,27 +1448,27 @@ public class Wallet implements Serializable, BlockChainListener {
     private void addWalletTransaction(Pool pool, Transaction tx) {
         checkState(lock.isLocked());
         switch (pool) {
-        case UNSPENT:
-            Preconditions.checkState(unspent.put(tx.getHash(), tx) == null);
-            break;
-        case SPENT:
-            Preconditions.checkState(spent.put(tx.getHash(), tx) == null);
-            break;
-        case PENDING:
-            Preconditions.checkState(pending.put(tx.getHash(), tx) == null);
-            break;
-        case DEAD:
-            Preconditions.checkState(dead.put(tx.getHash(), tx) == null);
-            break;
-        case INACTIVE:
-            Preconditions.checkState(inactive.put(tx.getHash(), tx) == null);
-            break;
-        case PENDING_INACTIVE:
-            Preconditions.checkState(pending.put(tx.getHash(), tx) == null);
-            Preconditions.checkState(inactive.put(tx.getHash(), tx) == null);
-            break;
-        default:
-            throw new RuntimeException("Unknown wallet transaction type " + pool);
+            case UNSPENT:
+                Preconditions.checkState(unspent.put(tx.getHash(), tx) == null);
+                break;
+            case SPENT:
+                Preconditions.checkState(spent.put(tx.getHash(), tx) == null);
+                break;
+            case PENDING:
+                Preconditions.checkState(pending.put(tx.getHash(), tx) == null);
+                break;
+            case DEAD:
+                Preconditions.checkState(dead.put(tx.getHash(), tx) == null);
+                break;
+            case INACTIVE:
+                Preconditions.checkState(inactive.put(tx.getHash(), tx) == null);
+                break;
+            case PENDING_INACTIVE:
+                Preconditions.checkState(pending.put(tx.getHash(), tx) == null);
+                Preconditions.checkState(inactive.put(tx.getHash(), tx) == null);
+                break;
+            default:
+                throw new RuntimeException("Unknown wallet transaction type " + pool);
         }
         // This is safe even if the listener has been added before, as TransactionConfidence ignores duplicate
         // registration requests. That makes the code in the wallet simpler.
@@ -1489,7 +1491,6 @@ public class Wallet implements Serializable, BlockChainListener {
      * depending on how the wallet is implemented (eg if backed by a database).
      */
     public List<Transaction> getRecentTransactions(int numTransactions, boolean includeDead) {
-        lock.lock();
         try {
             checkArgument(numTransactions >= 0);
             // Firstly, put all transactions into an array.
@@ -1512,9 +1513,11 @@ public class Wallet implements Serializable, BlockChainListener {
                 all.subList(numTransactions, all.size()).clear();
                 return all;
             }
-        } finally {
-            lock.unlock();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
+
+        return new ArrayList<Transaction>();
     }
 
     /**
@@ -1590,26 +1593,21 @@ public class Wallet implements Serializable, BlockChainListener {
     }
 
     int getPoolSize(WalletTransaction.Pool pool) {
-        lock.lock();
-        try {
-            switch (pool) {
-                case UNSPENT:
-                    return unspent.size();
-                case SPENT:
-                    return spent.size();
-                case PENDING:
-                    return pending.size();
-                case INACTIVE:
-                    return inactive.size();
-                case DEAD:
-                    return dead.size();
-                case ALL:
-                    return unspent.size() + spent.size() + pending.size() + inactive.size() + dead.size();
-            }
-            throw new RuntimeException("Unreachable");
-        } finally {
-            lock.unlock();
+        switch (pool) {
+            case UNSPENT:
+                return unspent.size();
+            case SPENT:
+                return spent.size();
+            case PENDING:
+                return pending.size();
+            case INACTIVE:
+                return inactive.size();
+            case DEAD:
+                return dead.size();
+            case ALL:
+                return unspent.size() + spent.size() + pending.size() + inactive.size() + dead.size();
         }
+        throw new RuntimeException("Unreachable");
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1879,7 +1877,7 @@ public class Wallet implements Serializable, BlockChainListener {
             if (size > Transaction.MAX_STANDARD_TX_SIZE) {
                 // TODO: Throw an exception here.
                 log.error("Transaction could not be created without exceeding max size: {} vs {}", size,
-                          Transaction.MAX_STANDARD_TX_SIZE);
+                        Transaction.MAX_STANDARD_TX_SIZE);
                 return false;
             }
 
@@ -1896,18 +1894,21 @@ public class Wallet implements Serializable, BlockChainListener {
     }
 
     private LinkedList<TransactionOutput> calculateSpendCandidates(boolean excludeImmatureCoinbases) {
-        checkState(lock.isLocked());
-        LinkedList<TransactionOutput> candidates = Lists.newLinkedList();
-        for (Transaction tx : Iterables.concat(unspent.values(), pending.values())) {
-            // Do not try and spend coinbases that were mined too recently, the protocol forbids it.
-            if (excludeImmatureCoinbases && !tx.isMature()) continue;
-            for (TransactionOutput output : tx.getOutputs()) {
-                if (!output.isAvailableForSpending()) continue;
-                if (!output.isMine(this)) continue;
-                candidates.add(output);
+        lock.lock();
+        try {        LinkedList<TransactionOutput> candidates = Lists.newLinkedList();
+            for (Transaction tx : Iterables.concat(unspent.values(), pending.values())) {
+                // Do not try and spend coinbases that were mined too recently, the protocol forbids it.
+                if (excludeImmatureCoinbases && !tx.isMature()) continue;
+                for (TransactionOutput output : tx.getOutputs()) {
+                    if (!output.isAvailableForSpending()) continue;
+                    if (!output.isMine(this)) continue;
+                    candidates.add(output);
+                }
             }
+            return candidates;
+        } finally {
+            lock.unlock();
         }
-        return candidates;
     }
 
     Address getChangeAddress() {
@@ -1972,15 +1973,11 @@ public class Wallet implements Serializable, BlockChainListener {
      * @return ECKey object or null if no such key was found.
      */
     public ECKey findKeyFromPubHash(byte[] pubkeyHash) {
-        lock.lock();
-        try {
-            for (ECKey key : keychain) {
-                if (Arrays.equals(key.getPubKeyHash(), pubkeyHash)) return key;
-            }
-            return null;
-        } finally {
-            lock.unlock();
+
+        for (ECKey key : keychain) {
+            if (Arrays.equals(key.getPubKeyHash(), pubkeyHash)) return key;
         }
+        return null;
     }
 
     /**
@@ -2074,20 +2071,16 @@ public class Wallet implements Serializable, BlockChainListener {
      * Returns the balance of this wallet as calculated by the provided balanceType.
      */
     public BigInteger getBalance(BalanceType balanceType) {
-        lock.lock();
-        try {
-            if (balanceType == BalanceType.AVAILABLE) {
-                return getBalance(coinSelector);
-            } else if (balanceType == BalanceType.ESTIMATED) {
-                LinkedList<TransactionOutput> all = calculateSpendCandidates(false);
-                BigInteger value = BigInteger.ZERO;
-                for (TransactionOutput out : all) value = value.add(out.getValue());
-                return value;
-            } else {
-                throw new AssertionError("Unknown balance type");  // Unreachable.
-            }
-        } finally {
-            lock.unlock();
+
+        if (balanceType == BalanceType.AVAILABLE) {
+            return getBalance(coinSelector);
+        } else if (balanceType == BalanceType.ESTIMATED) {
+            LinkedList<TransactionOutput> all = calculateSpendCandidates(false);
+            BigInteger value = BigInteger.ZERO;
+            for (TransactionOutput out : all) value = value.add(out.getValue());
+            return value;
+        } else {
+            throw new AssertionError("Unknown balance type");  // Unreachable.
         }
     }
 
@@ -2096,15 +2089,10 @@ public class Wallet implements Serializable, BlockChainListener {
      * as many coins as possible and returns the total.
      */
     public BigInteger getBalance(CoinSelector selector) {
-        lock.lock();
-        try {
-            checkNotNull(selector);
-            LinkedList<TransactionOutput> candidates = calculateSpendCandidates(true);
-            CoinSelection selection = selector.select(NetworkParameters.MAX_MONEY, candidates);
-            return selection.valueGathered;
-        } finally {
-            lock.unlock();
-        }
+        checkNotNull(selector);
+        LinkedList<TransactionOutput> candidates = calculateSpendCandidates(true);
+        CoinSelection selection = selector.select(NetworkParameters.MAX_MONEY, candidates);
+        return selection.valueGathered;
     }
 
     @Override
@@ -2528,12 +2516,12 @@ public class Wallet implements Serializable, BlockChainListener {
      * Returns the earliest creation time of the keys in this wallet, in seconds since the epoch, ie the min of 
      * {@link com.google.bitcoin.core.ECKey#getCreationTimeSeconds()}. This can return zero if at least one key does
      * not have that data (was created before key timestamping was implemented). <p>
-     *     
+     *
      * This method is most often used in conjunction with {@link PeerGroup#setFastCatchupTimeSecs(long)} in order to
      * optimize chain download for new users of wallet apps. Backwards compatibility notice: if you get zero from this
      * method, you can instead use the time of the first release of your software, as it's guaranteed no users will
      * have wallets pre-dating this time. <p>
-     * 
+     *
      * If there are no keys in the wallet, the current time is returned.
      */
     public long getEarliestKeyCreationTime() {
@@ -2589,7 +2577,7 @@ public class Wallet implements Serializable, BlockChainListener {
             lock.unlock();
         }
     }
-    
+
     /**
      * Gets the number of elements that will be added to a bloom filter returned by getBloomFilter
      */
@@ -2607,7 +2595,7 @@ public class Wallet implements Serializable, BlockChainListener {
         }
         return size;
     }
-    
+
     /**
      * Gets a bloom filter that contains all of the public keys from this wallet, and which will provide the given
      * false-positive rate. See the docs for {@link BloomFilter} for a brief explanation of anonymity when using filters.
@@ -2615,15 +2603,15 @@ public class Wallet implements Serializable, BlockChainListener {
     public BloomFilter getBloomFilter(double falsePositiveRate) {
         return getBloomFilter(getBloomFilterElementCount(), falsePositiveRate, (long)(Math.random()*Long.MAX_VALUE));
     }
-    
+
     /**
      * Gets a bloom filter that contains all of the public keys from this wallet,
      * and which will provide the given false-positive rate if it has size elements.
      * Keep in mind that you will get 2 elements in the bloom filter for each key in the wallet.
-     * 
+     *
      * This is used to generate a BloomFilter which can be #{link BloomFilter.merge}d with another.
      * It could also be used if you have a specific target for the filter's size.
-     * 
+     *
      * See the docs for {@link BloomFilter#BloomFilter(int, double)} for a brief explanation of anonymity when using bloom filters.
      */
     public BloomFilter getBloomFilter(int size, double falsePositiveRate, long nTweak) {

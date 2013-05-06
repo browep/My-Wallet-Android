@@ -24,6 +24,7 @@ import java.net.URL;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import org.apache.commons.io.IOUtils;
@@ -32,6 +33,7 @@ import org.json.simple.parser.JSONParser;
 import org.spongycastle.util.encoders.Hex;
 
 import com.google.bitcoin.core.Transaction;
+import com.google.bitcoin.core.TransactionConfidence.ConfidenceType;
 import com.google.bitcoin.core.TransactionInput;
 import com.google.bitcoin.core.TransactionOutput;
 
@@ -217,7 +219,7 @@ public final class TransactionSummaryDialog extends DialogFragment
 			final View feeViewContainer = view.findViewById(R.id.transaction_fee_container);
 			final TextView valueNowView = (TextView) view.findViewById(R.id.transaction_value);
 			final View valueNowContainerView = view.findViewById(R.id.transaction_value_container);
-			
+
 			String to = null;
 			for (TransactionOutput output : tx.getOutputs()) {
 				try {
@@ -242,60 +244,131 @@ public final class TransactionSummaryDialog extends DialogFragment
 				}
 			}
 
+			long realResult = 0; 
+			int confirmations = 0;
+
 			if (tx instanceof MyTransaction) {
 				MyTransaction myTx = (MyTransaction)tx;
-				
-				final long realResult = myTx.getResult().longValue();
-				final long txIndex = myTx.getTxIndex();
-				
-				if (realResult <= 0) {
-					toViewLabel.setText(R.string.transaction_fragment_to);
 
-					if (to == null) {
-						((LinearLayout)toViewContainer.getParent()).removeView(toViewContainer);
-					} else {
-						toView.setText(to);
-					}
-				} else {
-					toViewLabel.setText(R.string.transaction_fragment_from);
-
-					if (from == null) {
-						((LinearLayout)toViewContainer.getParent()).removeView(toViewContainer);
-					} else {
-						toView.setText(from);
-					}
-				}
-
-				if (realResult > 0 && from != null)
-					resultDescriptionView.setText(this.getString(R.string.transaction_fragment_amount_you_received, WalletUtils.formatValue(myTx.getResult())));
-				else if (realResult < 0 && to != null)
-					resultDescriptionView.setText(this.getString(R.string.transaction_fragment_amount_you_sent, WalletUtils.formatValue(myTx.getResult())));
-				else
-					resultDescriptionView.setText(this.getString(R.string.transaction_fragment_amount_you_moved, WalletUtils.formatValue(totalOutputValue)));
-		
-			
-				transactionTimeView.setText(dateFormat.format(myTx.getTime()));
+				realResult = myTx.getResult().longValue();
 
 				if (wallet.getLatestBlock() != null) {
-
-					if (myTx.getHeight() > 0) {
-						int confirmations = wallet.getLatestBlock().getHeight() - myTx.getHeight() + 1;
-
-						confirmationsView.setText(""+confirmations);
-					} else {
-						confirmationsView.setText("Unconfirmed");
-					}
-				} else {
-					confirmationsView.setText(R.string.unknown);
+					confirmations = wallet.getLatestBlock().getHeight() - myTx.getHeight() + 1;
 				}
 
+			} else if (application.isInP2PFallbackMode()) {				
+				realResult = tx.getValue(application.bitcoinjWallet).longValue();
+
+				if (tx.getConfidence().getConfidenceType() == ConfidenceType.BUILDING)
+					confirmations = tx.getConfidence().getDepthInBlocks();
+			}
+
+			final long finalResult = realResult;
+
+			if (realResult <= 0) {
+				toViewLabel.setText(R.string.transaction_fragment_to);
+
+				if (to == null) {
+					((LinearLayout)toViewContainer.getParent()).removeView(toViewContainer);
+				} else {
+					toView.setText(to);
+				}
+			} else {
+				toViewLabel.setText(R.string.transaction_fragment_from);
+
+				if (from == null) {
+					((LinearLayout)toViewContainer.getParent()).removeView(toViewContainer);
+				} else {
+					toView.setText(from);
+				}
+			}
+
+			//confirmations view
+			if (confirmations> 0) {
+				confirmationsView.setText(""+confirmations);
+			} else {
+				confirmationsView.setText("Unconfirmed");
+			}
+
+			//Hash String view
+			final String hashString = new String(Hex.encode(tx.getHash().getBytes()), "UTF-8");
+
+			hashView.setOnClickListener(new OnClickListener() {
+
+				@Override
+				public void onClick(View v) {
+					Intent browserIntent = new Intent(
+							Intent.ACTION_VIEW,
+							Uri.parse("https:/"+Constants.BLOCKCHAIN_DOMAIN+"/tx/"+hashString));
+
+					startActivity(browserIntent);
+				}
+			});
+			
+			
+			//Notes View
+			String note = wallet.getTxNotes().get(hashString);
+
+			if (note == null) {
+				addNoteButton.setOnClickListener(new OnClickListener() {
+					@Override
+					public void onClick(View v) {
+						dismiss();
+
+						AddNoteDialog.showDialog(getFragmentManager(), hashString);
+					}
+				});
+
+				view.removeView(noteView);
+			} else {
+				view.removeView(addNoteButton);
+
+				noteView.setText(note);
+
+				noteView.setOnClickListener(new OnClickListener() {
+					@Override
+					public void onClick(View v) {
+						dismiss();
+
+						AddNoteDialog.showDialog(getFragmentManager(), hashString);
+					}
+				});
+			}
+			
+			addNoteButton.setEnabled(!application.isInP2PFallbackMode());
+
+			SpannableString content = new SpannableString(hashString);
+			content.setSpan(new UnderlineSpan(), 0, content.length(), 0);
+			hashView.setText(content);
+			
+
+			if (realResult > 0 && from != null)
+				resultDescriptionView.setText(this.getString(R.string.transaction_fragment_amount_you_received, WalletUtils.formatValue(BigInteger.valueOf(realResult))));
+			else if (realResult < 0 && to != null)
+				resultDescriptionView.setText(this.getString(R.string.transaction_fragment_amount_you_sent, WalletUtils.formatValue(BigInteger.valueOf(realResult))));
+			else
+				resultDescriptionView.setText(this.getString(R.string.transaction_fragment_amount_you_moved, WalletUtils.formatValue(totalOutputValue)));
+
+			final Date time = tx.getUpdateTime();
+
+			transactionTimeView.setText(dateFormat.format(time));
+
+			//These will be made visible again later once information is fetched from server
+			feeViewContainer.setVisibility(View.GONE);
+			valueNowContainerView.setVisibility(View.GONE);
+			
+			if (tx instanceof MyTransaction) {
+				MyTransaction myTx = (MyTransaction)tx;
+
+				final long txIndex = myTx.getTxIndex();
+				
 				final Handler handler = new Handler();
 
 				new Thread(new Runnable() {
 					@Override
 					public void run() {
-						try {
-							final JSONObject obj = getTransactionSummary(txIndex, wallet.getGUID(), realResult);
+						try {							
+							final JSONObject obj = getTransactionSummary(txIndex, wallet.getGUID(), finalResult);
 
 							handler.post(new Runnable() {
 								@Override
@@ -306,7 +379,6 @@ public final class TransactionSummaryDialog extends DialogFragment
 
 											feeView.setText(WalletUtils.formatValue(BigInteger.valueOf(Long.valueOf(obj.get("fee").toString()))) + " BTC");
 										}
-
 
 										if (obj.get("confirmations") != null) {
 											int confirmations = ((Number)obj.get("confirmations")).intValue();
@@ -337,57 +409,6 @@ public final class TransactionSummaryDialog extends DialogFragment
 					}
 				}).start();
 			}
-	
-			final String hashString = new String(Hex.encode(tx.getHash().getBytes()), "UTF-8");
-
-			hashView.setOnClickListener(new OnClickListener() {
-
-				@Override
-				public void onClick(View v) {
-					Intent browserIntent = new Intent(
-							Intent.ACTION_VIEW,
-							Uri.parse("https:/"+Constants.BLOCKCHAIN_DOMAIN+"/tx/"+hashString));
-
-					startActivity(browserIntent);
-				}
-			});
-
-			SpannableString content = new SpannableString(hashString);
-			content.setSpan(new UnderlineSpan(), 0, content.length(), 0);
-			hashView.setText(content);
-			
-			String note = wallet.getTxNotes().get(hashString);
-
-			if (note == null) {
-				addNoteButton.setOnClickListener(new OnClickListener() {
-					@Override
-					public void onClick(View v) {
-						dismiss();
-
-						AddNoteDialog.showDialog(getFragmentManager(), hashString);
-					}
-				});
-
-				view.removeView(noteView);
-			} else {
-				view.removeView(addNoteButton);
-
-				noteView.setText(note);
-
-				noteView.setOnClickListener(new OnClickListener() {
-					@Override
-					public void onClick(View v) {
-						dismiss();
-
-						AddNoteDialog.showDialog(getFragmentManager(), hashString);
-					}
-				});
-			}
-
-			feeViewContainer.setVisibility(View.GONE);
-
-			valueNowContainerView.setVisibility(View.GONE);
-
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
