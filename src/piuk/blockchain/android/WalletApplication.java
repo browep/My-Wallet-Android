@@ -326,11 +326,11 @@ public class WalletApplication extends Application {
 
 	public void startBlockchainService()
 	{
+		if (blockchainWallet == null)
+			return;
+		
 		try {
 			if (bitcoinjWallet == null) {
-				if (blockchainWallet == null)
-					return;
-
 				deleteBitcoinJLocalData();
 
 				this.bitcoinjWallet = blockchainWallet.getBitcoinJWallet();
