@@ -19,11 +19,14 @@ package piuk.blockchain.android.ui;
 
 import java.util.Locale;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.AlertDialog.Builder;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -33,9 +36,12 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 import piuk.EventListeners;
+import piuk.MyRemoteWallet;
 import piuk.blockchain.android.R;
 import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.WalletApplication;
+import piuk.blockchain.android.ui.SendCoinsFragment.FeePolicy;
+import piuk.blockchain.android.ui.dialogs.RequestPasswordDialog;
 import piuk.blockchain.android.util.ActionBarFragment;
 
 /**
@@ -48,6 +54,7 @@ public abstract class AbstractWalletActivity extends FragmentActivity {
 	protected Handler handler = new Handler();
 	protected String qr_code_action;
 	private static final int REQUEST_CODE_SCAN = 0;
+	public static long lastDisplayedNetworkError = 0;
 
 	public String getQRCodeAction() {
 		return qr_code_action; 
@@ -63,16 +70,63 @@ public abstract class AbstractWalletActivity extends FragmentActivity {
 			longToast(R.string.send_coins_install_qr_scanner_msg);
 		}
 	}
-	
 
 	static void handleCopyToClipboard(final Context context, final String address)
 	{
 		final ClipboardManager clipboardManager = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
 		clipboardManager.setText(address);
-		
+
 		Toast.makeText(context, R.string.wallet_address_fragment_clipboard_msg, Toast.LENGTH_SHORT).show();
 	}
 
+	public final boolean hasInternetConnection() {
+		ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+
+		if (cm.getActiveNetworkInfo() != null && cm.getActiveNetworkInfo().isAvailable() && cm.getActiveNetworkInfo().isConnected()) {
+			return true;
+
+		} else {
+			return false;
+		}
+	}
+	
+	public final boolean isWifiEnabled() {
+		ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+
+		NetworkInfo info = cm.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
+
+		if (info.isConnected()) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
+	public void startP2PMode() {
+		final MyRemoteWallet remoteWallet = application.getRemoteWallet();
+
+		if (remoteWallet == null)
+			return;
+
+		if (remoteWallet.isDoubleEncrypted() == false) {
+			application.startBlockchainService();
+		} else {
+			if (remoteWallet.temporySecondPassword == null) {
+				RequestPasswordDialog.show(getSupportFragmentManager(), new SuccessCallback() {
+
+					public void onSuccess() {
+						application.startBlockchainService();
+					}
+
+					public void onFail() {
+						Toast.makeText(application, R.string.password_incorrect, Toast.LENGTH_LONG).show();
+					}
+				}, RequestPasswordDialog.PasswordTypeSecond);
+			} else {
+				application.startBlockchainService();
+			}
+		}		
+	}
 
 	private EventListeners.EventListener eventListener = new EventListeners.EventListener() {
 
@@ -85,6 +139,65 @@ public abstract class AbstractWalletActivity extends FragmentActivity {
 		public void onWalletDidChange() {
 			application.checkWalletStatus(self);
 		}
+
+		@Override
+		public void onMultiAddrError() {
+			if (self instanceof SendCoinsActivity || self instanceof WalletActivity) {
+				if (lastDisplayedNetworkError > System.currentTimeMillis()-Constants.NetworkErrorDisplayThreshold)
+					return;
+
+				//Don't do anything is we are already running the blockchain service
+				if (application.isInP2PFallbackMode())
+					return;
+
+				lastDisplayedNetworkError = System.currentTimeMillis();
+
+				//Only ask for P2P mode when connected to wifi 
+				if (!hasInternetConnection() || !isWifiEnabled()) {
+					handler.post(new Runnable() {
+						public void run() {
+							AlertDialog.Builder builder = new AlertDialog.Builder(self);
+
+							builder.setTitle(R.string.network_error);
+
+							builder.setMessage(R.string.network_error_description);
+
+							builder.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+								public void onClick(DialogInterface dialog, int id) {
+									dialog.dismiss();
+								}
+							});
+
+							builder.show();
+						}
+					});
+				} else {
+					handler.post(new Runnable() {
+						public void run() {
+							AlertDialog.Builder builder = new AlertDialog.Builder(self);
+
+							builder.setTitle(R.string.blockchain_network_error);
+
+							builder.setMessage(R.string.blockchain_network_error_description);
+
+							builder.setNegativeButton(R.string.ignore, new DialogInterface.OnClickListener() {
+								public void onClick(DialogInterface dialog, int id) {
+									dialog.dismiss();
+								}
+							});
+
+							builder.setPositiveButton(R.string.start_p2p_mode, new DialogInterface.OnClickListener() {
+								public void onClick(DialogInterface dialog, int id) {
+									startP2PMode();	
+								}
+							});
+
+							builder.show();
+						}
+					});
+				}
+			}
+		};
 	};
 
 	@Override

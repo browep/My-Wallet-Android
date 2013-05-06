@@ -227,6 +227,16 @@ public final class WalletActivity extends AbstractWalletActivity {
 	{
 		super.onPrepareOptionsMenu(menu);
 
+		final boolean isInP2PMode = application.isInP2PFallbackMode();
+		
+		MenuItem leavP2PMode = menu.findItem(R.id.menu_leave_p2p_mode);
+
+		leavP2PMode.setVisible(isInP2PMode);
+
+		MenuItem enterP2PMode = menu.findItem(R.id.menu_start_p2p_mode);
+
+		enterP2PMode.setVisible(!isInP2PMode);
+
 		return true;
 	}
 
@@ -241,7 +251,7 @@ public final class WalletActivity extends AbstractWalletActivity {
 
 			Intent browserIntent = new Intent(
 					Intent.ACTION_VIEW,
-					Uri.parse("https://blockchain.info/wallet/iphone-view?guid="
+					Uri.parse("https://"+Constants.BLOCKCHAIN_DOMAIN+"/wallet/iphone-view?guid="
 							+ application.getRemoteWallet().getGUID()
 							+ "&sharedKey="
 							+ application.getRemoteWallet().getSharedKey()));
@@ -278,6 +288,30 @@ public final class WalletActivity extends AbstractWalletActivity {
 		case R.id.buy_bitcoins:
 			openDeopositPage();
 			return true;
+		case R.id.menu_leave_p2p_mode:
+			application.leaveP2PMode();
+			return true;
+		case R.id.menu_start_p2p_mode:
+			AlertDialog.Builder builder = new AlertDialog.Builder(self);
+
+			builder.setTitle(R.string.start_p2p_mode);
+
+			builder.setMessage(R.string.start_p2p_mode_description);
+
+			builder.setNegativeButton(R.string.ignore, new DialogInterface.OnClickListener() {
+				public void onClick(DialogInterface dialog, int id) {
+					dialog.dismiss();
+				}
+			});
+
+			builder.setPositiveButton(R.string.start_p2p_mode, new DialogInterface.OnClickListener() {
+				public void onClick(DialogInterface dialog, int id) {
+					startP2PMode();	
+				}
+			});
+
+			builder.show();
+			return true;
 		default:
 			return false;
 		}
@@ -302,7 +336,7 @@ public final class WalletActivity extends AbstractWalletActivity {
 
 		String guid = wallet.getGUID();
 
-		Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://blockchain.info/deposit?address="+address+"&guid="+guid+"&sharedKey="+sharedKey));
+		Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://"+Constants.BLOCKCHAIN_DOMAIN+"/deposit?address="+address+"&guid="+guid+"&sharedKey="+sharedKey));
 
 		startActivity(browserIntent);
 	}

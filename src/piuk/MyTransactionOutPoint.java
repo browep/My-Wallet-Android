@@ -10,7 +10,6 @@ import com.google.bitcoin.core.TransactionOutPoint;
 import com.google.bitcoin.core.TransactionOutput;
 
 //Very messy
-//Needed to convert DBOutput blockchain.info uses internal to the BitcoinJ TransactionOutPoint needed to sign inputs
 public class MyTransactionOutPoint extends TransactionOutPoint {
 	private static final long serialVersionUID = 1L;
 	byte[] scriptBytes;	

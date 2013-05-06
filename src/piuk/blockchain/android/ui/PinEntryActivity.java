@@ -24,6 +24,7 @@ import org.spongycastle.util.encoders.Hex;
 
 import piuk.EventListeners;
 import piuk.MyWallet;
+import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.R;
 import piuk.blockchain.android.WalletApplication;
 import piuk.blockchain.android.ui.dialogs.RequestPasswordDialog;
@@ -31,7 +32,10 @@ import piuk.blockchain.android.ui.dialogs.WelcomeDialog;
 
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.SharedPreferences.Editor;
 import android.view.Menu;
 import android.view.View;
@@ -55,11 +59,9 @@ public class PinEntryActivity extends AbstractWalletActivity {
 		public String getDescription() {
 			return "Pinentry Listener";
 		}
-		
+
 		@Override
 		public void onWalletDidChange() {		
-			System.out.println("Receive onWalletDidChange()");
-
 			begin();
 		}
 	};
@@ -76,7 +78,7 @@ public class PinEntryActivity extends AbstractWalletActivity {
 		}
 	}
 
-	private static final String WebROOT = "https://blockchain.info/pin-store";
+	private static final String WebROOT = "https://"+Constants.BLOCKCHAIN_DOMAIN+"/pin-store";
 
 	int stage = UNKNOWN;
 
@@ -131,7 +133,7 @@ public class PinEntryActivity extends AbstractWalletActivity {
 
 			connection.setConnectTimeout(30000);
 			connection.setReadTimeout(30000);
-			
+
 			connection.connect();
 
 			DataOutputStream wr = new DataOutputStream(connection.getOutputStream ());
@@ -216,7 +218,146 @@ public class PinEntryActivity extends AbstractWalletActivity {
 		buttonDelete.setEnabled(!enabled);
 		buttonBlank.setEnabled(!enabled);
 	}
-	
+
+	public void validatePIN(final String PIN) {
+		disableKeyPad(true);
+
+		statusView.setText("Validating PIN");
+
+		final Activity activity = this;
+
+		new Thread(new Runnable() {
+			public void run() {
+
+				String pin_lookup_key = PreferenceManager.getDefaultSharedPreferences(application).getString("pin_kookup_key", null);
+				String encrypted_password = PreferenceManager.getDefaultSharedPreferences(application).getString("encrypted_password", null);
+
+				try {
+					final JSONObject response = apiGetValue(pin_lookup_key, PIN);
+
+					String decryptionKey = (String) response.get("success");
+					if (decryptionKey != null) {	
+						application.didEncounterFatalPINServerError = false;
+
+						String password = MyWallet.decrypt(encrypted_password, decryptionKey, PBKDF2Iterations);
+
+						application.checkIfWalletHasUpdatedAndFetchTransactions(password, new SuccessCallback() {
+							@Override
+							public void onSuccess() {
+								handler.post(new Runnable() {
+									public void run() {															
+										Toast.makeText(application, "PIN Verified", Toast.LENGTH_SHORT)
+										.show();	
+
+										finish();
+
+										disableKeyPad(false);
+									}
+								});
+							}
+
+							@Override
+							public void onFail() {
+								handler.post(new Runnable() {
+									public void run() {
+										disableKeyPad(false);
+
+										Toast.makeText(application,
+												R.string.toast_wallet_decryption_failed, Toast.LENGTH_LONG)
+												.show();	
+
+										try {
+											clearPrefValues(application);
+										} catch (Exception e) {
+											e.printStackTrace();
+										}
+
+										begin();
+									}
+								});
+							}
+						});
+					} else if (response.get("error") != null) {
+						
+						//Even though we received an error it is a valid response
+						//So no fatal
+						application.didEncounterFatalPINServerError = false;
+
+						//"code" == 2 means the PIN is incorrect
+						if (!response.containsKey("code") || ((Number)response.get("code")).intValue() != 2) {
+							clearPrefValues(application);
+						}
+
+						handler.post(new Runnable() {
+							public void run() {
+								disableKeyPad(false);
+
+								Toast.makeText(application, (String)response.get("error"), Toast.LENGTH_SHORT).show();	
+
+								begin();
+							}
+						});
+					} else {
+						throw new Exception("Unknown Error");
+					}
+				} catch (final Exception e) {
+					e.printStackTrace();
+
+					application.didEncounterFatalPINServerError = true;
+
+					handler.post(new Runnable() {
+						public void run() {
+							disableKeyPad(false);
+
+							AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+
+							builder.setCancelable(false);
+
+							builder.setMessage(R.string.pin_server_error_description);
+
+							builder.setTitle(R.string.pin_server_error);
+
+							builder.setPositiveButton(R.string.try_again, new DialogInterface.OnClickListener() {
+								public void onClick(DialogInterface dialog, int id) {
+									validatePIN(PIN);
+
+									dialog.dismiss();
+
+									begin();
+								}
+							});
+							builder.setNegativeButton(R.string.pin_server_error_enter_password_manually, new DialogInterface.OnClickListener() {
+								public void onClick(DialogInterface dialog, int id) {
+									dialog.dismiss();
+
+									RequestPasswordDialog.show(
+											getSupportFragmentManager(),
+											new SuccessCallback() {  
+												public void onSuccess() {
+													finish();
+												}
+												public void onFail() {	
+													Toast.makeText(application, R.string.password_incorrect, Toast.LENGTH_LONG).show();
+
+													begin();
+												}
+											}, RequestPasswordDialog.PasswordTypeMain);
+
+								}
+							});
+
+							AlertDialog dialog = builder.create();
+
+							dialog.show();
+
+							begin();
+						}
+					});
+				}
+			}
+		}).start();
+	}
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -261,8 +402,6 @@ public class PinEntryActivity extends AbstractWalletActivity {
 		pinBoxArray[2] = pinBox2;
 		pinBoxArray[3] = pinBox3;
 
-
-
 		statusView = (TextView) findViewById(R.id.statusMessage);
 
 		View.OnClickListener pinButtonHandler = new View.OnClickListener() {
@@ -289,90 +428,7 @@ public class PinEntryActivity extends AbstractWalletActivity {
 						if (stage == BEGIN_CHECK_PIN) {
 							stage = VALIDATING_PIN;
 
-							disableKeyPad(true);
-							
-							statusView.setText("Validating PIN");
-							
-							new Thread(new Runnable() {
-								public void run() {
-									
-									String pin_lookup_key = PreferenceManager.getDefaultSharedPreferences(application).getString("pin_kookup_key", null);
-									String encrypted_password = PreferenceManager.getDefaultSharedPreferences(application).getString("encrypted_password", null);
-
-									try {
-										JSONObject response = apiGetValue(pin_lookup_key, PIN);
-
-										String decryptionKey = (String) response.get("success");
-
-										if (decryptionKey != null) {											
-											String password = MyWallet.decrypt(encrypted_password, decryptionKey, PBKDF2Iterations);
-
-											application.checkIfWalletHasUpdatedAndFetchTransactions(password, new SuccessCallback() {
-												@Override
-												public void onSuccess() {
-													handler.post(new Runnable() {
-														public void run() {															
-															Toast.makeText(application, "PIN Verified", Toast.LENGTH_SHORT)
-															.show();	
-
-															finish();
-															
-															disableKeyPad(false);
-														}
-													});
-												}
-
-												@Override
-												public void onFail() {
-													handler.post(new Runnable() {
-														public void run() {
-															disableKeyPad(false);
-
-															Toast.makeText(application,
-																	R.string.toast_wallet_decryption_failed, Toast.LENGTH_LONG)
-																	.show();	
-
-															try {
-																clearPrefValues(application);
-															} catch (Exception e) {
-																e.printStackTrace();
-															}
-
-															begin();
-														}
-													});
-												}
-											});
-										} else if (response.get("error") != null) {
-											
-											//"code" == 2 means the PIN is incorrect
-											if (!response.containsKey("code") || ((Number)response.get("code")).intValue() != 2) {
-												clearPrefValues(application);
-											}
-
-											throw new Exception((String) response.get("error"));
-										} else {
-											clearPrefValues(application);
-
-											throw new Exception("Unknown Error");
-										}
-									} catch (final Exception e) {
-										e.printStackTrace();
-
-										handler.post(new Runnable() {
-											public void run() {
-												disableKeyPad(false);
-
-												Toast.makeText(application,
-														e.getLocalizedMessage(), Toast.LENGTH_LONG)
-														.show();	
-
-												begin();
-											}
-										});
-									}
-								}
-							}).start();
+							validatePIN(PIN);
 						} if (stage == BEGIN_SETUP) {
 							previousEntered = userEntered;
 
@@ -405,9 +461,12 @@ public class PinEntryActivity extends AbstractWalletActivity {
 
 											final String value = new String(Hex.encode(bytes), "UTF-8");
 
-											JSONObject response = apiStoreKey(key, value, PIN);
+											final JSONObject response = apiStoreKey(key, value, PIN);
 
 											if (response.get("success") != null) {
+												
+												application.didEncounterFatalPINServerError = false;
+												
 												handler.post(new Runnable() {
 													public void run() {
 														try {
@@ -425,7 +484,7 @@ public class PinEntryActivity extends AbstractWalletActivity {
 																	.show();	
 
 															finish();
-															
+
 															disableKeyPad(false);
 														} catch (Exception e) {
 															e.printStackTrace();
@@ -435,30 +494,33 @@ public class PinEntryActivity extends AbstractWalletActivity {
 																	.show();	
 
 															begin();
-															
+
 															disableKeyPad(false);
 														}
 													}
 												});
 											} else if (response.get("error") != null) {
-												throw new Exception((String) response.get("error"));
+												application.didEncounterFatalPINServerError = false;
+
+												handler.post(new Runnable() {
+													public void run() {
+														Toast.makeText(application, (String) response.get("error"), Toast.LENGTH_LONG)
+																.show();	
+
+														disableKeyPad(false);
+
+														begin();
+													}
+												});
 											} else {
 												throw new Exception("Unknown Error");
 											}
 										} catch (final Exception e) {
+											application.didEncounterFatalPINServerError = true;
+
 											e.printStackTrace();
 
-											handler.post(new Runnable() {
-												public void run() {
-													Toast.makeText(application,
-															e.getLocalizedMessage(), Toast.LENGTH_LONG)
-															.show();	
-
-													disableKeyPad(false);
-
-													begin();
-												}
-											});
+											finish();
 										}
 									}
 								}).start();
@@ -522,13 +584,13 @@ public class PinEntryActivity extends AbstractWalletActivity {
 		button9.setOnClickListener(pinButtonHandler);
 
 		buttonDelete = (Button)findViewById(R.id.buttonDeleteBack);
-		
+
 		buttonBlank = (Button)findViewById(R.id.buttonBlank); 
 	}
 
 
 	public void begin() {
-				
+
 		disableKeyPad(false);
 
 		clear();
@@ -541,7 +603,7 @@ public class PinEntryActivity extends AbstractWalletActivity {
 
 		if (pin_lookup_key == null || encrypted_password == null) {
 			titleView.setText("Create PIN");	
-			
+
 			statusView.setText("Please create a new PIN code");
 
 			stage = BEGIN_SETUP;

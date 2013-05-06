@@ -12,9 +12,9 @@ import com.google.bitcoin.core.TransactionOutPoint;
 public class MyTransactionInput extends TransactionInput {
 	private static final long serialVersionUID = 1L;
 	
-	String address;
-	BigInteger value;
-	NetworkParameters params;
+	public String address;
+	public BigInteger value;
+	public NetworkParameters params;
 	
 	public MyTransactionInput(NetworkParameters params, Transaction parentTransaction, byte[] scriptBytes, TransactionOutPoint outpoint) {
 		super(params, parentTransaction, scriptBytes, outpoint);

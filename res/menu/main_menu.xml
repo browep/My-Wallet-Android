@@ -3,32 +3,35 @@
 
     <item
         android:id="@+id/menu_account_settings"
-        android:icon="@drawable/ic_action_info"
         android:showAsAction="never"
         android:title="@string/menu_account_settings"/>
     <item
         android:id="@+id/wallet_options_address_book"
-        android:icon="@drawable/ic_action_address_book"
         android:showAsAction="never"
         android:title="@string/address_book_activity_title"/>
     <item
         android:id="@+id/wallet_options_exchange_rates"
-        android:icon="@drawable/ic_action_exchange"
         android:showAsAction="never"
         android:title="@string/exchange_rates_activity_title"/>
     <item
         android:id="@+id/scan_private_key"
-        android:icon="@drawable/ic_action_private_key"
         android:showAsAction="never"
         android:title="@string/menu_scan_private_key"/>
     <item
         android:id="@+id/backup_wallet"
-        android:icon="@android:drawable/ic_menu_save"
         android:showAsAction="never"
         android:title="@string/wallet_options_backup"/>
     <item
         android:id="@+id/buy_bitcoins"
         android:showAsAction="never"
         android:title="@string/buy_bitcoins"/>
+    <item
+        android:id="@+id/menu_leave_p2p_mode"
+        android:showAsAction="never"
+        android:title="@string/menu_leave_p2p_mode"/>
+    <item
+        android:id="@+id/menu_start_p2p_mode"
+        android:showAsAction="never"
+        android:title="@string/menu_enter_p2p_mode"/>
 
 </menu>

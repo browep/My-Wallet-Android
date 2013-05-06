@@ -66,7 +66,6 @@ public class WalletAddressesFragment extends ListFragment
 		
 	    @Override
 		public void onWalletDidChange() {
-
 			try {
 				updateView();
 			} catch (Exception e) {

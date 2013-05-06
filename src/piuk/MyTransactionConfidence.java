@@ -6,8 +6,8 @@ import com.google.bitcoin.core.TransactionConfidence;
 public class MyTransactionConfidence extends TransactionConfidence {
 	private static final long serialVersionUID = 1L;
 
-	int height;
-	boolean double_spend;
+	public int height;
+	public boolean double_spend;
 
 	public MyTransactionConfidence(Transaction tx, int height,
 			boolean double_spend) {

@@ -17,17 +17,20 @@
 
 package piuk.blockchain.android;
 
+import android.app.ActivityManager;
+import android.app.ActivityManager.RunningServiceInfo;
 import android.app.Application;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProviderInfo;
 import android.content.*;
 import android.content.SharedPreferences.Editor;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.net.ConnectivityManager;
 import android.os.Handler;
-import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.widget.Toast;
 import com.google.bitcoin.core.*;
+import com.google.bitcoin.store.WalletProtobufSerializer;
 
 import org.apache.commons.io.IOUtils;
 import org.spongycastle.util.encoders.Hex;
@@ -38,11 +41,15 @@ import piuk.Hash;
 import piuk.MyRemoteWallet;
 import piuk.MyRemoteWallet.NotModfiedException;
 import piuk.blockchain.android.R;
+import piuk.blockchain.android.service.BlockchainServiceImpl;
+import piuk.blockchain.android.service.WebsocketService;
 import piuk.blockchain.android.ui.AbstractWalletActivity;
 import piuk.blockchain.android.ui.PinEntryActivity;
 import piuk.blockchain.android.ui.SuccessCallback;
 import piuk.blockchain.android.util.ErrorReporter;
+import piuk.blockchain.android.util.WalletUtils;
 
+import java.io.File;
 import java.io.FileInputStream; 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -50,30 +57,43 @@ import java.io.PrintStream;
 import java.net.CookieHandler;
 import java.security.MessageDigest;
 import java.security.Security;
+import java.text.SimpleDateFormat;
 import java.util.Map.Entry;
+import java.util.Date;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-/**
- * @author Andreas Schildbach
- */
 public class WalletApplication extends Application {
 	private MyRemoteWallet blockchainWallet;
 
 	private final Handler handler = new Handler();
 	private Timer timer;
 	public int decryptionErrors = 0;
+	private Intent blockchainServiceIntent;
+	private Intent websocketServiceIntent;
+	public boolean didEncounterFatalPINServerError = false;
+	public Wallet blockServiceWallet;
 
+	private final BroadcastReceiver broadcastReceiver = new BroadcastReceiver()
+	{
+		@Override
+		public void onReceive(final Context context, final Intent intent)
+		{
+			final String action = intent.getAction();
 
-	private final ServiceConnection serviceConnection = new ServiceConnection() {
-		private BlockchainService service;
+			handler.post(new Runnable() {
+				public void run() {
+					if (ConnectivityManager.CONNECTIVITY_ACTION.equals(action))
+					{
+						boolean hasConnectivity = !intent.getBooleanExtra(ConnectivityManager.EXTRA_NO_CONNECTIVITY, false);
 
-		public void onServiceConnected(final ComponentName name,
-				final IBinder binder) {
-			service = ((BlockchainService.LocalBinder) binder).getService();
-		}
-
-		public void onServiceDisconnected(final ComponentName name) {
+						if (hasConnectivity) {
+							checkWalletStatus(null);
+						}
+					}	
+				}
+			});
 		}
 	};
 
@@ -101,6 +121,7 @@ public class WalletApplication extends Application {
 		edit.remove("sharedKey");
 
 		this.blockchainWallet = null;
+		this.didEncounterFatalPINServerError = false;
 		this.decryptionErrors = 0;
 
 		edit.commit();
@@ -121,7 +142,167 @@ public class WalletApplication extends Application {
 			}
 		}
 
-		bindService(new Intent(this, BlockchainService.class), serviceConnection, Context.BIND_AUTO_CREATE);
+		final IntentFilter intentFilter = new IntentFilter();
+
+		intentFilter.addAction(ConnectivityManager.CONNECTIVITY_ACTION);
+
+		registerReceiver(broadcastReceiver, intentFilter);
+
+		startService(websocketServiceIntent);
+	}
+
+	public long esimateFirstSeenFromBlockExplorer() throws Exception {
+		SimpleDateFormat format = new SimpleDateFormat("yyyy-mm-dd hh:mm:ss");
+
+		long earliest = 0;
+		for (ECKey key : blockServiceWallet.getKeys()) {
+			try {
+
+				String url = "http://blockexplorer.com/q/addressfirstseen/" + key.toAddress(Constants.NETWORK_PARAMETERS).toString();
+
+				String response = WalletUtils.fetchURL(url);
+
+				Date date = null;
+				if (response.contains("Never")) {
+					date = new Date();
+				} else {
+					date = format.parse(response);
+				}
+
+				if (earliest == 0) {
+					earliest = date.getTime();
+				} else if (date.getTime() < earliest) {
+					earliest = date.getTime();
+				}
+			} catch (Exception e) {
+				e.printStackTrace(); 
+			}
+		}
+
+		return earliest;
+	}
+
+	//BitcoinJ Temp Wallet
+	public void saveBitcoinJWallet()
+	{
+		try
+		{
+			File walletFile = getFileStreamPath(Constants.WALLET_FILENAME_PROTOBUF);
+
+			blockServiceWallet.saveToFile(walletFile);
+		}
+		catch (final IOException x)
+		{
+			throw new RuntimeException(x);
+		}
+	}
+
+	//BitcoinJ Temp Wallet
+	private void loadBitcoinJWallet()
+	{
+		File walletFile = getFileStreamPath(Constants.WALLET_FILENAME_PROTOBUF);
+
+		if (walletFile.exists())
+		{
+			FileInputStream walletStream = null;
+
+			try
+			{
+				walletStream = new FileInputStream(walletFile);
+
+				blockServiceWallet = new WalletProtobufSerializer().readWallet(walletStream);
+			}
+			catch (final Exception e)
+			{
+				e.printStackTrace();
+			}
+			finally
+			{
+				if (walletStream != null)
+				{
+					try
+					{
+						walletStream.close();
+					}
+					catch (final IOException x)
+					{
+						x.printStackTrace();
+					}
+				}
+			}
+		}
+	}
+
+	public void deleteBitcoinJLocalData() {
+		try {
+			//Delete the wallet file
+			File bitcoinJFile = getFileStreamPath(Constants.WALLET_FILENAME_PROTOBUF);
+
+			if (bitcoinJFile.exists()) {
+				bitcoinJFile.delete();
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		try {
+			//Clear the blockchain file (we need to rescan)
+			File blockChainFile = new File(getDir("blockstore", Context.MODE_WORLD_READABLE | Context.MODE_WORLD_WRITEABLE), Constants.BLOCKCHAIN_FILENAME);
+
+			if (blockChainFile.exists())
+				blockChainFile.delete();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void startBlockchainService()
+	{
+		try {
+			if (blockServiceWallet == null) {
+				if (blockchainWallet == null)
+					return;
+
+				deleteBitcoinJLocalData();
+
+				this.blockServiceWallet = blockchainWallet.getBitcoinJWallet();
+			} 
+
+			final Application application = this;
+
+			new Thread(new Runnable() {
+
+				@Override
+				public void run() {
+
+					try {
+						long firstSeen = esimateFirstSeenFromBlockExplorer();
+
+						PreferenceManager.getDefaultSharedPreferences(application).edit().putLong(Constants.EARLIEST_KEY_TIME, firstSeen).commit();
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+
+					startService(blockchainServiceIntent);
+
+					EventListeners.invokeWalletDidChange();
+				}
+
+			}).start();
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void leaveP2PMode() {
+		this.blockServiceWallet = null;
+
+		stopService(blockchainServiceIntent);
+
+		deleteBitcoinJLocalData();
+
+		EventListeners.invokeWalletDidChange();
 	}
 
 	public void diconnectSoon() {
@@ -136,11 +317,26 @@ public class WalletApplication extends Application {
 					public void run() {
 						handler.post(new Runnable() {
 							public void run() {
+								unregisterReceiver(broadcastReceiver);
+
+								AbstractWalletActivity.lastDisplayedNetworkError = 0;
+
+								if (isInP2PFallbackMode())
+									saveBitcoinJWallet();
+							}
+						});
+					}
+				}, 1000);
+
+				timer.schedule(new TimerTask() {
+
+					@Override
+					public void run() {
+						handler.post(new Runnable() {
+							public void run() {
 								try {
-									System.out.println("diconnectSoon() set blockchainWallet = null");
-
 									blockchainWallet = null;
-
+									didEncounterFatalPINServerError = false;
 									decryptionErrors = 0;
 
 								} catch (Exception e) {
@@ -158,7 +354,7 @@ public class WalletApplication extends Application {
 						handler.post(new Runnable() {
 							public void run() {
 								try {
-									unbindService(serviceConnection);
+									stopService(websocketServiceIntent);
 								} catch (Exception e) {
 									e.printStackTrace();
 								}
@@ -176,20 +372,28 @@ public class WalletApplication extends Application {
 		this.blockchainWallet = new MyRemoteWallet();
 
 		this.decryptionErrors = 0;
+
+		this.didEncounterFatalPINServerError = false;
 	}
 
 	public void checkWalletStatus(final AbstractWalletActivity activity) {
 
-		if (activity == null || PinEntryActivity.active)
-			return;
-
 		boolean passwordSaved = PreferenceManager.getDefaultSharedPreferences(this).contains("encrypted_password");
 
-		if (blockchainWallet != null && decryptionErrors == 0 && passwordSaved) {
+		if (this.isInP2PFallbackMode()) {
+			if (!this.isBitcoinJServiceRunning()) {
+				startService(blockchainServiceIntent);
+			}	
+		} 
+
+		if (blockchainWallet != null && decryptionErrors == 0 && (passwordSaved || didEncounterFatalPINServerError)) {
 			if (!blockchainWallet.isUptoDate(Constants.MultiAddrTimeThreshold)) {
 				checkIfWalletHasUpdatedAndFetchTransactions(blockchainWallet.getTemporyPassword());
 			} 
 		} else if (blockchainWallet == null || decryptionErrors > 0 || !passwordSaved) {
+
+			if (activity == null || PinEntryActivity.active)
+				return;
 
 			//Remove old password 
 			String old_password = PreferenceManager.getDefaultSharedPreferences(this).getString("password", null);
@@ -219,11 +423,13 @@ public class WalletApplication extends Application {
 
 		ErrorReporter.getInstance().init(this);
 
+		blockchainServiceIntent = new Intent(this, BlockchainServiceImpl.class);
+		websocketServiceIntent = new Intent(this, WebsocketService.class);
+
 		try {
 			// Need to save session cookie for kaptcha
 			@SuppressWarnings("rawtypes")
-			Class aClass = getClass().getClassLoader().loadClass(
-					"java.net.CookieManager");
+			Class aClass = getClass().getClassLoader().loadClass("java.net.CookieManager");
 
 			CookieHandler.setDefault((CookieHandler) aClass.newInstance());
 
@@ -233,15 +439,12 @@ public class WalletApplication extends Application {
 			e.printStackTrace();
 		}
 
+		loadBitcoinJWallet();
 
 		EventListeners.addEventListener(eventListener);
 
 		connect();
 	}
-
-	/*public Wallet getWallet() {
-		return blockchainWallet.getBitcoinJWallet();
-	}*/
 
 	public MyRemoteWallet getRemoteWallet() {
 		return blockchainWallet;
@@ -318,6 +521,20 @@ public class WalletApplication extends Application {
 		}
 	}
 
+	private boolean isBitcoinJServiceRunning() {
+		ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+		for (RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+			if (BlockchainServiceImpl.class.getName().equals(service.service.getClassName())) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public boolean isInP2PFallbackMode() {
+		return blockServiceWallet != null;
+	}
+
 	public void unRegisterForNotifications(final String registration_id) {
 		new Thread(new Runnable() {
 			@Override
@@ -327,7 +544,7 @@ public class WalletApplication extends Application {
 						setRegisteredForNotifications(null);
 					}
 				} catch (Exception e) {
-					e.printStackTrace();
+					e.printStackTrace(); 
 				}
 			}
 
@@ -423,8 +640,6 @@ public class WalletApplication extends Application {
 
 		new Thread(new Runnable() {
 			public void run() {
-				System.out.println("checkIfWalletHasUpdatedAndFetchTransactions()");
-
 				String payload = null;
 				SuccessCallback callback = callbackFinal;
 
@@ -434,10 +649,25 @@ public class WalletApplication extends Application {
 					if (blockchainWallet == null) {
 						localWallet = getLocalWallet();
 
-						String localChecksum = makeWalletChecksum(localWallet);
+						//First try and restore the local cache
+						if (readLocalWallet(localWallet, password)) {	
+							if (callback != null)  {
+								handler.post(new Runnable() {
+									public void run() {
+										callbackFinal.onSuccess();
+									};
+								});
 
-						if (localChecksum != null){
-							payload = MyRemoteWallet.getWalletPayload(guid, sharedKey, localChecksum);				
+								callback = null;
+							}
+
+							readLocalMultiAddr();  
+
+							Thread.sleep(1000);
+
+							checkIfWalletHasUpdatedAndFetchTransactions(password, guid, sharedKey, null);
+
+							return;
 						} else {
 							payload = MyRemoteWallet.getWalletPayload(guid, sharedKey);	
 						}
@@ -458,58 +688,12 @@ public class WalletApplication extends Application {
 
 						if (!blockchainWallet.isUptoDate(Constants.MultiAddrTimeThreshold)) {
 							doMultiAddr(true);
-						} else {
-							System.out.println("Skipping doMultiAddr");
-						}
+						} 
 
 						return;
-					} else {
-						if (readLocalWallet(localWallet, password)) {							
-							if (callback != null)  {
-								handler.post(new Runnable() {
-									public void run() {
-										callbackFinal.onSuccess();
-									};
-								});
-
-								callback = null;
-							}
-
-							if (!blockchainWallet.isUptoDate(Constants.MultiAddrTimeThreshold)) {
-								doMultiAddr(false);
-							} else {
-								System.out.println("Skipping doMultiAddr");
-							}
-						}
-
-						return;
-					}
+					} 
 				} catch (final Exception e) {
 					e.printStackTrace();
-
-					writeException(e);
-
-					if (readLocalWallet(localWallet, password)) {
-						if (callback != null)  {
-							handler.post(new Runnable() {
-								public void run() {
-									callbackFinal.onSuccess();
-								};
-							});
-
-							callback = null;
-						}
-
-						readLocalMultiAddr();
-					}
-
-					handler.post(new Runnable() {
-						public void run() {
-							Toast.makeText(WalletApplication.this,
-									e.getLocalizedMessage(), Toast.LENGTH_SHORT)
-									.show();
-						}
-					});
 				}
 
 				if (payload == null) {
@@ -521,6 +705,11 @@ public class WalletApplication extends Application {
 						});
 						callback = null;
 					}
+
+					if (blockchainWallet != null) {
+						doMultiAddr(true);
+					}
+
 					return;
 				}
 
@@ -559,7 +748,7 @@ public class WalletApplication extends Application {
 								Toast.makeText(WalletApplication.this,
 										R.string.toast_wallet_decryption_failed,
 										Toast.LENGTH_LONG).show();
-								
+
 								callbackFinal.onFail();
 							};
 						});
@@ -622,37 +811,61 @@ public class WalletApplication extends Application {
 		}).start();
 	}
 
+	private AtomicBoolean isRunningMultiAddr = new AtomicBoolean(false);
 	public void doMultiAddr(final boolean notifications) {
 		if (blockchainWallet == null)
 			return;
 
+		if (!isRunningMultiAddr.compareAndSet(false, true))
+			return;
+
+		System.out.println("doMultiAddr()");
+
 		new Thread(new Runnable() {
 			public void run() {
 				try {
-					writeMultiAddrCache(blockchainWallet.doMultiAddr(notifications));
+					String multiAddr = null;
+
+					try {
+						multiAddr = blockchainWallet.doMultiAddr(notifications);
+					} catch (Exception e) {
+						e.printStackTrace(); 
+
+						try {
+							//Sleep for a bit and retry
+							Thread.sleep(5000);
+						} catch (InterruptedException e1) {
+							e1.printStackTrace();
+						}
+
+						try {
+							multiAddr = blockchainWallet.doMultiAddr(notifications);
+						} catch (Exception e1) {
+							e1.printStackTrace(); 
+
+							EventListeners.invokeOnMultiAddrError();
+
+							return;
+						}
+					}
+
+					try {
+						writeMultiAddrCache(multiAddr);
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
 
 					//After multi addr the currency is set
-					if (blockchainWallet.currencyCode != null)
-						setCurrency(blockchainWallet.currencyCode);
+					if (blockchainWallet.getCurrencyCode() != null)
+						setCurrency(blockchainWallet.getCurrencyCode());
 
 					handler.post(new Runnable() {
 						public void run() {
 							notifyWidgets();
 						}
 					});
-				} catch (Exception e) {
-					e.printStackTrace();
-
-					writeException(e);
-
-					handler.post(new Runnable() {
-						public void run() {
-							Toast.makeText(
-									WalletApplication.this,
-									R.string.toast_error_downloading_transactions,
-									Toast.LENGTH_LONG).show();
-						}
-					});
+				} finally {
+					isRunningMultiAddr.set(false);
 				}
 			}
 		}).start();
@@ -661,10 +874,16 @@ public class WalletApplication extends Application {
 	public static interface AddAddressCallback {
 		public void onSavedAddress(String address);
 
-		public void onError();
+		public void onError(String reason);
 	}
 
 	public void saveWallet(final SuccessCallback callback) {
+
+		if (this.isInP2PFallbackMode()) {
+			callback.onFail();
+			return;
+		};
+
 		new Thread() {
 			@Override
 			public void run() {
@@ -698,11 +917,16 @@ public class WalletApplication extends Application {
 		}.start();
 	}
 
-	public void addKeyToWallet(ECKey key, String label, int tag,
+	public void addKeyToWallet(final ECKey key, String label, int tag,
 			final AddAddressCallback callback) {
 
 		if (blockchainWallet == null)
 			return;
+
+		if (isInP2PFallbackMode()) {
+			callback.onError("Cannot add an address in P2P Mode.");
+			return;
+		}
 
 		try {
 			blockchainWallet.addKey(key, label);
@@ -722,7 +946,9 @@ public class WalletApplication extends Application {
 
 				@Override
 				public void onFail() {
-					callback.onError();
+					blockchainWallet.removeKey(key);
+
+					callback.onError("Error saving wallet");
 				}
 			});
 
@@ -731,7 +957,7 @@ public class WalletApplication extends Application {
 
 			writeException(e);
 
-			callback.onError();
+			callback.onError(e.getLocalizedMessage());
 		}
 
 		localSaveWallet();
@@ -797,8 +1023,8 @@ public class WalletApplication extends Application {
 
 			blockchainWallet.parseMultiAddr(multiAddr, false);
 
-			if (blockchainWallet.currencyCode != null)
-				setCurrency(blockchainWallet.currencyCode);
+			if (blockchainWallet.getCurrencyCode() != null)
+				setCurrency(blockchainWallet.getCurrencyCode());
 
 			return true;
 
@@ -811,7 +1037,7 @@ public class WalletApplication extends Application {
 		}
 	}
 
-	public String getLocalWallet() {
+	public String getLocalWallet() { 
 		try {
 			// Read the wallet from local file
 			FileInputStream file = openFileInput(Constants.WALLET_FILENAME);

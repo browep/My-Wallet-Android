@@ -25,6 +25,7 @@ import java.util.List;
 import com.google.bitcoin.core.Address;
 import com.google.bitcoin.core.NetworkParameters;
 import com.google.bitcoin.core.ScriptException;
+import com.google.bitcoin.core.Transaction;
 import com.google.bitcoin.core.TransactionConfidence;
 import com.google.bitcoin.core.TransactionConfidence.ConfidenceType;
 
@@ -42,6 +43,7 @@ import android.os.Handler;
 import android.support.v4.app.ListFragment;
 import android.text.format.DateUtils;
 import android.view.ContextMenu;
+import android.view.Gravity;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
@@ -59,7 +61,7 @@ import android.widget.AdapterView.AdapterContextMenuInfo;
 public final class WalletTransactionsFragment extends ListFragment {
 	private WalletApplication application;
 	private Activity activity;
-	private ArrayAdapter<MyTransaction> adapter;
+	private ArrayAdapter<Transaction> adapter;
 	private final Handler handler = new Handler();
 
 	private final EventListeners.EventListener eventListener = new EventListeners.EventListener() {
@@ -69,12 +71,12 @@ public final class WalletTransactionsFragment extends ListFragment {
 		}
 
 		@Override
-		public void onCoinsSent(final MyTransaction tx, final long result) {
+		public void onCoinsSent(final Transaction tx, final long result) {
 			setAdapterContent();
 		};
 
 		@Override
-		public void onCoinsReceived(final MyTransaction tx, final long result) {
+		public void onCoinsReceived(final Transaction tx, final long result) {
 			setAdapterContent();		
 		};
 
@@ -100,7 +102,7 @@ public final class WalletTransactionsFragment extends ListFragment {
 	}
 
 	public void initAdapter() {
-		adapter = new ArrayAdapter<MyTransaction>(activity, 0) {
+		adapter = new ArrayAdapter<Transaction>(activity, 0) {
 			final DateFormat dateFormat = android.text.format.DateFormat
 					.getDateFormat(activity);
 			final DateFormat timeFormat = android.text.format.DateFormat
@@ -117,30 +119,53 @@ public final class WalletTransactionsFragment extends ListFragment {
 			@Override
 			public View getView(final int position, View row,
 					final ViewGroup parent) {
+				if (row == null)
+					row = getLayoutInflater(null).inflate(R.layout.transaction_row, null);
+
+				final CurrencyAmountView rowValue = (CurrencyAmountView) row
+						.findViewById(R.id.transaction_row_value);
+
+				final TextView rowLabel = (TextView) row
+						.findViewById(R.id.transaction_row_address);
+
+				final TextView rowTime = (TextView) row
+						.findViewById(R.id.transaction_row_time);
+
+								
 				try {
 					synchronized(adapter) {
-
-						if (row == null)
-							row = getLayoutInflater(null).inflate(
-									R.layout.transaction_row, null);
-
-						final MyTransaction tx = getItem(position);
+						final Transaction tx = getItem(position);
 
 						if (tx.getHash() == null) {
-							final TextView rowLabel = (TextView) row
-									.findViewById(R.id.transaction_row_address);
 							rowLabel.setTextColor(Color.BLACK);
-							rowLabel.setText("No transactions");
+							rowLabel.setText(R.string.no_transactions);
 							rowLabel.setTypeface(Typeface.DEFAULT);
+							rowLabel.setTextColor(Color.BLACK);
+
+							rowTime.setVisibility(View.INVISIBLE);
+							rowValue.setVisibility(View.INVISIBLE);
+							rowLabel.setGravity(Gravity.CENTER);
 
 							return row;
 						} else {
+
+							rowTime.setVisibility(View.VISIBLE);
+							rowValue.setVisibility(View.VISIBLE);
+							rowLabel.setGravity(Gravity.LEFT);
+
 							final TransactionConfidence confidence = tx.getConfidence();
 							final ConfidenceType confidenceType = confidence
 									.getConfidenceType();
 
 							try {
-								final BigInteger value = tx.getResult();
+								BigInteger value = null;
+
+								if (tx instanceof MyTransaction) {
+									value = ((MyTransaction)tx).getResult();
+								} else {
+									value = tx.getValue(application.blockServiceWallet);
+								}
+
 								final boolean sent = value.signum() < 0;
 
 								final int textColor;
@@ -179,23 +204,17 @@ public final class WalletTransactionsFragment extends ListFragment {
 									label = AddressBookProvider.resolveLabel(
 											activity.getContentResolver(), address);
 
-								final TextView rowTime = (TextView) row
-										.findViewById(R.id.transaction_row_time);
 								final Date time = tx.getUpdateTime();
 								rowTime.setText(time != null ? (DateUtils.isToday(time
 										.getTime()) ? timeFormat.format(time)
 												: dateFormat.format(time)) : null);
 								rowTime.setTextColor(textColor);
 
-								final TextView rowLabel = (TextView) row
-										.findViewById(R.id.transaction_row_address);
 								rowLabel.setTextColor(textColor);
 								rowLabel.setText(label != null ? label : address);
 								rowLabel.setTypeface(label != null ? Typeface.DEFAULT
 										: Typeface.MONOSPACE);
 
-								final CurrencyAmountView rowValue = (CurrencyAmountView) row
-										.findViewById(R.id.transaction_row_value);
 								rowValue.setCurrencyCode(null);
 								rowValue.setAmountSigned(true);
 								rowValue.setTextColor(textColor);
@@ -214,7 +233,18 @@ public final class WalletTransactionsFragment extends ListFragment {
 						}
 					}
 				} catch (Exception e) {
-					return null;
+					e.printStackTrace();
+
+					rowLabel.setTextColor(Color.BLACK);
+					rowLabel.setText(R.string.unknown_error);
+					rowLabel.setTypeface(Typeface.DEFAULT);					
+					rowLabel.setTextColor(Color.BLACK);
+
+					rowLabel.setGravity(Gravity.CENTER);
+					rowTime.setVisibility(View.INVISIBLE);
+					rowValue.setVisibility(View.INVISIBLE);
+
+					return row;
 				}
 			}
 		};
@@ -232,14 +262,30 @@ public final class WalletTransactionsFragment extends ListFragment {
 					return;
 				}
 
-				adapter.clear(); 
+				adapter.clear();  
 
-				List<MyTransaction> transactions = application.getRemoteWallet().getMyTransactions();
+				List<Transaction> transactions = null;
+
+				if (application.isInP2PFallbackMode())
+					transactions = application.blockServiceWallet.getTransactionsByTime();
+				else
+					transactions = (List)application.getRemoteWallet().getMyTransactions();
+
+				if (transactions == null) {
+					adapter.clear();
+					return;
+				}
 
 				synchronized(transactions) {
 					if (transactions.size() > 0) {
-						for (MyTransaction transaction : transactions) {
+
+						int ii = 0;
+						for (Transaction transaction : transactions) {
+							if (ii >= 50)
+								break;
+
 							adapter.add(transaction);
+							++ii;
 						}  
 					} else {
 						adapter.add(new MyTransaction(NetworkParameters.prodNet(), 0, null));
@@ -254,8 +300,6 @@ public final class WalletTransactionsFragment extends ListFragment {
 	public void onCreate(final Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
-		System.out.println("Add eventListener");
-
 		EventListeners.addEventListener(eventListener);
 
 		initAdapter();
@@ -265,8 +309,6 @@ public final class WalletTransactionsFragment extends ListFragment {
 	public void onActivityCreated(final Bundle savedInstanceState) {
 		EventListeners.addEventListener(eventListener);
 
-		System.out.println("Add eventListener");
-
 		super.onActivityCreated(savedInstanceState);
 	}
 
@@ -274,8 +316,6 @@ public final class WalletTransactionsFragment extends ListFragment {
 	public void onViewCreated(final View view,
 			final Bundle savedInstanceState) {
 		super.onViewCreated(view, savedInstanceState);
-
-		System.out.println("Add eventListener");
 
 		EventListeners.addEventListener(eventListener);
 
@@ -285,8 +325,6 @@ public final class WalletTransactionsFragment extends ListFragment {
 	@Override
 	public void onDestroy() {		
 		super.onDestroy();
-		System.out.println("Remove eventListener");
-
 		EventListeners.removeEventListener(eventListener);
 	}
 
@@ -294,7 +332,7 @@ public final class WalletTransactionsFragment extends ListFragment {
 	public void onListItemClick(final ListView l, final View v,
 			final int position, final long id) {
 		synchronized(adapter) {
-			final MyTransaction tx = adapter.getItem(position);
+			final Transaction tx = adapter.getItem(position);
 
 			if (tx == null) {
 				return;

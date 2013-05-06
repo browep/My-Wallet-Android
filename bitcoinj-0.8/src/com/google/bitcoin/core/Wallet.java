@@ -74,7 +74,7 @@ public class Wallet implements Serializable, BlockChainListener {
     private static final Logger log = LoggerFactory.getLogger(Wallet.class);
     private static final long serialVersionUID = 2L;
 
-    protected final ReentrantLock lock = Locks.lock("wallet");
+    public ReentrantLock lock = Locks.lock("wallet");
 
     // Algorithm for movement of transactions between pools. Outbound tx = us spending coins. Inbound tx = us
     // receiving coins. If a tx is both inbound and outbound (spend with change) it is considered outbound for the

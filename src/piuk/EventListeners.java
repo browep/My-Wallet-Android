@@ -4,6 +4,8 @@ import java.lang.ref.WeakReference;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.google.bitcoin.core.Transaction;
+
 import android.os.Handler;
 
 public class EventListeners {
@@ -53,16 +55,19 @@ public class EventListeners {
 		public void onWalletDidChange() {
 		};
 
-		public void onCoinsSent(final MyTransaction tx, final long result) {
+		public void onCoinsSent(final Transaction tx, final long result) {
 		};
 
-		public void onCoinsReceived(final MyTransaction tx, final long result) {
+		public void onCoinsReceived(final Transaction tx, final long result) {
 		};
 		
 		public void onTransactionsChanged() {
 		};
 		
 		public void onCurrencyChanged() {
+		};
+		
+		public void onMultiAddrError() {
 		};
 	}
 
@@ -84,7 +89,7 @@ public class EventListeners {
 		}
 	}
 
-	public static void invokeOnCoinsReceived(final MyTransaction tx, final long result) {
+	public static void invokeOnCoinsReceived(final Transaction tx, final long result) {
 		new Thread(new Runnable() {
 			@Override
 			public void run() {
@@ -132,7 +137,7 @@ public class EventListeners {
 		}).start();
 	}
 
-	public static void invokeOnCoinsSent(final MyTransaction tx, final long result) {
+	public static void invokeOnCoinsSent(final Transaction tx, final long result) {
 		new Thread(new Runnable() {
 			@Override
 			public void run() {
@@ -195,6 +200,30 @@ public class EventListeners {
 								EventListener _listener = listener.get();
 								if (_listener != null) {
 									_listener.onCurrencyChanged();
+								}
+							}
+						});
+					}
+				}	
+			}
+		}).start();
+	}
+	
+	public static void invokeOnMultiAddrError() {
+		new Thread(new Runnable() {
+			@Override
+			public void run() {
+				synchronized (listeners) {
+					for (final ListenerWeakContainer listener : listeners) {
+						if (listener.get() == null)
+							return;
+
+						handler.post(new Runnable() {
+							@Override
+							public void run() {
+								EventListener _listener = listener.get();
+								if (_listener != null) {
+									_listener.onMultiAddrError();
 								}
 							}
 						});

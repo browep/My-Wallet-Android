@@ -35,12 +35,12 @@ import com.google.bitcoin.core.Wallet;
 
 public class MyTransaction extends Transaction implements Serializable {
 	private static final long serialVersionUID = 1L;
-	Sha256Hash hash;
-	Date time;
-	String tag;
-	int height;
-	boolean double_spend;
-	int txIndex;
+	public Sha256Hash hash;
+	public Date time;
+	public String tag;
+	public int height;
+	public boolean double_spend;
+	public int txIndex;
 	public BigInteger result;
 
 	public static long getSerialversionuid() {

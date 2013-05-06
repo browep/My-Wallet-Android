@@ -20,22 +20,23 @@ package piuk.blockchain.android.ui;
 import java.math.BigInteger;
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.graphics.Color;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.IBinder;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentTransaction;
@@ -61,21 +62,21 @@ import com.google.bitcoin.core.AddressFormatException;
 import com.google.bitcoin.core.ECKey;
 import com.google.bitcoin.core.Transaction;
 import com.google.bitcoin.core.TransactionOutput;
-import com.google.bitcoin.core.Utils;
-import com.google.bitcoin.core.WrongNetworkException;
+import com.google.bitcoin.core.Wallet.BalanceType;
+import com.google.bitcoin.core.Wallet.SendRequest;
 
-import piuk.BitcoinAddress;
 import piuk.MyRemoteWallet;
-import piuk.MyTransaction;
 import piuk.MyRemoteWallet.SendProgress;
 import piuk.blockchain.android.R;
 import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.WalletApplication;
-import piuk.blockchain.android.WalletApplication.AddAddressCallback;
+import piuk.blockchain.android.service.BlockchainService;
+import piuk.blockchain.android.service.BlockchainServiceImpl;
 import piuk.blockchain.android.ui.CurrencyAmountView.Listener;
 import piuk.blockchain.android.ui.SendCoinsActivity.OnChangedSendTypeListener;
 import piuk.blockchain.android.ui.dialogs.RequestPasswordDialog;
 import piuk.blockchain.android.util.WalletUtils;
+import piuk.EventListeners;
 
 /**
  * @author Andreas Schildbach
@@ -97,6 +98,7 @@ public final class SendCoinsFragment extends Fragment
 	private View sendTypeDescriptionContainer;
 	private TextView sendTypeDescription;
 	private ImageView sendTypeDescriptionIcon;
+	private BlockchainServiceImpl service;
 
 	private CurrencyAmountView amountView;
 	private Button viewGo;
@@ -115,6 +117,19 @@ public final class SendCoinsFragment extends Fragment
 	{
 		INPUT, SENDING, SENT
 	}
+
+	private final ServiceConnection serviceConnection = new ServiceConnection()
+	{
+		public void onServiceConnected(final ComponentName name, final IBinder binder)
+		{
+			service = (BlockchainServiceImpl) ((BlockchainServiceImpl.LocalBinder) binder).getService();
+		}
+
+		public void onServiceDisconnected(final ComponentName name)
+		{
+			service = null;
+		}
+	};
 
 	private final TextWatcher textWatcher = new TextWatcher()
 	{
@@ -152,6 +167,8 @@ public final class SendCoinsFragment extends Fragment
 		final Activity activity = getActivity();
 
 		application = (WalletApplication) activity.getApplication();
+
+		activity.bindService(new Intent(activity, BlockchainServiceImpl.class), serviceConnection, Context.BIND_AUTO_CREATE);
 	}
 
 	public abstract class RightDrawableOnTouchListener implements OnTouchListener {
@@ -209,7 +226,13 @@ public final class SendCoinsFragment extends Fragment
 		if (wallet == null)
 			return view;
 
-		final BigInteger available = wallet.getBalance();
+		BigInteger available = null;
+		
+		if (application.isInP2PFallbackMode()) {
+			available = application.blockServiceWallet.getBalance(BalanceType.ESTIMATED);
+		} else {
+			available = wallet.getBalance();
+		}
 
 		receivingAddressView = (AutoCompleteTextView) view.findViewById(R.id.send_coins_receiving_address);
 		feeContainerView = view.findViewById(R.id.send_coins_fee_container);
@@ -221,7 +244,7 @@ public final class SendCoinsFragment extends Fragment
 		sendTypeDescriptionIcon	= (ImageView)view.findViewById(R.id.send_type_description_icon);
 
 		{
-
+			//Construct the from drop down list
 			String[] activeAddresses = wallet.getActiveAddresses();
 			Map<String, String> labelMap = wallet.getLabelMap();
 
@@ -444,6 +467,11 @@ public final class SendCoinsFragment extends Fragment
 				if (application.getRemoteWallet() == null)
 					return;
 
+				if (sendType != null && !sendType.equals(SendCoinsActivity.SendTypeQuickSend) && application.isInP2PFallbackMode()) {
+					activity.longToast(R.string.only_quick_supported);
+					return;
+				}
+				
 				String[] from;
 				if (sendType != null && sendType.equals(SendCoinsActivity.SendTypeCustomSend)) {
 					Pair<String, String> selected = (Pair<String, String>) sendCoinsFromSpinner.getSelectedItem();
@@ -463,17 +491,79 @@ public final class SendCoinsFragment extends Fragment
 					BigDecimal amountDecimal = BigDecimal.valueOf(amountView.getAmount().doubleValue());
 
 					//Add the fee
-					amount = amountDecimal.add(amountDecimal.divide(BigDecimal.valueOf(100)).multiply(BigDecimal.valueOf(wallet.sharedFee))).toBigInteger();
-
-					System.out.println("amount " + amount);
-
+					amount = amountDecimal.add(amountDecimal.divide(BigDecimal.valueOf(100)).multiply(BigDecimal.valueOf(wallet.getSharedFee()))).toBigInteger();
 				} else {
 					amount = amountView.getAmount();
-				}
+				} 
 
 				final WalletApplication application = (WalletApplication) getActivity().getApplication();
 
-				application.getRemoteWallet().sendCoinsAsync(from, receivingAddress.toString(), amount, feePolicy, fee, progress);
+				if (application.isInP2PFallbackMode()) {
+
+					final long blockchainLag = System.currentTimeMillis() - service.blockChain.getChainHead().getHeader().getTime().getTime();
+					
+					final boolean blockchainUptodate = blockchainLag < Constants.BLOCKCHAIN_UPTODATE_THRESHOLD_MS;
+
+					if (!blockchainUptodate) {
+						activity.longToast(R.string.blockchain_not_upto_date);
+						return;
+					}
+					
+					// create spend
+					final SendRequest sendRequest = SendRequest.to(receivingAddress, amountView.getAmount());
+
+					sendRequest.fee = fee;
+
+					new Thread(new Runnable()
+					{
+						public void run()
+						{
+							final Transaction transaction = application.blockServiceWallet.sendCoinsOffline(sendRequest);
+
+													
+							handler.post(new Runnable()
+							{
+								public void run()
+								{
+									if (transaction != null)
+									{
+										state = State.SENDING;
+
+										EventListeners.invokeOnTransactionsChanged();
+
+										updateView();
+
+										service.broadcastTransaction(transaction);
+
+										application.saveBitcoinJWallet();
+										
+										state = State.SENT;
+
+										activity.longToast(R.string.wallet_transactions_fragment_tab_sent);
+
+										Intent intent = activity.getIntent();
+										intent.putExtra("tx", transaction.getHash());
+										activity.setResult(Activity.RESULT_OK, intent);
+
+										activity.finish();
+
+										updateView();
+									}
+									else
+									{
+										state = State.INPUT;
+
+										updateView();
+
+										activity.longToast(R.string.send_coins_error_msg);
+									}
+								}
+							});
+						}
+					}).start();
+				} else {
+					application.getRemoteWallet().sendCoinsAsync(from, receivingAddress.toString(), amount, feePolicy, fee, progress);
+				}
 			}
 
 			public void makeTransaction(FeePolicy feePolicy) {
@@ -601,12 +691,11 @@ public final class SendCoinsFragment extends Fragment
 					availableViewContainer.setVisibility(View.GONE);
 				} else if (type.equals(SendCoinsActivity.SendTypeSharedSend)) {					
 					sendTypeDescriptionContainer.setVisibility(View.VISIBLE);
-					sendTypeDescription.setText(getString(R.string.shared_send_description, wallet.sharedFee+"%"));
+					sendTypeDescription.setText(getString(R.string.shared_send_description, wallet.getSharedFee()+"%"));
 					sendTypeDescriptionIcon.setImageResource(R.drawable.ic_icon_shared);
 				}
 			}
 		});
-
 
 		updateView();
 
@@ -637,6 +726,8 @@ public final class SendCoinsFragment extends Fragment
 		((SendCoinsActivity)getActivity()).setOnChangedSendTypeListener(null);
 
 		handler.removeCallbacks(sentRunnable);
+
+		getActivity().unbindService(serviceConnection);
 	}
 
 
@@ -656,9 +747,7 @@ public final class SendCoinsFragment extends Fragment
 
 	public class SpinAdapter extends ArrayAdapter<Pair<String, String>>{
 
-		// Your sent context
 		private Context context;
-		// Your custom values for the spinner (User)
 
 		public SpinAdapter(Context context, int textViewResourceId,
 				List<Pair<String, String>> values) {
@@ -748,12 +837,6 @@ public final class SendCoinsFragment extends Fragment
 
 		return array;
 	}
-
-
-	private boolean isValidEmail(String email) {
-		return android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches();
-	}
-
 
 	public String getToAddress() {
 		final String userEntered = receivingAddressView.getText().toString().trim();

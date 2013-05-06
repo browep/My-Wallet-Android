@@ -29,6 +29,7 @@ import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import org.json.simple.parser.JSONParser;
 
+import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.ui.SendCoinsFragment;
 import piuk.blockchain.android.ui.SendCoinsFragment.FeePolicy;
 
@@ -43,21 +44,81 @@ import java.util.*;
 
 @SuppressWarnings("unchecked")
 public class MyRemoteWallet extends MyWallet {
-	public static final String WebROOT = "https://blockchain.info/";
-	String _checksum;
-	boolean _isNew = false;
-	public MyBlock latestBlock;
-	public long lastMultiAddress;
-	public BigInteger final_balance = BigInteger.ZERO;
-	public BigInteger total_received = BigInteger.ZERO;
-	public BigInteger total_sent = BigInteger.ZERO;
-	public String currencyCode;
-	public double currencyConversion;
-	public Map<String, JSONObject> multiAddrBalancesRoot;
-	public double sharedFee;
+	private static final String WebROOT = "https://"+Constants.BLOCKCHAIN_DOMAIN+"/";
+	
+	private String _checksum;
+	private boolean _isNew = false;
+	private MyBlock latestBlock;
+	private long lastMultiAddress;
+	private BigInteger final_balance = BigInteger.ZERO;
+	private BigInteger total_received = BigInteger.ZERO;
+	private BigInteger total_sent = BigInteger.ZERO;
+	private String currencyCode;
+	private double currencyConversion;
+	private Map<String, JSONObject> multiAddrBalancesRoot;
+	private double sharedFee;
+	private List<MyTransaction> transactions = Collections.synchronizedList(new ArrayList<MyTransaction>());
+	
+	public MyBlock getLatestBlock() {
+		return latestBlock;
+	}
 
-	public int n_tx = 0;
-	List<MyTransaction> transactions = Collections.synchronizedList(new ArrayList<MyTransaction>());
+	
+	public void setFinal_balance(BigInteger final_balance) {
+		this.final_balance = final_balance;
+	}
+
+
+	public void setTotal_received(BigInteger total_received) {
+		this.total_received = total_received;
+	}
+
+
+	public void setTotal_sent(BigInteger total_sent) {
+		this.total_sent = total_sent;
+	}
+
+
+	public long getLastMultiAddress() {
+		return lastMultiAddress;
+	}
+
+	public void setLatestBlock(MyBlock latestBlock) {
+		this.latestBlock = latestBlock;
+	}
+
+	public BigInteger getFinal_balance() {
+		return final_balance;
+	}
+
+
+	public BigInteger getTotal_received() {
+		return total_received;
+	}
+
+	public BigInteger getTotal_sent() {
+		return total_sent;
+	}
+
+
+	public String getCurrencyCode() {
+		return currencyCode;
+	}
+
+
+	public double getCurrencyConversion() {
+		return currencyConversion;
+	}
+
+
+	public Map<String, JSONObject> getMultiAddrBalancesRoot() {
+		return multiAddrBalancesRoot;
+	}
+
+
+	public double getSharedFee() {
+		return sharedFee;
+	}
 
 	public boolean isAddressMine(String address) {
 		for (Map<String, Object> map : this.getKeysMap()) {
@@ -90,7 +151,7 @@ public class MyRemoteWallet extends MyWallet {
 		args.append("&format=plain");
 		args.append("&method=create");
 
-		final String response = postURL("https://blockchain.info/api/receive", args.toString());
+		final String response = postURL("https://"+Constants.BLOCKCHAIN_DOMAIN+"/api/receive", args.toString());
 		
 		JSONObject object = (JSONObject) new JSONParser().parse(response);
 
@@ -203,6 +264,15 @@ public class MyRemoteWallet extends MyWallet {
 
 		return success;
 	}
+	
+	@Override
+	public synchronized boolean removeKey(ECKey key) {
+		boolean success = super.removeKey(key);
+
+		EventListeners.invokeWalletDidChange();
+
+		return success;
+	}
 
 	public List<MyTransaction> getMyTransactions() {
 		return transactions;
@@ -297,7 +367,6 @@ public class MyRemoteWallet extends MyWallet {
 		this.final_balance = BigInteger.valueOf(((Number)wallet_obj.get("final_balance")).longValue());
 		this.total_sent = BigInteger.valueOf(((Number)wallet_obj.get("total_sent")).longValue());
 		this.total_received = BigInteger.valueOf(((Number)wallet_obj.get("total_received")).longValue());
-		this.n_tx = ((Number)wallet_obj.get("n_tx")).intValue();
 
 		List<Map<String, Object>> transactions = (List<Map<String, Object>>) top.get("txs");
 

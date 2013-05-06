@@ -331,15 +331,15 @@ public final class WalletAddressesActivity extends AbstractWalletActivity {
 	private void reallyGenerateAddress() {
 		application.addKeyToWallet(new ECKey(), null, 0,
 				new AddAddressCallback() {
-
+ 
 					public void onSavedAddress(String address) {
-						System.out.println("Generated Address " + address);
-
+						Toast.makeText(self, getString(R.string.toast_generated_address, address), Toast.LENGTH_LONG).show();
+						
 						updateFragments();
 					}
 
-					public void onError() {
-						System.out.println("Generate Address Failed");
+					public void onError(String reason) {
+						Toast.makeText(self, reason, Toast.LENGTH_LONG).show();
 
 						updateFragments();
 					}

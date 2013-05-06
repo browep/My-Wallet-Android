@@ -49,6 +49,10 @@
 			</FrameLayout>
 		</LinearLayout>
 	</FrameLayout>
-
-
+	
+	<fragment
+		android:id="@+id/blockchain_state_fragment"
+		android:name="piuk.blockchain.android.ui.BlockchainStateFragment"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content" />
 </LinearLayout>

@@ -3,10 +3,10 @@ package piuk;
 import com.google.bitcoin.core.Sha256Hash;
 
 public class MyBlock {
-	int height;
-	long time;
-	Sha256Hash hash;
-	int blockIndex;
+	public int height;
+	public long time;
+	public Sha256Hash hash;
+	public int blockIndex;
 
 	public long getTime() {
 		return time;

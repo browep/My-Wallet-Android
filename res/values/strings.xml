@@ -4,6 +4,7 @@
     <string name="app_name">Blockchain</string>
     <string name="menu_account_settings">Account Settings</string>
     <string name="menu_scan_private_key">Scan Private Key</string>
+    <string name="menu_leave_p2p_mode">Leave P2P Mode</string>
     <string name="export_keys_dialog_button_archive">Archive</string>
     <string name="wallet_options_backup">Backup Wallet</string>
     <string name="import_export_keys_dialog_failure_title">Error</string>
@@ -18,6 +19,7 @@
     <string name="toast_wallet_decrypt_failed">Error decrypting wallet. Please check your
 		password.</string>
     <string name="toast_generated_new_wallet">Generated new wallet.</string>
+    <string name="toast_generated_address">Generated Address %s.</string>
     <string name="toast_pin_saved">PIN Saved.</string>
     <string name="export_keys_dialog_title">Backup Wallet</string>
     <string name="export_keys_dialog_message">Your encrypted wallet will be written to external storage. In case of emergency the wallet can be restored online at blockchain.info or using the multibit.org bitcoin client.</string>
@@ -27,7 +29,6 @@
     <string name="export_keys_dialog_success">Your wallet has been saved to\n\n%s\n\nKeep it safe, and keep your password safe!\n\nDo you want to archive your wallet using an app?</string>
     <string name="export_keys_dialog_failure">Your private keys could not be exported:\n%s</string>
     <string name="toast_downloading_wallet">Downloading wallet.</string>
-    <string name="toast_error_downloading_transactions">Error downloading transactions.</string>
     <string name="toast_error_syncing_wallet">Error syncing wallet. Please check your internet
 		connection.</string>
     <string name="toast_error_downloading_captcha">Error downloading captcha.</string>
@@ -48,8 +49,7 @@
     <string name="dialog_continue">Continue</string>
     <string name="second_password_title">Second Password</string>
     <string name="main_password_title">Main Password</string>
-    <string name="second_password_correct">Second Password Correct</string>
-    <string name="second_password_incorrect">Second Password Incorrect</string>
+    <string name="password_incorrect">Incorrect Password</string>
     <string name="generate_key_no_password_error">Cannot generate key without a second password</string>
     <string name="send_no_password_error">Cannot send transaction without a second password</string>
     <string name="ask_for_fee">This transaction is low priority it is recommended you include a 0.005 BTC miners fee. Would you like to add this fee now?</string>
@@ -258,6 +258,33 @@
     <string name="shared_send_description">Send shared routes transactions through a shared wallet for increased privacy. Shared transactions incur a %1$s fee.</string>
     <string name="this_is_you_bitcoin_address">This Is Your Bitcoin Address</string>
     <string name="shared_with_anyone">Share this with anyone and they can send you payments.</string>
+    <string name="pin_server_error">PIN Server Error.</string>
+    <string name="pin_server_error_description">There was an error validating the PIN code with the server. This may be because you are not connected to the internet or blockchain.info is currently down. How would you like to proceed?</string>
+    <string name="try_again">Try Again.</string>
+    <string name="pin_server_error_enter_password_manually">Enter Password.</string>
+    <string name="network_error">Network Error.</string>
+    <string name="network_error_description">A network error occurred syncing your bitcoin wallet. Please check your internet connection.</string>
+    <string name="blockchain_network_error">Server Error.</string>
+    <string name="blockchain_network_error_description">An error occurred connecting to blockchain.info. The website may be offline or experiencing technical difficulties. \n\n Would you like to fallback to the P2P network? A significant delay will be incurred synchronizing with the bitcoin network.</string>
+    <string name="start_p2p_mode">Start P2P Mode.</string>
+    <string name="menu_enter_p2p_mode">Enter P2P Mode</string>
+    <string name="start_p2p_mode_description">When P2P Mode is enabled the app will disconnect from blockchain.info and instead connect to the bitcoin network. A significant delay will be incurred synchronizing with the bitcoin network.</string>
+    <string name="ignore">Ignore.</string>
+    <string name="blockchain_state_progress_hours">%1$s, %2$d hours behind</string>
+    <string name="blockchain_state_progress_days">%1$s, %2$d days behind</string>
+    <string name="blockchain_state_progress_weeks">%1$s, %2$d weeks behind</string>
+    <string name="blockchain_state_progress_months">%1$s, %2$d months behind</string>
+    <string name="blockchain_state_progress_downloading">Synchronizing with network</string>
+    <string name="blockchain_state_progress_stalled">Synchronization stalled</string>
+    <string name="blockchain_state_progress_problem_storage">Synchronizing: Storage problem</string>
+    <string name="blockchain_state_progress_problem_network">Synchronizing: Network problem</string>
+    <string name="blockchain_state_replaying">Blockchain replay is in progress.</string>
+    <string name="blockchain_not_upto_date">The blockchain is not up to date.</string>
+    <string name="only_quick_supported">Only Quick Send is supported in P2P mode.</string>
+    <string name="blockchain_network_success">Server Connected.</string>
+    <string name="blockchain_network_success_description">The application successfully re-connected to the main server. You are currently running in P2P fallback mode, would you like to connect to Blockchain.info again instead?</string>
+    <string name="no_transactions">No Transactions</string>
+    <string name="unknown_error">Unknown Error</string>
 
     <string-array name="send_types_array">
         <item>Quick Send</item>

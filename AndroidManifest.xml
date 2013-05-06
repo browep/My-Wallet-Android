@@ -5,20 +5,17 @@
     android:versionCode="115"
     android:versionName="3.44" >
 
-    <uses-sdk
-        android:minSdkVersion="8"
-        android:targetSdkVersion="17" />
+    <uses-sdk android:minSdkVersion="8" android:targetSdkVersion="17" />
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.BROADCAST_STICKY" />
     <uses-permission android:name="android.permission.VIBRATE" />
 	<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     
     <!-- GCM requires a Google account. -->
     <uses-permission android:name="android.permission.GET_ACCOUNTS" />
-
-    <!-- Keeps the processor from sleeping when a message is received. -->
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <!--
      Creates a custom permission so only this app can receive its messages.
@@ -154,10 +151,15 @@
             android:name="piuk.blockchain.android.AddressBookProvider"
             android:authorities="piuk.blockchain.android.address_book"
             android:exported="false" />
+        
         <provider
             android:name="piuk.blockchain.android.ExchangeRatesProvider"
             android:authorities="piuk.blockchain.android.exchange_rates"
             android:exported="false" />
+       
+        <service
+			android:name="piuk.blockchain.android.service.BlockchainServiceImpl"
+			android:exported="false" />
 
         <receiver
             android:name="piuk.blockchain.android.WalletBalanceWidgetProvider"
@@ -173,7 +175,7 @@
             </meta-data>
         </receiver>
 
-        <service android:name="piuk.blockchain.android.BlockchainService" />
+        <service android:name="piuk.blockchain.android.service.WebsocketService" />
     </application>
 
 </manifest>

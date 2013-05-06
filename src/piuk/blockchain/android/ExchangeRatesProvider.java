@@ -148,7 +148,7 @@ public class ExchangeRatesProvider extends ContentProvider {
 
 	private static Map<String, Rate> getExchangeRates() {
 		try {
-			String response = fetchURL("http://blockchain.info/ticker");
+			String response = fetchURL("http://"+Constants.BLOCKCHAIN_DOMAIN+"/ticker");
 
 			final Map<String, Rate> rates = new LinkedHashMap<String, Rate>();
 

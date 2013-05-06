@@ -177,17 +177,11 @@ public final class RequestPasswordDialog extends DialogFragment {
 						} if (wallet.validateSecondPassword(secondPassword)) {
 							wallet.setTemporySecondPassword(secondPassword);
 
-							Toast.makeText(getActivity().getApplication(),
-									R.string.second_password_correct,
-									Toast.LENGTH_SHORT).show();
-
 							dismiss();
 
 							callback.onSuccess();
 						} else {
-							Toast.makeText(getActivity().getApplication(),
-									R.string.second_password_incorrect,
-									Toast.LENGTH_SHORT).show();
+							Toast.makeText(getActivity().getApplication(), R.string.password_incorrect, Toast.LENGTH_SHORT).show();
 						}
 					} else if (passwordType == PasswordTypeMain) {
 						String password = passwordField.getText().toString();

@@ -27,6 +27,7 @@ import java.util.List;
 import org.apache.commons.io.IOUtils;
 
 import piuk.EventListeners;
+import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.R;
 import piuk.blockchain.android.WalletApplication;
 import piuk.blockchain.android.ui.AbstractWalletActivity;
@@ -102,7 +103,7 @@ public final class NewAccountDialog extends DialogFragment {
 		new Thread(new Runnable() {
 			public void run() {
 				try {
-					final Bitmap b = loadBitmap("https://blockchain.info/kaptcha.jpg");
+					final Bitmap b = loadBitmap("https://"+Constants.BLOCKCHAIN_DOMAIN+"/kaptcha.jpg");
 					captchaImage.post(new Runnable() {
 						public void run() {
 							captchaImage.setImageBitmap(b);

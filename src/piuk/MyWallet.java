@@ -119,24 +119,24 @@ public class MyWallet {
 
 		if (tx_notes == null) {
 			tx_notes = Collections.emptyMap();
-			
+
 			root.put("tx_notes", tx_notes);
 		}
-		
+
 		return tx_notes;
 	}
-	
+
 	public boolean addTxNote(Hash hash, String note) throws Exception {
 		//Disallow quotes and < >
-        if (StringUtils.containsAny(note, "\"'<>")) {
-            throw new Exception("Note contains invalid characters");
-        }
-        
+		if (StringUtils.containsAny(note, "\"'<>")) {
+			throw new Exception("Note contains invalid characters");
+		}
+
 		getTxNotes().put(hash.toString(), note);	
-		
+
 		return true;
 	}
-	
+
 	public int getFeePolicy() {
 		Map<String, Object> options = getOptions();
 
@@ -155,7 +155,7 @@ public class MyWallet {
 
 		if (options == null) {
 			options = Collections.emptyMap();
-			
+
 			root.put("options", options);
 		}
 
@@ -227,7 +227,7 @@ public class MyWallet {
 
 		return ecKey;
 	}
-	
+
 	public static ECKey decodeBase64PK(String base64Priv) throws Exception {
 		byte[] privBytes = Base64.decode(base64Priv, Base64.NO_PADDING);
 
@@ -238,8 +238,8 @@ public class MyWallet {
 
 		return ecKey;
 	}
-	
-	
+
+
 	public static ECKey decodeHexPK(String hex) throws Exception {
 		byte[] privBytes = Hex.decode(hex);
 
@@ -250,7 +250,7 @@ public class MyWallet {
 
 		return ecKey;
 	}
-	
+
 	public String decryptPK(String base58Priv) throws Exception {
 		if (this.isDoubleEncrypted()) {
 
@@ -262,7 +262,7 @@ public class MyWallet {
 
 		return base58Priv;
 	}
-	
+
 	public ECKey decodePK(String base58Priv) throws Exception {
 		return decodeBase58PK(decryptPK(base58Priv));
 	}
@@ -358,7 +358,8 @@ public class MyWallet {
 		EventListeners.invokeWalletDidChange();
 	}
 
-	protected void addKeysTobitoinJWallet(Wallet wallet) throws Exception {
+	
+	protected void addKeysTobitoinJWallet(Wallet wallet, boolean enableTagFiler, int tagFilter) throws Exception {
 
 		wallet.keychain.clear();
 
@@ -376,29 +377,61 @@ public class MyWallet {
 			if (key.get("label") != null)
 				encoded_key.setLabel((String) key.get("label"));
 
+			Long tag = 0L;
 			if (key.get("tag") != null) {
-				Long tag = (Long) key.get("tag");
+				tag = (Long) key.get("tag");
 
 				encoded_key.setTag((int) (long) tag);
 			}
 
 			try {
-				wallet.addKey(encoded_key);
+				if (!enableTagFiler || tag == tagFilter)
+					wallet.addKey(encoded_key);
 			} catch (IllegalArgumentException e) {
 				e.printStackTrace();
 			}
 		}
 	}
 
-	protected Wallet getBitcoinJWallet() throws Exception {
+	public Wallet getBitcoinJWallet() throws Exception {
 		// Construct a BitcoinJ wallet containing all our private keys
-		Wallet keywallet = new Wallet(params);
+		Wallet keywallet = new Wallet(params) {
 
-		addKeysTobitoinJWallet(keywallet);
+			@Override
+			public ECKey findKeyFromPubHash(byte[] pubkeyHash) {
+				for (ECKey key : keychain) {
+					if (Arrays.equals(key.getPubKeyHash(), pubkeyHash)) return key;
+				}
+				return null;
+			}
+
+		};
+		
+		addKeysTobitoinJWallet(keywallet, true, 0);
 
 		return keywallet;
 	}
 
+
+	public synchronized boolean removeKey(ECKey key) {
+		
+		final String address = key.toAddress(params).toString();
+
+		final List<Map<String, Object>> keyMap = getKeysMap();
+		
+		for (int ii = 0; ii < keyMap.size(); ++ii) {
+			Map<String, Object> map = keyMap.get(ii);
+			
+			if (map.get("addr").equals(address)) {
+				keyMap.remove(ii);
+				break;
+			}
+		}
+		
+		return true;
+	}
+
+	
 	public boolean addKey(ECKey key, String label) throws Exception {
 		Map<String, Object> map = new HashMap<String, Object>();
 
@@ -435,7 +468,7 @@ public class MyWallet {
 			{
 				// N Rounds of SHA256
 				byte[] data = md.digest((getSharedKey() + secondPassword).getBytes("UTF-8"));
-				
+
 				for (int ii = 1; ii < this.getPbkdf2Iterations(); ++ii) {
 					data = md.digest(data);
 				}
