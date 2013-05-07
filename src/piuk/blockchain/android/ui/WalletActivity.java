@@ -34,6 +34,7 @@ import piuk.MyRemoteWallet.SendProgress;
 import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.R;
 import piuk.blockchain.android.WalletApplication;
+import piuk.blockchain.android.ui.AbstractWalletActivity.QrCodeDelagate;
 import piuk.blockchain.android.ui.SendCoinsFragment.FeePolicy;
 import piuk.blockchain.android.ui.dialogs.WelcomeDialog;
 import piuk.blockchain.android.util.ActionBarFragment;
@@ -228,7 +229,7 @@ public final class WalletActivity extends AbstractWalletActivity {
 		super.onPrepareOptionsMenu(menu);
 
 		final boolean isInP2PMode = application.isInP2PFallbackMode();
-		
+
 		MenuItem leavP2PMode = menu.findItem(R.id.menu_leave_p2p_mode);
 
 		leavP2PMode.setVisible(isInP2PMode);
@@ -280,7 +281,12 @@ public final class WalletActivity extends AbstractWalletActivity {
 			if (application.getRemoteWallet() == null)
 				return false;
 
-			showQRReader("scan_private_key");
+			showQRReader(new QrCodeDelagate() {
+				@Override
+				public void didReadQRCode(String data) throws Exception {
+					handleScanPrivateKey(data);
+				}
+			});
 			return true;
 		case R.id.backup_wallet:
 			showDialog(DIALOG_EXPORT_KEYS);
@@ -341,175 +347,151 @@ public final class WalletActivity extends AbstractWalletActivity {
 		startActivity(browserIntent);
 	}
 
-	@Override
-	public void onActivityResult(final int requestCode, final int resultCode,
-			final Intent intent) {
+	public void handleScanPrivateKey(String data) throws Exception {
+		String format = WalletUtils.detectPrivateKeyFormat(data);
 
-		String action = super.getQRCodeAction();
+		final ECKey key = WalletUtils.parsePrivateKey(format, data);
 
-		if (action == null)
-			return;
+		final AlertDialog.Builder b = new AlertDialog.Builder(this);
 
-		if (application.getRemoteWallet() == null)
-			return;
+		b.setPositiveButton(android.R.string.yes, null);
 
-		try {
-			if (resultCode == RESULT_OK && "QR_CODE".equals(intent.getStringExtra("SCAN_RESULT_FORMAT"))) {
+		b.setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				dialog.dismiss();
+			}
+		});
 
-				final String contents = intent.getStringExtra("SCAN_RESULT");
+		b.setTitle("Scan Private Key");
 
-				if (action.equals("scan_private_key")) {
-					String format = WalletUtils.detectPrivateKeyFormat(contents);
+		b.setMessage("Fetching Balance. Please Wait");
 
-					final ECKey key = WalletUtils.parsePrivateKey(format, contents);
+		final AlertDialog dialog = b.show();
 
-					final AlertDialog.Builder b = new AlertDialog.Builder(this);
+		dialog.getButton(Dialog.BUTTON1).setEnabled(false);					
 
-					b.setPositiveButton(android.R.string.yes, null);
+		new Thread() {
+			public void run() {
+				try {
+					BigInteger balance = MyRemoteWallet.getAddressBalance(key.toAddress(NetworkParameters.prodNet()).toString());
 
-					b.setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
+					//Try compressed instead
+					if (balance.longValue() == 0) {
+						balance = MyRemoteWallet.getAddressBalance(key.toAddressCompressed(NetworkParameters.prodNet()).toString());
+					}
+
+					final BigInteger finalBalance = balance;
+
+					handler.post(new Runnable() {
 						@Override
-						public void onClick(DialogInterface dialog, int which) {
-							dialog.dismiss();
-						}
-					});
-
-					b.setTitle("Scan Private Key");
-
-					b.setMessage("Fetching Balance. Please Wait");
-
-					final AlertDialog dialog = b.show();
-
-					dialog.getButton(Dialog.BUTTON1).setEnabled(false);					
-
-					new Thread() {
 						public void run() {
-							try {
-								BigInteger balance = MyRemoteWallet.getAddressBalance(key.toAddress(NetworkParameters.prodNet()).toString());
 
-								//Try compressed instead
-								if (balance.longValue() == 0) {
-									balance = MyRemoteWallet.getAddressBalance(key.toAddressCompressed(NetworkParameters.prodNet()).toString());
-								}
+							if (finalBalance.longValue() == 0) {
+								dialog.setMessage("The Balance of this address is zero.");	
+								return;
+							}
 
-								final BigInteger finalBalance = balance;
+							dialog.getButton(Dialog.BUTTON1).setEnabled(true);
 
-								handler.post(new Runnable() {
-									@Override
-									public void run() {
+							dialog.getButton(Dialog.BUTTON1).setOnClickListener(new OnClickListener() {
+								@Override
+								public void onClick(View v) {
 
-										if (finalBalance.longValue() == 0) {
-											dialog.setMessage("The Balance of this address is zero.");	
+									try {
+										MyRemoteWallet wallet = new MyRemoteWallet();
+
+										wallet.addKey(key, null);
+
+										Address to = application.determineSelectedAddress();
+
+										if (to == null) {
+											handler.post(new Runnable() {
+												public void run() {
+													dialog.dismiss();
+												}
+											});
+
 											return;
 										}
 
-										dialog.getButton(Dialog.BUTTON1).setEnabled(true);
+										BigInteger baseFee = wallet.getBaseFee();
 
-										dialog.getButton(Dialog.BUTTON1).setOnClickListener(new OnClickListener() {
+										wallet.sendCoinsAsync(to.toString(), finalBalance.subtract(baseFee), FeePolicy.FeeForce, baseFee, new SendProgress() {
+
 											@Override
-											public void onClick(View v) {
-
-												try {
-													MyRemoteWallet wallet = new MyRemoteWallet();
-
-													wallet.addKey(key, null);
-
-													Address to = application.determineSelectedAddress();
-
-													if (to == null) {
-														handler.post(new Runnable() {
-															public void run() {
-																dialog.dismiss();
-															}
-														});
-
-														return;
-													}
-
-													BigInteger baseFee = wallet.getBaseFee();
-
-													wallet.sendCoinsAsync(to.toString(), finalBalance.subtract(baseFee), FeePolicy.FeeForce, baseFee, new SendProgress() {
-
-														@Override
-														public boolean onReady(
-																Transaction tx,
-																BigInteger fee,
-																FeePolicy feePolicy,
-																long priority) {
-															return true;
-														}
-
-														@Override
-														public void onSend(
-																Transaction tx,
-																String message) {
-															handler.post(new Runnable() {
-																public void run() {
-																	dialog.dismiss();
-
-																	longToast("Private Key Successfully Swept");
-																}
-															});
-														}
-
-														@Override
-														public ECKey onPrivateKeyMissing(String address) {
-															return null;
-														}
-
-														@Override
-														public void onError(final String message) {
-															handler.post(new Runnable() {
-																public void run() {
-																	dialog.dismiss();
-
-																	longToast(message);
-																}
-															});															
-														}
-
-														@Override
-														public void onProgress(String message) {}
-													});
-
-												} catch (final Exception e) {
-													e.getLocalizedMessage();
-
-													handler.post(new Runnable() {
-														public void run() {
-															dialog.dismiss();
-
-															longToast(e.getLocalizedMessage());
-														}
-													});
-												}
+											public boolean onReady(
+													Transaction tx,
+													BigInteger fee,
+													FeePolicy feePolicy,
+													long priority) {
+												return true;
 											}
+
+											@Override
+											public void onSend(
+													Transaction tx,
+													String message) {
+												handler.post(new Runnable() {
+													public void run() {
+														dialog.dismiss();
+
+														longToast("Private Key Successfully Swept");
+													}
+												});
+											}
+
+											@Override
+											public ECKey onPrivateKeyMissing(String address) {
+												return null;
+											}
+
+											@Override
+											public void onError(final String message) {
+												handler.post(new Runnable() {
+													public void run() {
+														dialog.dismiss();
+
+														longToast(message);
+													}
+												});															
+											}
+
+											@Override
+											public void onProgress(String message) {}
 										});
 
-										dialog.setMessage("The Balance of this address is "+WalletUtils.formatValue(finalBalance)+" BTC. Would you like to sweep it?");
-									}
-								});
-							} catch (final Exception e) {
-								e.printStackTrace();
+									} catch (final Exception e) {
+										e.getLocalizedMessage();
 
-								handler.post(new Runnable() {
-									public void run() {
-										dialog.dismiss();
+										handler.post(new Runnable() {
+											public void run() {
+												dialog.dismiss();
 
-										longToast(e.getLocalizedMessage());
+												longToast(e.getLocalizedMessage());
+											}
+										});
 									}
-								});
-							}
+								}
+							});
+
+							dialog.setMessage("The Balance of this address is "+WalletUtils.formatValue(finalBalance)+" BTC. Would you like to sweep it?");
 						}
-					}.start();
+					});
+				} catch (final Exception e) {
+					e.printStackTrace();
 
-				} 
+					handler.post(new Runnable() {
+						public void run() {
+							dialog.dismiss();
+
+							longToast(e.getLocalizedMessage());
+						}
+					});
+				}
 			}
-		} catch (final Exception e) {
-			e.getLocalizedMessage();
+		}.start();
 
-			longToast(e.getLocalizedMessage());
-		}
 	}
 
 	private Dialog createExportKeysDialog()

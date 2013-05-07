@@ -463,6 +463,7 @@ public class WalletApplication extends Application {
 			}	
 		} 
 
+		
 		if (blockchainWallet != null && decryptionErrors == 0 && (passwordSaved || didEncounterFatalPINServerError)) {
 			if (!blockchainWallet.isUptoDate(Constants.MultiAddrTimeThreshold)) {
 				checkIfWalletHasUpdatedAndFetchTransactions(blockchainWallet.getTemporyPassword());
@@ -485,6 +486,9 @@ public class WalletApplication extends Application {
 				@Override
 				public void run() {	
 					if (!PinEntryActivity.active) {
+						
+						System.out.println("Start PinEntry");
+						
 						Intent intent = new Intent(activity, PinEntryActivity.class);
 
 						activity.startActivity(intent);

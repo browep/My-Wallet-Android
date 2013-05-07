@@ -21,12 +21,16 @@ import java.util.regex.Pattern;
 
 import org.spongycastle.util.encoders.Hex;
 
+import com.dm.zbar.android.scanner.ZBarConstants;
+
 public class PairWalletActivity extends AbstractWalletActivity {
 	final PairWalletActivity activity = this;
 
 	@Override
 	protected void onCreate(final Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		
+		dontCheckStatus = true;
 
 		setContentView(R.layout.pair_wallet_content);
 
@@ -45,7 +49,12 @@ public class PairWalletActivity extends AbstractWalletActivity {
 
 		pairDeviceButton.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
-				showQRReader("scan_pairing_code");
+				showQRReader(new QrCodeDelagate() {
+					@Override
+					public void didReadQRCode(String data) {
+						handleQRCode(data);
+					}
+				});
 			}
 		});
 
@@ -158,132 +167,117 @@ public class PairWalletActivity extends AbstractWalletActivity {
 	}
 
 	
-	@Override
-	public void onActivityResult(final int requestCode, final int resultCode,
-			final Intent intent) {
-		
-		String action = super.getQRCodeAction();
+	public void handleQRCode(String raw_code) {
+		final WalletApplication application = (WalletApplication) getApplication();
 
-		if (action == null)
-			return;
-		
-		if (action.equals("scan_pairing_code")
-				&& resultCode == RESULT_OK
-				&& "QR_CODE"
-				.equals(intent.getStringExtra("SCAN_RESULT_FORMAT"))) {
-			final WalletApplication application = (WalletApplication) getApplication();
-
-			try {
-				final String raw_code = intent.getStringExtra("SCAN_RESULT");
-
-				if (raw_code == null || raw_code.length() == 0) {
-					throw new Exception("Invalid Pairing QR Code");
-				}
-
-				if (raw_code.charAt(0) != '1') {
-					throw new Exception("Invalid Pairing Version Code " + raw_code.charAt(0));
-				}
-
-				final Handler handler = new Handler();
-
-				{
-					String[] components = raw_code.split("\\|", Pattern.LITERAL);
-
-					if (components.length < 3) {
-						throw new Exception("Invalid Pairing QR Code. Not enough components.");
-					}
-
-					final String guid = components[1];
-					if (guid.length() != 36) {
-						throw new Exception("Invalid Pairing QR Code. GUID wrong length.");
-					}
-
-					final String encrypted_data = components[2];
-
-					new Thread(new Runnable() {
-
-						@Override
-						public void run() {
-
-							try {
-								String temp_password = MyRemoteWallet.getPairingEncryptionPassword(guid);
-
-								String decrypted = MyWallet.decrypt(encrypted_data, temp_password, MyWallet.DefaultPBKDF2Iterations);
-
-								String[] sharedKeyAndPassword = decrypted.split("\\|", Pattern.LITERAL);
-
-								if (sharedKeyAndPassword.length < 2) {
-									throw new Exception("Invalid Pairing QR Code. sharedKeyAndPassword Incorrect number of components.");
-								}
-
-								final String sharedKey = sharedKeyAndPassword[0];
-								if (sharedKey.length() != 36) {
-									throw new Exception("Invalid Pairing QR Code. sharedKey wrong length.");
-								}
-
-								final String password = new String(Hex.decode(sharedKeyAndPassword[1]), "UTF-8");
-
-								application.clearWallet();
-
-								PinEntryActivity.clearPrefValues(application);
-
-								Editor edit = PreferenceManager.getDefaultSharedPreferences(
-										activity).edit();
-
-								edit.putString("guid", guid);
-								edit.putString("sharedKey", sharedKey);
-
-								edit.commit();
-
-								handler.post(new Runnable() {
-
-									@Override
-									public void run() {
-										application.checkIfWalletHasUpdatedAndFetchTransactions(password, guid, sharedKey, new SuccessCallback(){
-
-											@Override
-											public void onSuccess() {													
-												finish();
-											}
-
-											@Override
-											public void onFail() {
-												finish();
-
-												Toast.makeText(application, R.string.toast_error_syncing_wallet, Toast.LENGTH_LONG)
-												.show();
-											}
-										});
-									}
-								});
-
-							} catch (final Exception e) {
-								e.printStackTrace();
-
-								handler.post(new Runnable() {
-									public void run() {
-
-										Toast.makeText(application, e.getLocalizedMessage(), Toast.LENGTH_LONG)
-										.show();
-
-										e.printStackTrace();
-
-										application.writeException(e);
-									}
-								});
-							}
-						}
-					}).start();
-				}
-			} catch (Exception e) {
-
-				Toast.makeText(application, e.getLocalizedMessage(), Toast.LENGTH_LONG)
-				.show();
-
-				e.printStackTrace();
-
-				application.writeException(e);
+		try {
+			if (raw_code == null || raw_code.length() == 0) {
+				throw new Exception("Invalid Pairing QR Code");
 			}
+
+			if (raw_code.charAt(0) != '1') {
+				throw new Exception("Invalid Pairing Version Code " + raw_code.charAt(0));
+			}
+
+			final Handler handler = new Handler();
+
+			{
+				String[] components = raw_code.split("\\|", Pattern.LITERAL);
+
+				if (components.length < 3) {
+					throw new Exception("Invalid Pairing QR Code. Not enough components.");
+				}
+
+				final String guid = components[1];
+				if (guid.length() != 36) {
+					throw new Exception("Invalid Pairing QR Code. GUID wrong length.");
+				}
+
+				final String encrypted_data = components[2];
+
+				new Thread(new Runnable() {
+
+					@Override
+					public void run() {
+
+						try {
+							String temp_password = MyRemoteWallet.getPairingEncryptionPassword(guid);
+
+							String decrypted = MyWallet.decrypt(encrypted_data, temp_password, MyWallet.DefaultPBKDF2Iterations);
+
+							String[] sharedKeyAndPassword = decrypted.split("\\|", Pattern.LITERAL);
+
+							if (sharedKeyAndPassword.length < 2) {
+								throw new Exception("Invalid Pairing QR Code. sharedKeyAndPassword Incorrect number of components.");
+							}
+
+							final String sharedKey = sharedKeyAndPassword[0];
+							if (sharedKey.length() != 36) {
+								throw new Exception("Invalid Pairing QR Code. sharedKey wrong length.");
+							}
+
+							final String password = new String(Hex.decode(sharedKeyAndPassword[1]), "UTF-8");
+
+							application.clearWallet();
+
+							PinEntryActivity.clearPrefValues(application);
+
+							Editor edit = PreferenceManager.getDefaultSharedPreferences(
+									activity).edit();
+
+							edit.putString("guid", guid);
+							edit.putString("sharedKey", sharedKey);
+
+							edit.commit();
+
+							handler.post(new Runnable() {
+
+								@Override
+								public void run() {
+									application.checkIfWalletHasUpdatedAndFetchTransactions(password, guid, sharedKey, new SuccessCallback(){
+
+										@Override
+										public void onSuccess() {													
+											finish();
+										}
+
+										@Override
+										public void onFail() {
+											finish();
+
+											Toast.makeText(application, R.string.toast_error_syncing_wallet, Toast.LENGTH_LONG)
+											.show();
+										}
+									});
+								}
+							});
+
+						} catch (final Exception e) {
+							e.printStackTrace();
+
+							handler.post(new Runnable() {
+								public void run() {
+
+									Toast.makeText(application, e.getLocalizedMessage(), Toast.LENGTH_LONG)
+									.show();
+
+									e.printStackTrace();
+
+									application.writeException(e);
+								}
+							});
+						}
+					}
+				}).start();
+			}
+		} catch (Exception e) {
+
+			Toast.makeText(application, e.getLocalizedMessage(), Toast.LENGTH_LONG)
+			.show();
+
+			e.printStackTrace();
+
+			application.writeException(e);
 		}
 	}
 }

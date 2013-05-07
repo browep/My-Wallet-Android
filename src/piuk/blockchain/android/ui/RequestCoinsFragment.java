@@ -136,10 +136,14 @@ public final class RequestCoinsFragment extends Fragment {
 
 								@Override
 								public void run() {
-									updateView(address);
+									try {
+										updateView(address);
 
-									Toast.makeText(application, "Generated new shared address", Toast.LENGTH_SHORT)
-									.show();
+										Toast.makeText(application, "Generated new shared address", Toast.LENGTH_SHORT)
+										.show();
+									} catch (Exception e) {
+										e.printStackTrace();
+									}
 								}
 							});
 						} catch (final Exception e) {

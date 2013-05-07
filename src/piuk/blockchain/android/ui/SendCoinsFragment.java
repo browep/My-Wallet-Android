@@ -65,6 +65,8 @@ import com.google.bitcoin.core.TransactionOutput;
 import com.google.bitcoin.core.Wallet.BalanceType;
 import com.google.bitcoin.core.Wallet.SendRequest;
 
+import piuk.BitcoinAddress;
+import piuk.BitcoinURI;
 import piuk.MyRemoteWallet;
 import piuk.MyRemoteWallet.SendProgress;
 import piuk.blockchain.android.R;
@@ -72,6 +74,7 @@ import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.WalletApplication;
 import piuk.blockchain.android.service.BlockchainService;
 import piuk.blockchain.android.service.BlockchainServiceImpl;
+import piuk.blockchain.android.ui.AbstractWalletActivity.QrCodeDelagate;
 import piuk.blockchain.android.ui.CurrencyAmountView.Listener;
 import piuk.blockchain.android.ui.SendCoinsActivity.OnChangedSendTypeListener;
 import piuk.blockchain.android.ui.dialogs.RequestPasswordDialog;
@@ -214,6 +217,7 @@ public final class SendCoinsFragment extends Fragment
 
 	}
 
+	
 	@Override
 	public View onCreateView(final LayoutInflater inflater, final ViewGroup container, final Bundle savedInstanceState)
 	{
@@ -285,8 +289,14 @@ public final class SendCoinsFragment extends Fragment
 		receivingAddressView.setOnTouchListener(new RightDrawableOnTouchListener(receivingAddressView) {
 			@Override
 			public boolean onDrawableTouch(final MotionEvent event) {
-				activity.showQRReader("uri_qr_code");
-
+				
+				activity.showQRReader(activity.new QrCodeDelagate() {
+					@Override
+					public void didReadQRCode(String data) {
+						activity.handleScanURI(data);
+					}
+				});
+				
 				return true;
 			}
 		});
@@ -434,7 +444,13 @@ public final class SendCoinsFragment extends Fragment
 								public void onClick(DialogInterface dialog, int id) {
 									activity.scanPrivateKeyAddress = address;
 
-									activity.showQRReader("private_key_qr");
+
+									activity.showQRReader(activity.new QrCodeDelagate() {
+										@Override
+										public void didReadQRCode(String data) throws Exception {
+											activity.handleScanPrivateKey(data);
+										}
+									});
 								}
 							})
 							.setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {

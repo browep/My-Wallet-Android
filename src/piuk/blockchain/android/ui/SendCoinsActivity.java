@@ -131,66 +131,39 @@ public final class SendCoinsActivity extends AbstractWalletActivity {
 		handleIntent(intent);
 	}
 
-	@Override
-	public void onActivityResult(final int requestCode, final int resultCode,
-			final Intent intent) {
+	
+	public void handleScanPrivateKey(String contents) throws Exception {
+		System.out.println("Scanned PK " + contents);
 
-		String action = super.getQRCodeAction();
+		ECKey key = null;
 
-		if (action == null)
-			return;
+		if (scanPrivateKeyAddress != null) {
 
-		try {
+			String format = WalletUtils.detectPrivateKeyFormat(contents);
 
-			if (resultCode == RESULT_OK
-					&& "QR_CODE"
-					.equals(intent.getStringExtra("SCAN_RESULT_FORMAT"))) {
-				final String contents = intent.getStringExtra("SCAN_RESULT");
-				if (action.equals("private_key_qr")) {
-					System.out.println("Scanned PK " + contents);
+			key = WalletUtils.parsePrivateKey(format, contents);
 
-					ECKey key = null;
-
-					if (scanPrivateKeyAddress != null) {
-
-						String format = WalletUtils.detectPrivateKeyFormat(contents);
-
-						key = WalletUtils.parsePrivateKey(format, contents);
-
-						if (!key.toAddressCompressed(Constants.NETWORK_PARAMETERS)
-								.toString().equals(scanPrivateKeyAddress) && 
-								!key.toAddress(Constants.NETWORK_PARAMETERS)
-								.toString().equals(scanPrivateKeyAddress)) {
-							throw new Exception(getString(R.string.wrong_private_key));
-						} else {
-							//Success
-							temporaryPrivateKeys.put(scanPrivateKeyAddress, key);
-						}
-					} else {
-						updateSendCoinsFragment(contents, null);
-					}
-				} else if (action.equals("uri_qr_code")) {
-
-					final BitcoinURI bitcoinUri = new BitcoinURI(contents);
-					final BitcoinAddress address = bitcoinUri.getAddress();
-
-					updateSendCoinsFragment(
-							address != null ? address.toString() : null,
-									bitcoinUri.getAmount());
-				}
-
+			if (!key.toAddressCompressed(Constants.NETWORK_PARAMETERS)
+					.toString().equals(scanPrivateKeyAddress) && 
+					!key.toAddress(Constants.NETWORK_PARAMETERS)
+					.toString().equals(scanPrivateKeyAddress)) {
+				throw new Exception(getString(R.string.wrong_private_key));
+			} else {
+				//Success
+				temporaryPrivateKeys.put(scanPrivateKeyAddress, key);
 			}
-
-			synchronized (temporaryPrivateKeys) {
-				temporaryPrivateKeys.notify();
-			}
-
-			scanPrivateKeyAddress = null;
-
-		} catch (final Exception e) {
-			longToast(e.getLocalizedMessage());
+		} else {
+			updateSendCoinsFragment(contents, null);
 		}
+		
+		synchronized (temporaryPrivateKeys) {
+			temporaryPrivateKeys.notify();
+		}
+
+		scanPrivateKeyAddress = null;
 	}
+	
+
 
 	private void handleIntent(final Intent intent) {
 		final String action = intent.getAction();
@@ -243,6 +216,15 @@ public final class SendCoinsActivity extends AbstractWalletActivity {
 			longToast(R.string.send_coins_parse_address_error_msg);
 	}
 
+	public void handleScanURI(String contents) {
+		final BitcoinURI bitcoinUri = new BitcoinURI(contents);
+		final BitcoinAddress address = bitcoinUri.getAddress();
+
+		
+		updateSendCoinsFragment(
+				address != null ? address.toString() : null,
+						bitcoinUri.getAmount());
+	}
 	private void updateSendCoinsFragment(final String address,
 			final BigInteger amount) {
 		final SendCoinsFragment sendCoinsFragment = (SendCoinsFragment) getSupportFragmentManager()

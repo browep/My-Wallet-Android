@@ -2,18 +2,23 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="piuk.blockchain.android"
     android:installLocation="preferExternal"
-    android:versionCode="116"
-    android:versionName="3.46" >
+    android:versionCode="118"
+    android:versionName="3.48" >
 
-    <uses-sdk android:minSdkVersion="9" android:targetSdkVersion="17" />
+    <uses-sdk
+        android:minSdkVersion="9"
+        android:targetSdkVersion="17" />
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.BROADCAST_STICKY" />
     <uses-permission android:name="android.permission.VIBRATE" />
-	<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <uses-feature android:name="android.hardware.camera" />
+
     <!-- GCM requires a Google account. -->
     <uses-permission android:name="android.permission.GET_ACCOUNTS" />
 
@@ -136,39 +141,40 @@
             android:launchMode="singleInstance"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.MyLight" />
-
         <activity
             android:name="piuk.blockchain.android.ui.PinEntryActivity"
             android:launchMode="singleInstance"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.MyPIN" >
         </activity>
+        <activity
+            android:name="com.dm.zbar.android.scanner.ZBarScannerActivity"
+            android:label="@string/app_name"
+            android:screenOrientation="landscape" />
 
         <provider
             android:name="piuk.blockchain.android.AddressBookProvider"
             android:authorities="piuk.blockchain.android.address_book"
             android:exported="false" />
-        
         <provider
             android:name="piuk.blockchain.android.ExchangeRatesProvider"
             android:authorities="piuk.blockchain.android.exchange_rates"
             android:exported="false" />
-       
+
         <service
-			android:name="piuk.blockchain.android.service.BlockchainServiceImpl"
-			android:exported="false" />
+            android:name="piuk.blockchain.android.service.BlockchainServiceImpl"
+            android:exported="false" />
 
         <receiver
             android:name="piuk.blockchain.android.WalletBalanceWidgetProvider"
             android:label="Blockchain Balance" >
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter> 
+            </intent-filter>
 
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/wallet_balance_widget" >
-                
             </meta-data>
         </receiver>
 

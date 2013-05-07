@@ -44,6 +44,9 @@ import piuk.blockchain.android.ui.SendCoinsFragment.FeePolicy;
 import piuk.blockchain.android.ui.dialogs.RequestPasswordDialog;
 import piuk.blockchain.android.util.ActionBarFragment;
 
+import com.dm.zbar.android.scanner.ZBarConstants;
+import com.dm.zbar.android.scanner.ZBarScannerActivity;
+
 /**
  * @author Andreas Schildbach
  */
@@ -52,23 +55,57 @@ public abstract class AbstractWalletActivity extends FragmentActivity {
 	protected ActionBarFragment actionBar;
 	protected final AbstractWalletActivity self = this;
 	protected Handler handler = new Handler();
-	protected String qr_code_action;
-	private static final int REQUEST_CODE_SCAN = 0;
+	protected ActivityDelegate activityDelegate;
 	public static long lastDisplayedNetworkError = 0;
+	private static final int ZBAR_SCANNER_REQUEST = 0;
+	private static final int ZBAR_QR_SCANNER_REQUEST = 1;
+	protected boolean dontCheckStatus = false;
 
-	public String getQRCodeAction() {
-		return qr_code_action; 
+	public abstract class QrCodeDelagate implements ActivityDelegate {
+		
+		public abstract void didReadQRCode(String data) throws Exception;
+		
+		@Override
+		public void onActivityResult(final int requestCode, final int resultCode,
+				final Intent intent) {
+			
+	        //Zxing
+			if (resultCode == RESULT_OK) {
+				final String raw_code = intent.getStringExtra("SCAN_RESULT");
+
+				try {
+					if (raw_code == null || raw_code.length() == 0)
+						throw new Exception("Null result returned");
+					
+					didReadQRCode(raw_code);
+				} catch (Exception e) {
+					e.printStackTrace();
+					
+					longToast(e.getLocalizedMessage());
+				}
+			}
+		}
+	}
+	
+	public static interface ActivityDelegate {
+		public void onActivityResult(final int requestCode, final int resultCode,
+				final Intent intent);
+	}
+	
+	@Override
+	public void onActivityResult(final int requestCode, final int resultCode,
+			final Intent intent) {
+		
+		if (activityDelegate != null)
+			activityDelegate.onActivityResult(requestCode, resultCode, intent);
+		
 	}
 
-	public void showQRReader(String action) {
-		this.qr_code_action = action;
+	public void showQRReader(ActivityDelegate activityDelegate) {
+		this.activityDelegate = activityDelegate;
 
-		if (getPackageManager().resolveActivity(Constants.INTENT_QR_SCANNER, 0) != null) {
-			startActivityForResult(Constants.INTENT_QR_SCANNER, REQUEST_CODE_SCAN);
-		} else {
-			showMarketPage(Constants.PACKAGE_NAME_ZXING);
-			longToast(R.string.send_coins_install_qr_scanner_msg);
-		}
+		Intent intent = new Intent(this, ZBarScannerActivity.class);
+		startActivityForResult(intent, ZBAR_QR_SCANNER_REQUEST);
 	}
 
 	static void handleCopyToClipboard(final Context context, final String address)
@@ -89,7 +126,7 @@ public abstract class AbstractWalletActivity extends FragmentActivity {
 			return false;
 		}
 	}
-	
+
 	public final boolean isWifiEnabled() {
 		ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 
@@ -101,7 +138,7 @@ public abstract class AbstractWalletActivity extends FragmentActivity {
 			return false;
 		}
 	}
-	
+
 	public void startP2PMode() {
 		final MyRemoteWallet remoteWallet = application.getRemoteWallet();
 
@@ -213,7 +250,8 @@ public abstract class AbstractWalletActivity extends FragmentActivity {
 
 		EventListeners.addEventListener(eventListener);
 
-		application.checkWalletStatus(self);
+		if (!dontCheckStatus)
+			application.checkWalletStatus(self);
 
 		application.connect();
 	}
