@@ -4,6 +4,10 @@
     <string name="app_name">Blockchain</string>
     <string name="menu_account_settings">Account Settings</string>
     <string name="menu_scan_private_key">Scan Private Key</string>
+    <string name="menu_addresses_generate_new">Generate New Address</string>
+    <string name="menu_addresses_scan_watch_only">Scan Watch Only Address</string>
+    <string name="menu_addresses_paste">Paste Sending Address</string>
+    <string name="menu_addresses_scan_address">Scan Sending Address</string>
     <string name="menu_leave_p2p_mode">Leave P2P Mode</string>
     <string name="running_in_p2p_mode">Running in P2P Mode</string>
     <string name="export_keys_dialog_button_archive">Archive</string>
@@ -84,9 +88,6 @@
     </string-array>
 
     <string name="wallet_addresses_fragment_unlabeled">(unlabeled)</string>
-    <string name="wallet_addresses_fragment_add_dialog_title">Add Bitcoin address</string>
-    <string name="wallet_addresses_fragment_add_dialog_message">Bitcoin addresses cannot be deleted. Do you want to
-		add a new address to your wallet?</string>
     <string name="wallet_addresses_fragment_add_dialog_positive">Add address</string>
     <string name="wallet_balance_fragment_local_value">worth about %1$s %2$s</string>
     <string name="exchange_rates_fragment_empty_text">Could not load exchange rates</string>
@@ -155,7 +156,9 @@
     <string name="address_book_list_sending_title">Sending addresses</string>
     <string name="address_book_empty_text">No entries in address book</string>
     <string name="address_book_context_send_title">Send Bitcoins to address</string>
-    <string name="address_book_context_edit_title">Edit address</string>
+    <string name="address_book_context_edit_title">Edit Label</string>
+    <string name="address_book_context_archive">Archive</string>
+    <string name="address_book_context_make_active">Unarchive</string>
     <string name="address_book_context_remove_title">Remove address</string>
     <string name="address_book_context_show_qr_title">Show QR code</string>
     <string name="address_book_context_copy_to_clipboard_title">Copy to clipboard</string>
@@ -184,8 +187,8 @@
 		scan this QR Code with your camera.</string>
     <string name="welcome_pair_device_button">Pair Device</string>
     <string name="welcome_new_account_button">New Account</string>
-    <string name="edit_address_book_entry_dialog_title_add">Add address</string>
-    <string name="edit_address_book_entry_dialog_title_edit">Edit address</string>
+    <string name="edit_address_book_entry_dialog_title_add">Add Address Label</string>
+    <string name="edit_address_book_entry_dialog_title_edit">Edit Address Label</string>
     <string name="edit_address_book_entry_dialog_address_label">Address</string>
     <string name="edit_address_book_entry_dialog_label_label">Name</string>
     <string name="edit_address_book_entry_dialog_button_add">Add</string>
@@ -284,6 +287,7 @@
     <string name="only_quick_supported">Only Quick Send is supported in P2P mode.</string>
     <string name="no_transactions">No Transactions</string>
     <string name="unknown_error">Unknown Error</string>
+    <string name="watch_only">(Watch Only)</string>
 
     <string-array name="send_types_array">
         <item>Quick Send</item>

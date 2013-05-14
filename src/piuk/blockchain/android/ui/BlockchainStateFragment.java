@@ -146,6 +146,9 @@ public final class BlockchainStateFragment extends Fragment implements OnSharedP
 
 		AbstractWalletActivity activity = (AbstractWalletActivity) this.getActivity();
 
+		if (activity == null)
+			return;
+		
 		if (!activity.application.isInP2PFallbackMode()) {
 			showProgress = false;
 		} else if (download != BlockchainService.ACTION_BLOCKCHAIN_STATE_DOWNLOAD_OK)

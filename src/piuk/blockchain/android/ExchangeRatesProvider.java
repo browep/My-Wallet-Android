@@ -79,10 +79,10 @@ public class ExchangeRatesProvider extends ContentProvider {
 
 			final String code = selectionArgs[0];
 			final Rate rate = exchangeRates.get(code);
-			
+
 			if (rate == null)
 				return null;
-			
+
 			cursor.newRow().add(code.hashCode()).add(code).add(rate._15m).add(rate._24hr).add(rate.symbol);
 		}
 
@@ -156,17 +156,22 @@ public class ExchangeRatesProvider extends ContentProvider {
 			final Map<String, JSONObject> root = (Map<String, JSONObject>) new JSONParser().parse(response);
 
 			List<Map.Entry<String, JSONObject>> entries = new ArrayList<Map.Entry<String, JSONObject>>(root.entrySet());
-			
+
 			Collections.reverse(entries);
-			
+
 			for (Map.Entry<String, JSONObject> entry : entries) {
 				String code = entry.getKey();
 
 				Rate rate = new Rate();
 
-				rate._15m = ((Number)entry.getValue().get("15m")).doubleValue();
-				rate._24hr = ((Number)entry.getValue().get("24h")).doubleValue();
-				rate.symbol = entry.getValue().get("symbol").toString();
+				if (entry.getValue().get("15m") != null)
+					rate._15m = ((Number)entry.getValue().get("15m")).doubleValue();
+
+				if (entry.getValue().get("24h") != null)
+					rate._24hr = ((Number)entry.getValue().get("24h")).doubleValue();
+
+				if (entry.getValue().get("symbol") != null)
+					rate.symbol = entry.getValue().get("symbol").toString();
 
 				rates.put(code, rate);
 			}

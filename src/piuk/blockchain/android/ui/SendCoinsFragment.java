@@ -217,7 +217,7 @@ public final class SendCoinsFragment extends Fragment
 
 	}
 
-	
+
 	@Override
 	public View onCreateView(final LayoutInflater inflater, final ViewGroup container, final Bundle savedInstanceState)
 	{
@@ -289,14 +289,14 @@ public final class SendCoinsFragment extends Fragment
 		receivingAddressView.setOnTouchListener(new RightDrawableOnTouchListener(receivingAddressView) {
 			@Override
 			public boolean onDrawableTouch(final MotionEvent event) {
-				
+
 				activity.showQRReader(activity.new QrCodeDelagate() {
 					@Override
 					public void didReadQRCode(String data) {
 						activity.handleScanURI(data);
 					}
 				});
-				
+
 				return true;
 			}
 		});
@@ -395,38 +395,42 @@ public final class SendCoinsFragment extends Fragment
 						}
 					}
 
-					if (fee.compareTo(BigInteger.ZERO) == 0  && feePolicy != FeePolicy.FeeNever && (priority < 57600000L || tx.bitcoinSerialize().length > 1024 || containsOutputLessThanThreshold)) {
+					if (feePolicy != FeePolicy.FeeNever && fee.compareTo(BigInteger.ZERO) == 0) {
+						if (tx.bitcoinSerialize().length > 1024 || containsOutputLessThanThreshold) {
+							makeTransaction(FeePolicy.FeeForce);
+						} else if (priority < 97600000L) {
 
-						handler.post(new Runnable() {
-							public void run() {
-								AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
-								builder.setMessage(R.string.ask_for_fee)
-								.setCancelable(false)
-								.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
-									public void onClick(DialogInterface dialog, int id) {
-										makeTransaction(FeePolicy.FeeForce);
-									}
-								})
-								.setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
-									public void onClick(DialogInterface dialog, int id) {
-										makeTransaction(FeePolicy.FeeNever);
-									}
-								});
+							handler.post(new Runnable() {
+								public void run() {
+									AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+									builder.setMessage(R.string.ask_for_fee)
+									.setCancelable(false)
+									.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+										public void onClick(DialogInterface dialog, int id) {
+											makeTransaction(FeePolicy.FeeForce);
+										}
+									})
+									.setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
+										public void onClick(DialogInterface dialog, int id) {
+											makeTransaction(FeePolicy.FeeNever);
+										}
+									});
 
-								AlertDialog alert = builder.create();
+									AlertDialog alert = builder.create();
 
-								alert.show();
-							}
-						});
+									alert.show();
+								}
+							});
 
-						handler.post(new Runnable() {
-							public void run() {
-								state = State.INPUT;
-								updateView();
-							}
-						});
+							handler.post(new Runnable() {
+								public void run() {
+									state = State.INPUT;
+									updateView();
+								}
+							});
 
-						return false;
+							return false;
+						}
 					}
 
 					return true;
@@ -564,7 +568,7 @@ public final class SendCoinsFragment extends Fragment
 										activity.finish();
 
 										updateView();
-										
+
 										EventListeners.invokeOnTransactionsChanged();
 									}
 									else

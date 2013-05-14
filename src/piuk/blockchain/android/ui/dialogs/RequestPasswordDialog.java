@@ -73,9 +73,11 @@ public final class RequestPasswordDialog extends DialogFragment {
 
 	public static void hide() {
 		for (WeakReference<RequestPasswordDialog> fragmentRef : fragmentRefs) {
-			if (fragmentRef != null && fragmentRef.get() != null) {
+			RequestPasswordDialog ref = fragmentRef.get();
+			
+			if (ref != null) {
 				try {
-					fragmentRef.get().dismissAllowingStateLoss();
+					ref.dismissAllowingStateLoss();
 				} catch (Exception e) {
 					e.printStackTrace();
 				}

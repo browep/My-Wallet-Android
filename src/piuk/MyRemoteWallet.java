@@ -266,6 +266,22 @@ public class MyRemoteWallet extends MyWallet {
 	}
 	
 	@Override
+	public void setTag(String address, long tag) {
+		super.setTag(address, tag);
+
+		EventListeners.invokeWalletDidChange();
+	}
+
+	@Override
+	public synchronized boolean addWatchOnly(String address) {
+		boolean success = super.addWatchOnly(address);
+
+		EventListeners.invokeWalletDidChange();
+
+		return success;
+	}
+	
+	@Override
 	public synchronized boolean removeKey(ECKey key) {
 		boolean success = super.removeKey(key);
 
@@ -591,6 +607,8 @@ public class MyRemoteWallet extends MyWallet {
 		//Now select the appropriate inputs
 		BigInteger valueSelected = BigInteger.ZERO;
 		BigInteger valueNeeded =  amount.add(fee);
+		BigInteger minFreeOutputSize = BigInteger.valueOf(1000000);
+		
 		MyTransactionOutPoint firstOutPoint = null;
 
 		for (MyTransactionOutPoint outPoint : unspent) {
@@ -613,7 +631,7 @@ public class MyRemoteWallet extends MyWallet {
 			if (firstOutPoint == null)
 				firstOutPoint = outPoint;
 
-			if (valueSelected.compareTo(valueNeeded) >= 0)
+			if (valueSelected.compareTo(valueNeeded) == 0 || valueSelected.compareTo(valueNeeded.add(minFreeOutputSize)) >= 0)
 				break;
 		}
 

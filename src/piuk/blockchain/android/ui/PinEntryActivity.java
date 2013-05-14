@@ -601,7 +601,7 @@ public class PinEntryActivity extends AbstractWalletActivity {
 		String pin_lookup_key = PreferenceManager.getDefaultSharedPreferences(this).getString("pin_kookup_key", null);
 		String encrypted_password = PreferenceManager.getDefaultSharedPreferences(this).getString("encrypted_password", null);
 
-		if (pin_lookup_key == null || encrypted_password == null) {
+		if (pin_lookup_key == null || encrypted_password == null || application.decryptionErrors > 0) {
 			titleView.setText("Create PIN");	
 
 			statusView.setText("Please create a new PIN code");

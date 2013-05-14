@@ -32,6 +32,7 @@ import piuk.blockchain.android.R;
 import piuk.blockchain.android.WalletApplication;
 import piuk.blockchain.android.ui.AbstractWalletActivity;
 import piuk.blockchain.android.ui.PinEntryActivity;
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.AlertDialog.Builder;
 import android.app.Dialog;
@@ -113,7 +114,12 @@ public final class NewAccountDialog extends DialogFragment {
 
 					captchaImage.post(new Runnable() {
 						public void run() {
-							Toast.makeText(getActivity().getApplication(),
+							Activity activity = getActivity();
+							
+							if (activity == null)
+								return;
+							
+							Toast.makeText(activity,
 									R.string.toast_error_downloading_captcha,
 									Toast.LENGTH_LONG).show();
 						}

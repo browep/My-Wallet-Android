@@ -31,9 +31,10 @@ import android.support.v4.app.FragmentStatePagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.support.v4.view.ViewPager.OnPageChangeListener;
 import android.text.ClipboardManager;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
-import android.widget.ImageButton;
 import android.widget.Toast;
 
 import com.google.bitcoin.core.Address;
@@ -64,17 +65,161 @@ public final class WalletAddressesActivity extends AbstractWalletActivity {
 
 	private static final String EXTRA_SENDING = "sending";
 
-	private static final int REQUEST_CODE_SCAN = 0;
-
 	private WalletActiveAddressesFragment activeAddressesFragment;
 	private WalletArchivedAddressesFragment archivedAddressesFragment;
 	private SendingAddressesFragment sendingAddressesFragment;
-	private ImageButton addButton;
-	private ImageButton pasteButton;
-	private ImageButton scanButton;
-
+	int pagerPosition = 0;
 	private final Handler handler = new Handler();
 
+	@Override
+	public boolean onCreateOptionsMenu(final Menu menu)
+	{
+		super.onCreateOptionsMenu(menu);
+
+		getMenuInflater().inflate(R.menu.addresses_menu, menu);
+
+		return true;
+	}
+
+	@Override
+	public boolean onPrepareOptionsMenu(final Menu menu)
+	{
+		super.onPrepareOptionsMenu(menu);
+
+		{
+			MenuItem item = menu.findItem(R.id.addresses_menu_generate);
+
+			item.setVisible(pagerPosition == 0);
+		}
+
+		{
+			MenuItem item = menu.findItem(R.id.addresses_menu_scan_watch_only);
+
+			item.setVisible(pagerPosition == 0);
+		}
+
+		{
+			MenuItem item = menu.findItem(R.id.addresses_menu_paste);
+
+			item.setVisible(pagerPosition == 2);
+		}
+
+		{
+			MenuItem item = menu.findItem(R.id.addresses_menu_scan_uri);
+
+			item.setVisible(pagerPosition == 2);
+		}
+
+		return true;
+	}
+
+	public void handleAddWatchOnly(String data) throws Exception {
+		
+		try {
+			new Address(Constants.NETWORK_PARAMETERS, data);
+		} catch (Exception e) {
+			longToast(R.string.send_coins_fragment_receiving_address_error);
+			return;
+		}
+
+		final String address = data;
+		
+		final AlertDialog.Builder b = new AlertDialog.Builder(this);
+
+		b.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				if (application.getRemoteWallet() == null)
+					return;
+
+				application.getRemoteWallet().addWatchOnly(address);
+				
+				application.saveWallet(new SuccessCallback() {
+					@Override
+					public void onSuccess() {
+						EditAddressBookEntryFragment.edit(getSupportFragmentManager(), address);
+					}
+
+					@Override
+					public void onFail() {
+					}
+				});
+			}
+		});
+
+		b.setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				dialog.dismiss();
+			}
+		});
+
+		b.setTitle("Watch Only Address");
+
+		b.setMessage("Do you wish to add the Watch Only bitcoin address " + data + " to your wallet? \n\nYou will not be able to spend any funds in this address unless you have the private key stored elsewhere. You should never add a Watch Only address that you do not have the private key for.");
+
+		b.show();				
+	}
+
+	@Override
+	public boolean onOptionsItemSelected(final MenuItem item) {
+		switch (item.getItemId()) {
+		case R.id.addresses_menu_generate:
+			handleAddAddress();
+			return true;
+		case R.id.addresses_menu_paste:
+			handlePasteClipboard();
+			return true;
+		case R.id.addresses_menu_scan_uri:
+			
+			showQRReader(new QrCodeDelagate() {
+				@Override
+				public void didReadQRCode(String contents) throws Exception {
+					try {
+						final BitcoinAddress address;
+
+						if (contents.matches("[a-zA-Z0-9]*")) {
+							address = new BitcoinAddress(contents);
+						} else {
+							final BitcoinURI bitcoinUri = new BitcoinURI(contents);
+							address = bitcoinUri.getAddress();
+						}
+
+						handler.postDelayed(new Runnable() {
+							public void run() {
+								EditAddressBookEntryFragment.edit(
+										getSupportFragmentManager(), address.toString());
+							}
+						}, 500);
+					} catch (final AddressFormatException x) {
+						errorDialog(R.string.send_coins_uri_parse_error_title, contents);
+					} catch (final BitcoinURIParseException x) {
+						errorDialog(R.string.send_coins_uri_parse_error_title, contents);
+					}
+				}
+			});
+			
+			return true;
+		case R.id.addresses_menu_scan_watch_only:
+			if (application.getRemoteWallet() == null)
+				return false;
+
+			System.out.println("showQRReader()");
+			
+			showQRReader(new QrCodeDelagate() {
+				@Override
+				public void didReadQRCode(String data) throws Exception {
+					System.out.println("didReadQRCode() " + data);
+
+					handleAddWatchOnly(data);
+				}
+			});
+			return true;
+		}
+
+
+		return false;
+	}
 
 	@Override
 	protected void onCreate(final Bundle savedInstanceState) {
@@ -92,6 +237,13 @@ public final class WalletAddressesActivity extends AbstractWalletActivity {
 			}
 		});
 
+		actionBar.addButton(android.R.drawable.ic_menu_more).setOnClickListener(
+				new OnClickListener() {
+					public void onClick(final View v) {
+						openOptionsMenu();
+					}
+				});
+
 		final ViewPager pager = (ViewPager) findViewById(R.id.address_book_pager);
 
 		if (pager != null) {
@@ -99,65 +251,14 @@ public final class WalletAddressesActivity extends AbstractWalletActivity {
 			pagerTabs.addTabLabels(R.string.address_book_list_receiving_title,
 					R.string.address_book_list_archived_title,
 					R.string.address_book_list_sending_title);
-			
+
 			final ProxyOnPageChangeListener pagerListener = new ProxyOnPageChangeListener(
 					pagerTabs) {
 				@Override
-				public void onPageSelected(final int position) {
-
+				public void onPageSelected(final int position) {					
 					super.onPageSelected(position);
 
-					if (position == 0) {
-						if (scanButton != null) {
-							actionBar.removeButton(scanButton);
-							scanButton = null;
-						}
-
-						if (pasteButton != null) {
-							actionBar.removeButton(pasteButton);
-							pasteButton = null;
-						}
-
-						if (addButton == null) {
-							addButton = actionBar
-									.addButton(R.drawable.ic_action_add);
-							addButton
-									.setOnClickListener(addAddressClickListener);
-						}
-					} else if (position == 1) {
-						if (scanButton != null) {
-							actionBar.removeButton(scanButton);
-							scanButton = null;
-						}
-
-						if (pasteButton != null) {
-							actionBar.removeButton(pasteButton);
-							pasteButton = null;
-						}
-
-						if (addButton == null) {
-							actionBar.removeButton(addButton);
-							addButton = null;
-						}
-					} else if (position == 2) {
-						if (addButton != null) {
-							actionBar.removeButton(addButton);
-							addButton = null;
-						}
-
-						if (scanButton == null) {
-							scanButton = actionBar
-									.addButton(R.drawable.ic_action_qr);
-							scanButton.setOnClickListener(scanClickListener);
-						}
-
-						if (pasteButton == null) {
-							pasteButton = actionBar
-									.addButton(R.drawable.ic_action_paste);
-							pasteButton
-									.setOnClickListener(pasteClipboardClickListener);
-						}
-					}
+					pagerPosition = position;
 				}
 			};
 
@@ -179,71 +280,17 @@ public final class WalletAddressesActivity extends AbstractWalletActivity {
 
 			archivedAddressesFragment = new WalletArchivedAddressesFragment();
 			activeAddressesFragment = new WalletActiveAddressesFragment();
-			
 			sendingAddressesFragment = new SendingAddressesFragment();
 		}
-		/*
-		 * else { scanButton = actionBar.addButton(R.drawable.ic_action_qr);
-		 * scanButton.setOnClickListener(scanClickListener);
-		 * 
-		 * pasteButton = actionBar.addButton(R.drawable.ic_action_paste);
-		 * pasteButton.setOnClickListener(pasteClipboardClickListener);
-		 * 
-		 * addButton = actionBar.addButton(R.drawable.ic_action_add);
-		 * addButton.setOnClickListener(addAddressClickListener);
-		 * 
-		 * activeAddressesFragment = (WalletActiveAddressesFragment)
-		 * getSupportFragmentManager
-		 * ().findFragmentById(R.id.wallet_addresses_fragment);
-		 * archivedAddressesFragment = (WalletArchivedAddressesFragment)
-		 * getSupportFragmentManager
-		 * ().findFragmentById(R.id.wallet_archived_fragment);
-		 * sendingAddressesFragment = (SendingAddressesFragment)
-		 * getSupportFragmentManager
-		 * ().findFragmentById(R.id.sending_addresses_fragment); }
-		 */
 
 		updateFragments();
-	}
-
-	@Override
-	public void onActivityResult(final int requestCode, final int resultCode,
-			final Intent intent) {
-		if (requestCode == REQUEST_CODE_SCAN
-				&& resultCode == RESULT_OK
-				&& "QR_CODE"
-						.equals(intent.getStringExtra("SCAN_RESULT_FORMAT"))) {
-			final String contents = intent.getStringExtra("SCAN_RESULT");
-
-			try {
-				final BitcoinAddress address;
-
-				if (contents.matches("[a-zA-Z0-9]*")) {
-					address = new BitcoinAddress(contents);
-				} else {
-					final BitcoinURI bitcoinUri = new BitcoinURI(contents);
-					address = bitcoinUri.getAddress();
-				}
-
-				handler.postDelayed(new Runnable() {
-					public void run() {
-						EditAddressBookEntryFragment.edit(
-								getSupportFragmentManager(), address.toString());
-					}
-				}, 500);
-			} catch (final AddressFormatException x) {
-				errorDialog(R.string.send_coins_uri_parse_error_title, contents);
-			} catch (final BitcoinURIParseException x) {
-				errorDialog(R.string.send_coins_uri_parse_error_title, contents);
-			}
-		}
 	}
 
 	private void updateFragments() {
 
 		if (application.getRemoteWallet() == null)
 			return;
-		
+
 		final String[] addressesArray = application.getRemoteWallet().getActiveAddresses();
 		final ArrayList<Address> addresses = new ArrayList<Address>(addressesArray.length);
 
@@ -259,6 +306,7 @@ public final class WalletAddressesActivity extends AbstractWalletActivity {
 
 		sendingAddressesFragment.setWalletAddresses(addresses);
 	}
+
 
 	private class PagerAdapter extends FragmentStatePagerAdapter {
 		public PagerAdapter(final FragmentManager fm) {
@@ -281,28 +329,6 @@ public final class WalletAddressesActivity extends AbstractWalletActivity {
 		}
 	}
 
-	private final OnClickListener scanClickListener = new OnClickListener() {
-		public void onClick(final View v) {
-			handleScan();
-		}
-	};
-
-	private void handleScan() {
-		if (getPackageManager().resolveActivity(Constants.INTENT_QR_SCANNER, 0) != null) {
-			startActivityForResult(Constants.INTENT_QR_SCANNER,
-					REQUEST_CODE_SCAN);
-		} else {
-			showMarketPage(Constants.PACKAGE_NAME_ZXING);
-			longToast(R.string.send_coins_install_qr_scanner_msg);
-		}
-	}
-
-	private final OnClickListener pasteClipboardClickListener = new OnClickListener() {
-		public void onClick(final View v) {
-			handlePasteClipboard();
-		}
-	};
-
 	private void handlePasteClipboard() {
 		final ClipboardManager clipboardManager = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
 
@@ -322,79 +348,60 @@ public final class WalletAddressesActivity extends AbstractWalletActivity {
 		}
 	}
 
-	private final OnClickListener addAddressClickListener = new OnClickListener() {
-		public void onClick(final View v) {
-			handleAddAddress();
-		}
-	};
 
 	private void reallyGenerateAddress() {
 		application.addKeyToWallet(new ECKey(), null, 0,
 				new AddAddressCallback() {
- 
-					public void onSavedAddress(String address) {
-						Toast.makeText(self, getString(R.string.toast_generated_address, address), Toast.LENGTH_LONG).show();
-						
-						updateFragments();
-					}
 
-					public void onError(String reason) {
-						Toast.makeText(self, reason, Toast.LENGTH_LONG).show();
+			public void onSavedAddress(String address) {
+				Toast.makeText(self, getString(R.string.toast_generated_address, address), Toast.LENGTH_LONG).show();
 
-						updateFragments();
-					}
-				});
+				EditAddressBookEntryFragment.edit(
+						getSupportFragmentManager(), address);
+
+				updateFragments();
+			}
+
+			public void onError(String reason) {
+				Toast.makeText(self, reason, Toast.LENGTH_LONG).show();
+
+				updateFragments();
+			}
+		});
 	}
 
 	private void handleAddAddress() {
-		new AlertDialog.Builder(WalletAddressesActivity.this)
-				.setTitle(R.string.wallet_addresses_fragment_add_dialog_title)
-				.setMessage(
-						R.string.wallet_addresses_fragment_add_dialog_message)
-				.setPositiveButton(
-						R.string.wallet_addresses_fragment_add_dialog_positive,
-						new DialogInterface.OnClickListener() {
-							public void onClick(final DialogInterface dialog,
-									final int which) {
+		if (application.getRemoteWallet() == null)
+			return;
 
-								if (application.getRemoteWallet() == null)
-									return;
-								
-								MyRemoteWallet remoteWallet = application.getRemoteWallet();
+		MyRemoteWallet remoteWallet = application.getRemoteWallet();
 
-								if (remoteWallet.isDoubleEncrypted() == false) {
-									System.out.println("Not double encrypted");
+		if (remoteWallet.isDoubleEncrypted() == false) {
+			reallyGenerateAddress();
+		} else {
+			if (remoteWallet.temporySecondPassword == null) {
+				RequestPasswordDialog.show(
+						getSupportFragmentManager(),
+						new SuccessCallback() {
 
-									reallyGenerateAddress();
-								} else {
-									if (remoteWallet.temporySecondPassword == null) {
-										RequestPasswordDialog.show(
-												getSupportFragmentManager(),
-												new SuccessCallback() {
-
-													public void onSuccess() {
-														reallyGenerateAddress();
-													}
-
-													public void onFail() {
-														Toast.makeText(
-																getApplication(),
-																R.string.generate_key_no_password_error,
-																Toast.LENGTH_LONG)
-																.show();
-													}
-												}, RequestPasswordDialog.PasswordTypeSecond);
-									} else {
-										System.out.println("Password Set");
-
-										reallyGenerateAddress();
-									}
-								}
-
-								updateFragments();
+							public void onSuccess() {
+								reallyGenerateAddress();
 							}
-						}).setNegativeButton(R.string.button_cancel, null)
-				.show();
+
+							public void onFail() {
+								Toast.makeText(
+										getApplication(),
+										R.string.generate_key_no_password_error,
+										Toast.LENGTH_LONG)
+										.show();
+							}
+						}, RequestPasswordDialog.PasswordTypeSecond);
+			} else {
+				reallyGenerateAddress();
+			}
+		}
+
+		updateFragments();
 	}
 
 	private class ProxyOnPageChangeListener implements OnPageChangeListener {

@@ -152,6 +152,7 @@ public final class ActionBarFragment extends Fragment {
 		view.addView(separator2, 2, separatorParams);
 	}
 
+
 	public boolean removeButton(final ImageButton button) {
 		final int index = view.indexOfChild(button);
 		if (index == -1)

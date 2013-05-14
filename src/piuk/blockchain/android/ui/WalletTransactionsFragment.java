@@ -303,24 +303,7 @@ public final class WalletTransactionsFragment extends ListFragment {
 
 		initAdapter();
 	}
-
-	@Override
-	public void onActivityCreated(final Bundle savedInstanceState) {
-		EventListeners.addEventListener(eventListener);
-
-		super.onActivityCreated(savedInstanceState);
-	}
-
-	@Override
-	public void onViewCreated(final View view,
-			final Bundle savedInstanceState) {
-		super.onViewCreated(view, savedInstanceState);
-
-		EventListeners.addEventListener(eventListener);
-
-		registerForContextMenu(getListView());
-	}
-
+	
 	@Override
 	public void onDestroy() {		
 		super.onDestroy();

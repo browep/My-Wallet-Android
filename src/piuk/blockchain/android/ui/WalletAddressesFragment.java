@@ -17,63 +17,39 @@
 
 package piuk.blockchain.android.ui;
 
+import java.math.BigInteger;
+import java.util.List;
+import java.util.Map;
+
 import piuk.EventListeners;
+import piuk.MyRemoteWallet;
 import piuk.blockchain.android.AddressBookProvider;
-import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.R;
 import piuk.blockchain.android.WalletApplication;
-import piuk.blockchain.android.util.QrDialog;
 import piuk.blockchain.android.util.WalletUtils;
 import android.app.Activity;
-import android.content.Context;
-import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.database.ContentObserver;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
-import android.preference.PreferenceManager;
 import android.support.v4.app.ListFragment;
-import android.support.v4.view.ViewPager;
-import android.text.ClipboardManager;
-import android.view.ContextMenu;
-import android.view.ContextMenu.ContextMenuInfo;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView.AdapterContextMenuInfo;
-import android.widget.BaseAdapter;
-import android.widget.ListAdapter;
+import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 
-import com.google.bitcoin.uri.BitcoinURI;
-
-/**
- * @author Andreas Schildbach
- */
 public class WalletAddressesFragment extends ListFragment
 {
-	private WalletApplication application;
-	private Activity activity;
-	private String[] addresses;
+	protected WalletApplication application;
+	protected Activity activity;
 	private int tag_filter = 0;
-
-	private EventListeners.EventListener eventListener = new EventListeners.EventListener() {
-		@Override
-		public String getDescription() {
-			return "Wallet Addresses Listener";
-		}
-		
-	    @Override
-		public void onWalletDidChange() {
-			try {
-				updateView();
-			} catch (Exception e) {
-				e.printStackTrace();
-			} 
-		}
-	};
+	private ArrayAdapter<Map<String, Object>> adapter;
+	private Map<String, String> labelMap;
+	protected EventListeners.EventListener eventListener;
 	
+
 	public WalletAddressesFragment() {
 		super();
 	}
@@ -84,17 +60,6 @@ public class WalletAddressesFragment extends ListFragment
 		this.tag_filter = tag_filter;
 	}
 
-	public synchronized void setKeys() {
-
-		if (application.getRemoteWallet() == null)
-			return;
-		
-		if (tag_filter == 2)
-			addresses = application.getRemoteWallet().getArchivedAddresses();
-		else
-			addresses = application.getRemoteWallet().getActiveAddresses();
-	}
-
 	@Override
 	public void onCreate(final Bundle savedInstanceState)
 	{
@@ -102,26 +67,17 @@ public class WalletAddressesFragment extends ListFragment
 
 		activity = getActivity();
 		application = (WalletApplication) activity.getApplication();
-		setKeys();
 
-		setListAdapter(new Adapter());
-	}
+		EventListeners.addEventListener(eventListener);
 
-	@Override
-	public void onViewCreated(final View view, final Bundle savedInstanceState)
-	{
-		super.onViewCreated(view, savedInstanceState);
-
-		registerForContextMenu(getListView());
-	}
-
-	public void onHide() {
-		this.unregisterForContextMenu(getListView());
+		initAdapter();
 	}
 
 	@Override
 	public void onDestroy() {
 		super.onDestroy();
+
+		EventListeners.removeEventListener(eventListener);
 	}
 
 	@Override
@@ -129,11 +85,9 @@ public class WalletAddressesFragment extends ListFragment
 	{
 		super.onResume();
 
-		EventListeners.addEventListener(eventListener);
-
 		activity.getContentResolver().registerContentObserver(AddressBookProvider.CONTENT_URI, true, contentObserver);
 
-		updateView();
+		setAdapterContent();
 	}
 
 	@Override
@@ -141,131 +95,127 @@ public class WalletAddressesFragment extends ListFragment
 	{
 		activity.getContentResolver().unregisterContentObserver(contentObserver);
 
-		EventListeners.removeEventListener(eventListener);
-
 		super.onPause();
 	}
 
 	@Override
 	public void onListItemClick(final ListView l, final View v, final int position, final long id)
 	{
-		EditAddressBookEntryFragment.edit(getFragmentManager(), addresses[position].toString());
+		final Map<String, Object> map = (Map<String, Object>) getListView().getAdapter().getItem(position);
+
+		final String address = (String) map.get("addr");
+
+		EditAddressBookEntryFragment.edit(getFragmentManager(), address);
 	}
 
-	@Override
-	public void onCreateContextMenu(final ContextMenu menu, final View v, final ContextMenuInfo info)
-	{
-		activity.getMenuInflater().inflate(R.menu.wallet_addresses_context, menu);
-	}
 
-	@Override
-	public boolean onContextItemSelected(final MenuItem item)
-	{
-		final AdapterContextMenuInfo menuInfo = (AdapterContextMenuInfo) item.getMenuInfo();
+	public  void setAdapterContent() {
+		try {
+			synchronized(adapter) {
 
-		final String address = (String) getListView().getAdapter().getItem(menuInfo.position);
-		
-		switch (item.getItemId())
-		{
-			case R.id.wallet_addresses_context_edit:
-			{
-				EditAddressBookEntryFragment.edit(getFragmentManager(), address.toString());
-				return true;
+				labelMap = null;
+
+				if (application.getRemoteWallet() == null) {
+					return;
+				}
+
+				adapter.clear();  
+
+				try {
+					List<Map<String, Object>> keysMap = application.getRemoteWallet().getKeysMap();
+					synchronized(application.getRemoteWallet()) {
+						for (Map<String, Object> map : keysMap) {
+
+							int tag = 0;
+							if (map.get("tag") != null)
+								tag = ((Number)map.get("tag")).intValue();
+
+							if (tag != tag_filter)
+								continue;
+
+							if (map.get("label") != null)
+								adapter.insert(map, 0);
+							else
+								adapter.add(map);
+						}
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
 			}
-
-			case R.id.wallet_addresses_context_show_qr:
-			{
-				final String uri = BitcoinURI.convertToBitcoinURI(address, null, null, null);
-				final int size = (int) (256 * getResources().getDisplayMetrics().density);
-				new QrDialog(activity, WalletUtils.getQRCodeBitmap(uri, size)).show();
-				return true;
-			}
-
-			case R.id.wallet_addresses_context_copy_to_clipboard:
-			{
-				AbstractWalletActivity.handleCopyToClipboard(activity, address.toString());
-				return true;
-			}
-
-			case R.id.wallet_addresses_context_default:
-			{
-				handleDefault(address);
-				return true;
-			}
-
-			default:
-				return false;
+		} catch (Exception e) { 
+			e.printStackTrace();
 		}
 	}
 
-	private void handleDefault(final String address)
-	{
-		final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
-		prefs.edit().putString(Constants.PREFS_KEY_SELECTED_ADDRESS, address.toString()).commit();
-	}
+	public void initAdapter() {
+		adapter = new ArrayAdapter<Map<String, Object>>(activity, 0) {
+			final Resources res = getResources();
+			@Override
+			public View getView(final int position, View row, final ViewGroup parent) {
 
-	private void updateView()
-	{
-		setKeys();
+				MyRemoteWallet wallet = application.getRemoteWallet();
 
-		final ListAdapter adapter = getListAdapter();
+				if (labelMap == null) {					
+					if (wallet != null)
+						labelMap = wallet.getLabelMap();
+				}
 
-		if (adapter != null)
-			((BaseAdapter) adapter).notifyDataSetChanged();
-	}
+				final Map<String, Object> map = (Map<String, Object>) getItem(position);
 
-	private class Adapter extends BaseAdapter
-	{
-		final Resources res = getResources();
+				String address = (String)map.get("addr");
 
-		@Override
-		public int getCount() {
-			if (addresses == null)
-				return 0;
-			
-			return addresses.length;
-		}
+				if (row == null)
+					row = getLayoutInflater(null).inflate(R.layout.address_book_row, null);
 
-		@Override
-		public Object getItem(final int position) {
-			if (addresses == null)
-				return null;
-			
-			return addresses[position];
-		}
+				final TextView addressView = (TextView) row.findViewById(R.id.address_book_row_address);
 
-		@Override
-		public long getItemId(final int position) {
-			if (addresses == null)
-				return 0;
-			
-			return addresses[position].hashCode();
-		}
+				addressView.setText(address.toString());
 
-		@Override
-		public View getView(final int position, View row, final ViewGroup parent) {
-			final String address = (String) getItem(position);
+				final TextView labelView = (TextView) row.findViewById(R.id.address_book_row_label);
 
-			if (row == null)
-				row = getLayoutInflater(null).inflate(R.layout.address_book_row, null);
+				String label = null;
 
-			final TextView addressView = (TextView) row.findViewById(R.id.address_book_row_address);
-		
-			addressView.setText(address.toString());
+				if (labelMap != null)
+					label = labelMap.get(address);
 
-			final TextView labelView = (TextView) row.findViewById(R.id.address_book_row_label);
-			final String label = AddressBookProvider.resolveLabel(activity.getContentResolver(), address.toString());
-			if (label != null) {
-				labelView.setText(label);
-				labelView.setTextColor(res.getColor(R.color.less_significant));
+				if (label != null) {
+					labelView.setText(label);
+				}
+				else {
+					labelView.setText(R.string.wallet_addresses_fragment_unlabeled);
+				}
+
+				final TextView watchOnly = (TextView) row.findViewById(R.id.address_book_watch_only);
+
+				String priv = (String)map.get("priv");
+				if (priv == null) {
+					watchOnly.setTextColor(Color.RED);
+					watchOnly.setVisibility(View.VISIBLE);
+				} else {
+					watchOnly.setVisibility(View.GONE);
+				}
+
+				final TextView balanceView = (TextView) row.findViewById(R.id.address_book_balance_view);
+
+				if (wallet == null) {
+					balanceView.setVisibility(View.GONE);	
+				} else {
+					final BigInteger balance = wallet.getBalance(address);
+					
+					if (balance == null) {
+						balanceView.setVisibility(View.GONE);	
+					} else {
+						balanceView.setVisibility(View.VISIBLE);	
+						balanceView.setText(WalletUtils.formatValue(balance) + " BTC");
+					}
+				}
+
+				return row;
 			}
-			else {
-				labelView.setText(R.string.wallet_addresses_fragment_unlabeled);
-				labelView.setTextColor(res.getColor(R.color.insignificant));
-			}
+		};
 
-			return row;
-		}
+		setListAdapter(adapter);
 	}
 
 	private final Handler handler = new Handler();
@@ -278,7 +228,7 @@ public class WalletAddressesFragment extends ListFragment
 			try {
 				handler.post(new Runnable() {
 					public void run() {
-						updateView();
+						setAdapterContent();
 					}
 				});
 			} catch (Exception e) {

@@ -427,7 +427,16 @@ public class MyWallet {
 		return true;
 	}
 
-	
+	public boolean addWatchOnly(String address) {
+		Map<String, Object> map = new HashMap<String, Object>();
+
+		map.put("addr", address);
+
+		getKeysMap().add(map);
+
+		return true;
+	}
+
 	public boolean addKey(ECKey key, String label) throws Exception {
 		Map<String, Object> map = new HashMap<String, Object>();
 

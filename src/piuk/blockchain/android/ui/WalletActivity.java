@@ -264,7 +264,7 @@ public final class WalletActivity extends AbstractWalletActivity {
 			if (application.getRemoteWallet() == null)
 				return false;
 
-			WalletAddressesActivity.start(WalletActivity.this, true);
+			WalletAddressesActivity.start(WalletActivity.this, false);
 
 			return true;
 

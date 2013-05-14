@@ -120,11 +120,13 @@ public class WalletApplication extends Application {
 		edit.remove("guid");
 		edit.remove("sharedKey");
 
+		edit.commit();
+		
 		this.blockchainWallet = null;
 		this.didEncounterFatalPINServerError = false;
 		this.decryptionErrors = 0;
-
-		edit.commit();
+		
+		this.deleteLocalWallet();
 	}
 
 	public void connect() {
@@ -477,7 +479,7 @@ public class WalletApplication extends Application {
 			String old_password = PreferenceManager.getDefaultSharedPreferences(this).getString("password", null);
 
 			if (old_password != null) {
-				readLocalWallet(getLocalWallet(), old_password);
+				decryptLocalWallet(readLocalWallet(), old_password);
 
 				PreferenceManager.getDefaultSharedPreferences(this).edit().remove("password").commit();
 			}
@@ -714,6 +716,8 @@ public class WalletApplication extends Application {
 
 	public synchronized void checkIfWalletHasUpdatedAndFetchTransactions(final String password, final String guid, final String sharedKey, final SuccessCallback callbackFinal) {
 
+		final WalletApplication application = this;
+		
 		new Thread(new Runnable() {
 			public void run() {
 				String payload = null;
@@ -723,10 +727,10 @@ public class WalletApplication extends Application {
 
 				try {
 					if (blockchainWallet == null) {
-						localWallet = getLocalWallet();
+						localWallet = readLocalWallet();
 
 						//First try and restore the local cache
-						if (readLocalWallet(localWallet, password)) {	
+						if (decryptLocalWallet(localWallet, password)) {	
 							if (callback != null)  {
 								handler.post(new Runnable() {
 									public void run() {
@@ -814,6 +818,14 @@ public class WalletApplication extends Application {
 				} catch (Exception e) {
 					e.printStackTrace();
 
+					deleteLocalWallet();
+					
+					try {
+						PinEntryActivity.clearPrefValues(application);
+					} catch (Exception e1) {
+						e1.printStackTrace();
+					}
+					
 					decryptionErrors++;
 
 					blockchainWallet = null;
@@ -1037,12 +1049,16 @@ public class WalletApplication extends Application {
 
 		try {
 			blockchainWallet.addLabel(address, label);
-
+			
 			new Thread() {
 				@Override
 				public void run() {
 					try {
 						blockchainWallet.remoteSave();
+						
+						System.out.println("invokeWalletDidChange()");
+						
+						EventListeners.invokeWalletDidChange();
 					} catch (Exception e) {
 						e.printStackTrace();
 
@@ -1105,7 +1121,16 @@ public class WalletApplication extends Application {
 		}
 	}
 
-	public String getLocalWallet() { 
+
+	public String makeWalletChecksum(String payload) {
+		try {
+			return new String(Hex.encode(MessageDigest.getInstance("SHA-256").digest(payload.getBytes("UTF-8"))));
+		} catch (Exception e) {}
+
+		return null;
+	}
+	
+	public String readLocalWallet() { 
 		try {
 			// Read the wallet from local file
 			FileInputStream file = openFileInput(Constants.WALLET_FILENAME);
@@ -1115,17 +1140,24 @@ public class WalletApplication extends Application {
 
 		return null;
 	}
-
-
-	public String makeWalletChecksum(String payload) {
+	
+	public boolean deleteLocalWallet() {
 		try {
-			return new String(Hex.encode(MessageDigest.getInstance("SHA-256").digest(payload.getBytes("UTF-8"))));
-		} catch (Exception e) {}
+			if (deleteFile(Constants.WALLET_FILENAME)) {
+				System.out.println("Removed Local Wallet");
+			} else {
+				System.out.println("Error Removing Local Wallet");
+			}
+		} catch (Exception e) {
+			writeException(e);
 
-		return null;
+			e.printStackTrace();
+		}  
+
+		return false;
 	}
-
-	public boolean readLocalWallet(String payload, String password) {
+	
+	public boolean decryptLocalWallet(String payload, String password) {
 		try {
 			MyRemoteWallet wallet = new MyRemoteWallet(payload, password);
 

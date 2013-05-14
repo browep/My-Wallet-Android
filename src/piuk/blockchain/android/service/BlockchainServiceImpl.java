@@ -633,7 +633,7 @@ public class BlockchainServiceImpl extends android.app.Service implements Blockc
 				wakeLock.release();
 			}
 
-			if (!application.isInP2PFallbackMode())
+			if (blockChainFile != null && !application.isInP2PFallbackMode())
 			{
 				Log.d(TAG, "removing blockchain");
 				blockChainFile.delete();

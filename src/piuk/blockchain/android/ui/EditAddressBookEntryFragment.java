@@ -17,6 +17,7 @@
 
 package piuk.blockchain.android.ui;
 
+import piuk.MyRemoteWallet;
 import piuk.blockchain.android.AddressBookProvider;
 import piuk.blockchain.android.R;
 import piuk.blockchain.android.WalletApplication;
@@ -72,6 +73,10 @@ public final class EditAddressBookEntryFragment extends DialogFragment
 	@Override
 	public Dialog onCreateDialog(final Bundle savedInstanceState)
 	{
+		final WalletApplication application = (WalletApplication) getActivity().getApplication();
+
+		MyRemoteWallet wallet = application.getRemoteWallet();
+
 		this.address = getArguments().getString(KEY_ADDRESS);
 
 		final FragmentActivity activity = getActivity();
@@ -82,7 +87,12 @@ public final class EditAddressBookEntryFragment extends DialogFragment
 
 		final String label = AddressBookProvider.resolveLabel(contentResolver, address);
 
-		final boolean isAdd = label == null;
+		boolean isAdd = label == null;
+
+		boolean showDelete = !isAdd;
+
+		if (showDelete && wallet != null)
+			showDelete = !wallet.isAddressMine(address);
 
 		final Builder dialog = new AlertDialog.Builder(activity).setTitle(isAdd ? R.string.edit_address_book_entry_dialog_title_add
 				: R.string.edit_address_book_entry_dialog_title_edit);
@@ -96,22 +106,21 @@ public final class EditAddressBookEntryFragment extends DialogFragment
 		viewLabel.setText(label);
 
 		dialog.setView(view);
-		final WalletApplication application = (WalletApplication) getActivity().getApplication();
 
 		dialog.setPositiveButton(isAdd ? R.string.edit_address_book_entry_dialog_button_add : R.string.edit_address_book_entry_dialog_button_edit,
 				new DialogInterface.OnClickListener()
-				{
-					public void onClick(final DialogInterface dialog, final int whichButton)
-					{
-						AddressBookProvider.setLabel(contentResolver, address, viewLabel.getText().toString());
+		{
+			public void onClick(final DialogInterface dialog, final int whichButton)
+			{
+				AddressBookProvider.setLabel(contentResolver, address, viewLabel.getText().toString());
 
-						application.setAddressLabel(address, viewLabel.getText().toString());
-						
-						dismiss();
-					}
-				});
-		
-		if (!isAdd)
+				application.setAddressLabel(address, viewLabel.getText().toString());
+
+				dismiss();
+			}
+		});
+
+		if (showDelete)
 		{
 			dialog.setNeutralButton(R.string.edit_address_book_entry_dialog_button_delete, new DialogInterface.OnClickListener()
 			{

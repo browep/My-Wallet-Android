@@ -3,7 +3,7 @@
     package="piuk.blockchain.android"
     android:installLocation="preferExternal"
     android:versionCode="118"
-    android:versionName="3.48" >
+    android:versionName="3.49" >
 
     <uses-sdk
         android:minSdkVersion="9"
@@ -125,25 +125,25 @@
         <activity
             android:name="piuk.blockchain.android.ui.RequestCoinsActivity"
             android:configChanges="orientation|keyboard|keyboardHidden"
-            android:launchMode="singleInstance"
+            android:launchMode="singleTask"
             android:screenOrientation="behind"
             android:theme="@style/Theme.MyLight" />
         <activity
             android:name="piuk.blockchain.android.ui.ExchangeRatesActivity"
             android:configChanges="orientation|keyboard|keyboardHidden"
-            android:launchMode="singleInstance"
+            android:launchMode="singleTask"
             android:screenOrientation="behind"
             android:theme="@style/Theme.MyLight" >
         </activity>
         <activity
             android:name="piuk.blockchain.android.ui.WalletAddressesActivity"
             android:configChanges="orientation|keyboard|keyboardHidden"
-            android:launchMode="singleInstance"
+            android:launchMode="singleTask"
             android:screenOrientation="portrait"
-            android:theme="@style/Theme.MyLight" />
+            android:theme="@style/Theme.HoloLight" />
         <activity
             android:name="piuk.blockchain.android.ui.PinEntryActivity"
-            android:launchMode="singleInstance"
+            android:launchMode="singleTask"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.MyPIN" >
         </activity>
