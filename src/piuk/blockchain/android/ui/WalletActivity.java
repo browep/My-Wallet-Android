@@ -42,6 +42,7 @@ import piuk.blockchain.android.util.ErrorReporter;
 import piuk.blockchain.android.util.Iso8601Format;
 import piuk.blockchain.android.util.WalletUtils;
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.BroadcastReceiver;
@@ -124,13 +125,15 @@ public final class WalletActivity extends AbstractWalletActivity {
 		transactionsFragment = (WalletTransactionsFragment) getSupportFragmentManager()
 				.findFragmentById(R.id.wallet_transactions_fragment);
 
+		final Activity activity = this;
+
 		actionBar.getPrimaryTitleView().setOnClickListener(
 				new OnClickListener() {
 					public void onClick(final View v) {
 						if (application.getRemoteWallet() == null)
 							return;
 
-						WelcomeDialog.show(getSupportFragmentManager(), application);
+						WelcomeDialog.show(getSupportFragmentManager(), activity, application);
 					}
 				});
 
@@ -140,7 +143,7 @@ public final class WalletActivity extends AbstractWalletActivity {
 						if (application.getRemoteWallet() == null)
 							return;
 
-						WelcomeDialog.show(getSupportFragmentManager(), application);
+						WelcomeDialog.show(getSupportFragmentManager(), activity, application);
 					}
 				});
 

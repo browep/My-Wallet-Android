@@ -399,24 +399,32 @@ public final class SendCoinsFragment extends Fragment
 						if (tx.bitcoinSerialize().length > 1024 || containsOutputLessThanThreshold) {
 							makeTransaction(FeePolicy.FeeForce);
 						} else if (priority < 97600000L) {
-
 							handler.post(new Runnable() {
 								public void run() {
 									AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
 									builder.setMessage(R.string.ask_for_fee)
-									.setCancelable(false)
-									.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
-										public void onClick(DialogInterface dialog, int id) {
-											makeTransaction(FeePolicy.FeeForce);
-										}
-									})
-									.setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
-										public void onClick(DialogInterface dialog, int id) {
-											makeTransaction(FeePolicy.FeeNever);
-										}
-									});
-
+									.setCancelable(false);
+									
 									AlertDialog alert = builder.create();
+									
+									alert.setButton(AlertDialog.BUTTON_NEUTRAL, getString(R.string.continue_without_fee), new DialogInterface.OnClickListener() {
+									      public void onClick(DialogInterface dialog, int id) {
+												makeTransaction(FeePolicy.FeeNever);
+												dialog.dismiss();
+									    } }); 
+
+									alert.setButton(AlertDialog.BUTTON_POSITIVE, getString(R.string.add_fee), new DialogInterface.OnClickListener() {
+									      public void onClick(DialogInterface dialog, int id) {
+									    	  makeTransaction(FeePolicy.FeeForce);
+									    	  
+												dialog.dismiss();
+									    }}); 
+
+									alert.setButton(AlertDialog.BUTTON_NEGATIVE, getString(R.string.cancel), new DialogInterface.OnClickListener() {
+									      public void onClick(DialogInterface dialog, int id) {
+												dialog.dismiss();
+									    }});
+
 
 									alert.show();
 								}
@@ -600,13 +608,14 @@ public final class SendCoinsFragment extends Fragment
 
 					BigInteger fee = null;
 
-					if (sendType != null && sendType.equals(SendCoinsActivity.SendTypeCustomSend)) {
+					if (feePolicy == FeePolicy.FeeForce) {
+						fee = baseFee;
+					} else if (sendType != null && sendType.equals(SendCoinsActivity.SendTypeCustomSend)) {
 						feePolicy = FeePolicy.FeeNever;
 						fee = feeAmountView.getAmount();
 					} else {
-						fee = (feePolicy == FeePolicy.FeeForce || wallet.getFeePolicy() == 1) ? baseFee : BigInteger.ZERO;;
+						fee = (wallet.getFeePolicy() == 1) ? baseFee : BigInteger.ZERO;
 					}
-
 
 					final BigInteger finalFee = fee;
 					final FeePolicy finalFeePolicy = feePolicy;

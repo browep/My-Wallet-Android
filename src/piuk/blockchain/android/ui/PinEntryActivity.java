@@ -278,7 +278,7 @@ public class PinEntryActivity extends AbstractWalletActivity {
 							}
 						});
 					} else if (response.get("error") != null) {
-						
+
 						//Even though we received an error it is a valid response
 						//So no fatal
 						application.didEncounterFatalPINServerError = false;
@@ -307,50 +307,54 @@ public class PinEntryActivity extends AbstractWalletActivity {
 
 					handler.post(new Runnable() {
 						public void run() {
-							disableKeyPad(false);
+							try {
+								disableKeyPad(false);
 
-							AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+								AlertDialog.Builder builder = new AlertDialog.Builder(activity);
 
-							builder.setCancelable(false);
+								builder.setCancelable(false);
 
-							builder.setMessage(R.string.pin_server_error_description);
+								builder.setMessage(R.string.pin_server_error_description);
 
-							builder.setTitle(R.string.pin_server_error);
+								builder.setTitle(R.string.pin_server_error);
 
-							builder.setPositiveButton(R.string.try_again, new DialogInterface.OnClickListener() {
-								public void onClick(DialogInterface dialog, int id) {
-									validatePIN(PIN);
+								builder.setPositiveButton(R.string.try_again, new DialogInterface.OnClickListener() {
+									public void onClick(DialogInterface dialog, int id) {
+										validatePIN(PIN);
 
-									dialog.dismiss();
+										dialog.dismiss();
 
-									begin();
-								}
-							});
-							builder.setNegativeButton(R.string.pin_server_error_enter_password_manually, new DialogInterface.OnClickListener() {
-								public void onClick(DialogInterface dialog, int id) {
-									dialog.dismiss();
+										begin();
+									}
+								});
+								builder.setNegativeButton(R.string.pin_server_error_enter_password_manually, new DialogInterface.OnClickListener() {
+									public void onClick(DialogInterface dialog, int id) {
+										dialog.dismiss();
 
-									RequestPasswordDialog.show(
-											getSupportFragmentManager(),
-											new SuccessCallback() {  
-												public void onSuccess() {
-													finish();
-												}
-												public void onFail() {	
-													Toast.makeText(application, R.string.password_incorrect, Toast.LENGTH_LONG).show();
+										RequestPasswordDialog.show(
+												getSupportFragmentManager(),
+												new SuccessCallback() {  
+													public void onSuccess() {
+														finish();
+													}
+													public void onFail() {	
+														Toast.makeText(application, R.string.password_incorrect, Toast.LENGTH_LONG).show();
 
-													begin();
-												}
-											}, RequestPasswordDialog.PasswordTypeMain);
+														begin();
+													}
+												}, RequestPasswordDialog.PasswordTypeMain);
 
-								}
-							});
+									}
+								});
 
-							AlertDialog dialog = builder.create();
+								AlertDialog dialog = builder.create();
 
-							dialog.show();
+								dialog.show();
 
-							begin();
+								begin();
+							} catch (Exception e) {
+								e.printStackTrace();
+							}
 						}
 					});
 				}
@@ -464,9 +468,9 @@ public class PinEntryActivity extends AbstractWalletActivity {
 											final JSONObject response = apiStoreKey(key, value, PIN);
 
 											if (response.get("success") != null) {
-												
+
 												application.didEncounterFatalPINServerError = false;
-												
+
 												handler.post(new Runnable() {
 													public void run() {
 														try {
@@ -505,7 +509,7 @@ public class PinEntryActivity extends AbstractWalletActivity {
 												handler.post(new Runnable() {
 													public void run() {
 														Toast.makeText(application, (String) response.get("error"), Toast.LENGTH_LONG)
-																.show();	
+														.show();	
 
 														disableKeyPad(false);
 
@@ -591,6 +595,8 @@ public class PinEntryActivity extends AbstractWalletActivity {
 
 	public void begin() {
 
+		final Activity activity = this;
+
 		disableKeyPad(false);
 
 		clear();
@@ -618,11 +624,11 @@ public class PinEntryActivity extends AbstractWalletActivity {
 									statusView.setText("Password Ok. Please create a PIN.");
 								}
 								public void onFail() {							
-									WelcomeDialog.show(getSupportFragmentManager(), (WalletApplication)getApplication());
+									WelcomeDialog.show(getSupportFragmentManager(), activity, (WalletApplication)getApplication());
 								}
 							}, RequestPasswordDialog.PasswordTypeMain);
 				} else {
-					WelcomeDialog.show(getSupportFragmentManager(), (WalletApplication)getApplication());
+					WelcomeDialog.show(getSupportFragmentManager(), activity, (WalletApplication)getApplication());
 				}
 			} 
 		} else {

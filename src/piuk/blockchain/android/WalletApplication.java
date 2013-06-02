@@ -121,11 +121,11 @@ public class WalletApplication extends Application {
 		edit.remove("sharedKey");
 
 		edit.commit();
-		
+
 		this.blockchainWallet = null;
 		this.didEncounterFatalPINServerError = false;
 		this.decryptionErrors = 0;
-		
+
 		this.deleteLocalWallet();
 	}
 
@@ -391,7 +391,7 @@ public class WalletApplication extends Application {
 		this.bitcoinjWallet = null;
 
 		stopService(blockchainServiceIntent);
- 
+
 		deleteBitcoinJLocalData();
 
 		EventListeners.invokeWalletDidChange();
@@ -409,15 +409,20 @@ public class WalletApplication extends Application {
 					public void run() {
 						handler.post(new Runnable() {
 							public void run() {
-								if (WebsocketService.isRunning)
-									stopService(websocketServiceIntent);
+								try {
+									if (WebsocketService.isRunning)
+										stopService(websocketServiceIntent);
 
-								unregisterReceiver(broadcastReceiver);
+									AbstractWalletActivity.lastDisplayedNetworkError = 0;
 
-								AbstractWalletActivity.lastDisplayedNetworkError = 0;
+									if (isInP2PFallbackMode())
+										saveBitcoinJWallet();
 
-								if (isInP2PFallbackMode())
-									saveBitcoinJWallet();
+									unregisterReceiver(broadcastReceiver);
+
+								} catch (Exception e) {
+									e.printStackTrace();
+								}
 							}
 						});
 					}
@@ -465,7 +470,7 @@ public class WalletApplication extends Application {
 			}	
 		} 
 
-		
+
 		if (blockchainWallet != null && decryptionErrors == 0 && (passwordSaved || didEncounterFatalPINServerError)) {
 			if (!blockchainWallet.isUptoDate(Constants.MultiAddrTimeThreshold)) {
 				checkIfWalletHasUpdatedAndFetchTransactions(blockchainWallet.getTemporyPassword());
@@ -488,9 +493,9 @@ public class WalletApplication extends Application {
 				@Override
 				public void run() {	
 					if (!PinEntryActivity.active) {
-						
+
 						System.out.println("Start PinEntry");
-						
+
 						Intent intent = new Intent(activity, PinEntryActivity.class);
 
 						activity.startActivity(intent);
@@ -717,7 +722,7 @@ public class WalletApplication extends Application {
 	public synchronized void checkIfWalletHasUpdatedAndFetchTransactions(final String password, final String guid, final String sharedKey, final SuccessCallback callbackFinal) {
 
 		final WalletApplication application = this;
-		
+
 		new Thread(new Runnable() {
 			public void run() {
 				String payload = null;
@@ -819,13 +824,13 @@ public class WalletApplication extends Application {
 					e.printStackTrace();
 
 					deleteLocalWallet();
-					
+
 					try {
 						PinEntryActivity.clearPrefValues(application);
 					} catch (Exception e1) {
 						e1.printStackTrace();
 					}
-					
+
 					decryptionErrors++;
 
 					blockchainWallet = null;
@@ -1049,15 +1054,15 @@ public class WalletApplication extends Application {
 
 		try {
 			blockchainWallet.addLabel(address, label);
-			
+
 			new Thread() {
 				@Override
 				public void run() {
 					try {
 						blockchainWallet.remoteSave();
-						
+
 						System.out.println("invokeWalletDidChange()");
-						
+
 						EventListeners.invokeWalletDidChange();
 					} catch (Exception e) {
 						e.printStackTrace();
@@ -1129,7 +1134,7 @@ public class WalletApplication extends Application {
 
 		return null;
 	}
-	
+
 	public String readLocalWallet() { 
 		try {
 			// Read the wallet from local file
@@ -1140,7 +1145,7 @@ public class WalletApplication extends Application {
 
 		return null;
 	}
-	
+
 	public boolean deleteLocalWallet() {
 		try {
 			if (deleteFile(Constants.WALLET_FILENAME)) {
@@ -1156,7 +1161,7 @@ public class WalletApplication extends Application {
 
 		return false;
 	}
-	
+
 	public boolean decryptLocalWallet(String payload, String password) {
 		try {
 			MyRemoteWallet wallet = new MyRemoteWallet(payload, password);

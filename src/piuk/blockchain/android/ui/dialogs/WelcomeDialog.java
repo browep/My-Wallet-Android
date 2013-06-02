@@ -21,6 +21,7 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.AlertDialog.Builder;
 import android.app.Dialog;
@@ -59,9 +60,12 @@ public final class WelcomeDialog extends DialogFragment {
 		}
 	}
 
-	public static void show(final FragmentManager fm, WalletApplication application) {
+	public static void show(final FragmentManager fm, Activity activity, WalletApplication application) {
 
 		try {
+			if (activity.isFinishing())
+				return;
+			
 			hide();
 			
 			NewAccountDialog.hide();
@@ -79,6 +83,9 @@ public final class WelcomeDialog extends DialogFragment {
 
 			final DialogFragment newFragment = instance();
 
+			if (activity.isFinishing())
+				return;
+			
 			newFragment.show(ft, FRAGMENT_TAG);
 
 			if (application.getRemoteWallet() == null) {

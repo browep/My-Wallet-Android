@@ -115,10 +115,10 @@ public final class NewAccountDialog extends DialogFragment {
 					captchaImage.post(new Runnable() {
 						public void run() {
 							Activity activity = getActivity();
-							
+
 							if (activity == null)
 								return;
-							
+
 							Toast.makeText(activity,
 									R.string.toast_error_downloading_captcha,
 									Toast.LENGTH_LONG).show();
@@ -155,8 +155,7 @@ public final class NewAccountDialog extends DialogFragment {
 
 	@Override
 	public void onCancel(DialogInterface dialog) {	
-
-		WelcomeDialog.show(getFragmentManager(), application);
+		WelcomeDialog.show(getFragmentManager(), getActivity(), application);
 	}
 
 

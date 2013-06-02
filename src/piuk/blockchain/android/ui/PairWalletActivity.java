@@ -1,5 +1,6 @@
 package piuk.blockchain.android.ui;
 
+import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences.Editor;
 import android.os.Bundle;
@@ -81,7 +82,8 @@ public class PairWalletActivity extends AbstractWalletActivity {
 	}
 
 	public void pairManually(final String guid) {
-
+		final Activity activity = this;
+		
 		new Thread(new Runnable() {
 			@Override
 			public void run() {
@@ -142,7 +144,7 @@ public class PairWalletActivity extends AbstractWalletActivity {
 
 										}
 										public void onFail() {							
-											WelcomeDialog.show(getSupportFragmentManager(), (WalletApplication)getApplication());
+											WelcomeDialog.show(getSupportFragmentManager(), activity, (WalletApplication)getApplication());
 										}
 									}, RequestPasswordDialog.PasswordTypeMainNoValidate);
 						}
