@@ -398,6 +398,7 @@ public final class SendCoinsFragment extends Fragment
 					if (feePolicy != FeePolicy.FeeNever && fee.compareTo(BigInteger.ZERO) == 0) {
 						if (tx.bitcoinSerialize().length > 1024 || containsOutputLessThanThreshold) {
 							makeTransaction(FeePolicy.FeeForce);
+							return false;
 						} else if (priority < 97600000L) {
 							handler.post(new Runnable() {
 								public void run() {
@@ -409,13 +410,13 @@ public final class SendCoinsFragment extends Fragment
 									
 									alert.setButton(AlertDialog.BUTTON_NEUTRAL, getString(R.string.continue_without_fee), new DialogInterface.OnClickListener() {
 									      public void onClick(DialogInterface dialog, int id) {
-												makeTransaction(FeePolicy.FeeNever);
+												 makeTransaction(FeePolicy.FeeNever);
 												dialog.dismiss();
 									    } }); 
 
 									alert.setButton(AlertDialog.BUTTON_POSITIVE, getString(R.string.add_fee), new DialogInterface.OnClickListener() {
 									      public void onClick(DialogInterface dialog, int id) {
-									    	  makeTransaction(FeePolicy.FeeForce);
+									    	    makeTransaction(FeePolicy.FeeForce);
 									    	  
 												dialog.dismiss();
 									    }}); 
@@ -424,7 +425,6 @@ public final class SendCoinsFragment extends Fragment
 									      public void onClick(DialogInterface dialog, int id) {
 												dialog.dismiss();
 									    }});
-
 
 									alert.show();
 								}
@@ -436,7 +436,6 @@ public final class SendCoinsFragment extends Fragment
 									updateView();
 								}
 							});
-
 							return false;
 						}
 					}
@@ -611,7 +610,7 @@ public final class SendCoinsFragment extends Fragment
 					if (feePolicy == FeePolicy.FeeForce) {
 						fee = baseFee;
 					} else if (sendType != null && sendType.equals(SendCoinsActivity.SendTypeCustomSend)) {
-						feePolicy = FeePolicy.FeeNever;
+						feePolicy = FeePolicy.FeeOnlyIfNeeded;
 						fee = feeAmountView.getAmount();
 					} else {
 						fee = (wallet.getFeePolicy() == 1) ? baseFee : BigInteger.ZERO;

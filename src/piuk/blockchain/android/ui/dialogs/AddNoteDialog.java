@@ -107,6 +107,9 @@ public final class AddNoteDialog extends DialogFragment {
 		final WalletApplication application = (WalletApplication) activity.getApplication();
 		final MyRemoteWallet wallet = application.getRemoteWallet();
 
+		if (wallet == null)
+			return null;
+		
 		final Builder dialog = new AlertDialog.Builder(new ContextThemeWrapper(activity, R.style.Theme_Dialog));		
 
 		String existingNote = wallet.getTxNotes().get(tx);
