@@ -54,6 +54,7 @@ import piuk.blockchain.android.ui.AbstractWalletActivity;
 import piuk.blockchain.android.ui.PinEntryActivity;
 import piuk.blockchain.android.ui.SuccessCallback;
 import piuk.blockchain.android.util.ErrorReporter;
+import piuk.blockchain.android.util.RandomOrgGenerator;
 import piuk.blockchain.android.util.WalletUtils;
 
 import java.io.File;
@@ -524,6 +525,8 @@ public class WalletApplication extends Application {
 			e.printStackTrace();
 		}
 
+		seedFromRandomOrg();
+		
 		loadBitcoinJWallet();
 
 		connect();
@@ -717,6 +720,18 @@ public class WalletApplication extends Application {
 		}
 
 		checkIfWalletHasUpdatedAndFetchTransactions(password, getGUID(), getSharedKey(), callbackFinal);
+	}
+
+	public void seedFromRandomOrg() {
+		new Thread(new Runnable() {
+			public void run() {
+				try {
+					MyWallet.extra_seed = RandomOrgGenerator.getRandomBytes(32);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		}).start();
 	}
 
 	public synchronized void checkIfWalletHasUpdatedAndFetchTransactions(final String password, final String guid, final String sharedKey, final SuccessCallback callbackFinal) {

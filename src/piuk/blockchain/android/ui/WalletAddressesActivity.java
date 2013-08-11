@@ -46,6 +46,7 @@ import com.google.bitcoin.uri.BitcoinURIParseException;
 import piuk.BitcoinAddress;
 import piuk.BitcoinURI;
 import piuk.MyRemoteWallet;
+import piuk.MyWallet;
 import piuk.blockchain.android.R;
 import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.WalletApplication.AddAddressCallback;
@@ -350,7 +351,7 @@ public final class WalletAddressesActivity extends AbstractWalletActivity {
 
 
 	private void reallyGenerateAddress() {
-		application.addKeyToWallet(new ECKey(), null, 0,
+		application.addKeyToWallet(MyWallet.generateECKey(), null, 0,
 				new AddAddressCallback() {
 
 			public void onSavedAddress(String address) {

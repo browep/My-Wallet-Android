@@ -62,14 +62,12 @@ import static com.google.common.base.Preconditions.checkArgument;
  */
 public class ECKey implements Serializable {
     public static final ECDomainParameters ecParams;
-    public static final SecureRandom secureRandom;
     public static final long serialVersionUID = -728224901792295832L;
 
     static {
         // All clients must agree on the curve to use by agreement. Bitcoin uses secp256k1.
         X9ECParameters params = SECNamedCurves.getByName("secp256k1");
         ecParams = new ECDomainParameters(params.getCurve(), params.getG(), params.getN(), params.getH());
-        secureRandom = new SecureRandom();
     }
 
     // The two parts of the key. If "priv" is set, "pub" can always be calculated. If "pub" is set but not "priv", we
@@ -84,11 +82,15 @@ public class ECKey implements Serializable {
     // Transient because it's calculated on demand.
     transient private byte[] pubKeyHash;
 
-    /**
-     * Generates an entirely new keypair. Point compression is used so the resulting public key will be 33 bytes
-     * (32 for the co-ordinate and 1 byte to represent the y bit).
-     */
     public ECKey() {
+       this(new SecureRandom());
+    }
+
+    /**
+        * Generates an entirely new keypair. Point compression is used so the resulting public key will be 33 bytes
+        * (32 for the co-ordinate and 1 byte to represent the y bit).
+    */
+    public ECKey(SecureRandom secureRandom) {
         ECKeyPairGenerator generator = new ECKeyPairGenerator();
         ECKeyGenerationParameters keygenParams = new ECKeyGenerationParameters(ecParams, secureRandom);
         generator.init(keygenParams);

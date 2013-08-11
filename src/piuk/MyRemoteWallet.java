@@ -58,7 +58,8 @@ public class MyRemoteWallet extends MyWallet {
 	private Map<String, JSONObject> multiAddrBalancesRoot;
 	private double sharedFee;
 	private List<MyTransaction> transactions = Collections.synchronizedList(new ArrayList<MyTransaction>());
-	
+	public byte[] extra_seed;
+
 	public MyBlock getLatestBlock() {
 		return latestBlock;
 	}

@@ -28,6 +28,7 @@ import org.apache.commons.lang.StringUtils;
 import org.json.simple.JSONValue;
 import org.json.simple.parser.JSONParser;
 
+import java.io.IOException;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
@@ -45,6 +46,9 @@ import org.spongycastle.crypto.paddings.PaddedBufferedBlockCipher;
 import org.spongycastle.crypto.params.KeyParameter;
 import org.spongycastle.crypto.params.ParametersWithIV;
 
+import piuk.blockchain.android.util.LinuxSecureRandom;
+import piuk.blockchain.android.util.RandomOrgGenerator;
+
 public class MyWallet {
 	private static final int AESBlockSize = 4;
 	public static final int DefaultPBKDF2Iterations = 10;
@@ -53,7 +57,8 @@ public class MyWallet {
 	public String temporySecondPassword;
 
 	public static final NetworkParameters params = NetworkParameters.prodNet();
-
+	public static byte[] extra_seed;
+	
 	public MyWallet(String base64Payload, String password) throws Exception {
 		this.root = decryptPayload(base64Payload, password);
 
@@ -61,6 +66,20 @@ public class MyWallet {
 			throw new Exception("Error Decrypting Wallet");
 	}
 
+	static {
+		LinuxSecureRandom.init();
+	}
+	
+	public static ECKey generateECKey() {
+		SecureRandom random = new SecureRandom();
+		
+		if (extra_seed != null) {
+			random.setSeed(extra_seed);
+		}
+		
+	    return new ECKey(random);
+	}
+	
 	// Create a new Wallet
 	public MyWallet() throws Exception {
 		this.root = new HashMap<String, Object>();
@@ -74,7 +93,7 @@ public class MyWallet {
 		root.put("keys", keys);
 		root.put("address_book", address_book);
 
-		addKey(new ECKey(), "New");
+		addKey(generateECKey(), "New");
 	}
 
 	@SuppressWarnings("unchecked")
