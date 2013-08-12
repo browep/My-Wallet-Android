@@ -38,7 +38,7 @@ public class Constants {
 
 	public static final NetworkParameters NETWORK_PARAMETERS = TEST ? NetworkParameters
 			.testNet() : NetworkParameters.prodNet();
-
+			
 			public static final String WALLET_FILENAME_PROTOBUF = "wallet-protobuf";
 
 			public static final String PREFS_KEY_BEST_CHAIN_HEIGHT_EVER = "best_chain_height_ever";
@@ -139,12 +139,6 @@ public class Constants {
 			public static final String MARKET_APP_URL = "market://details?id=%s";
 			public static final String WEBMARKET_APP_URL = isAmazon ? "http://www.amazon.com/gp/mas/dl/android?p=%s"
 					: "https://play.google.com/store/apps/details?id=%s";
-
-			private static final String VERSION_URL_PROD = "http://wallet.schildbach.de/version";
-			private static final String VERSION_URL_TEST = VERSION_URL_PROD + '_'
-					+ "test"; // replace protected
-			public static final String VERSION_URL = TEST ? VERSION_URL_TEST
-					: VERSION_URL_PROD;
 
 			public static final Intent INTENT_QR_SCANNER = new Intent(
 					"com.google.zxing.client.android.SCAN").putExtra("SCAN_MODE",

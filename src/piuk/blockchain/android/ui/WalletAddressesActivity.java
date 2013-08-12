@@ -133,7 +133,7 @@ public final class WalletAddressesActivity extends AbstractWalletActivity {
 				if (application.getRemoteWallet() == null)
 					return;
 
-				application.getRemoteWallet().addWatchOnly(address);
+				application.getRemoteWallet().addWatchOnly(address, "android_watch_only");
 				
 				application.saveWallet(new SuccessCallback() {
 					@Override
@@ -210,8 +210,6 @@ public final class WalletAddressesActivity extends AbstractWalletActivity {
 			showQRReader(new QrCodeDelagate() {
 				@Override
 				public void didReadQRCode(String data) throws Exception {
-					System.out.println("didReadQRCode() " + data);
-
 					handleAddWatchOnly(data);
 				}
 			});
@@ -351,7 +349,8 @@ public final class WalletAddressesActivity extends AbstractWalletActivity {
 
 
 	private void reallyGenerateAddress() {
-		application.addKeyToWallet(MyWallet.generateECKey(), null, 0,
+		
+		application.addKeyToWallet(application.getRemoteWallet().generateECKey(), null, 0,
 				new AddAddressCallback() {
 
 			public void onSavedAddress(String address) {
@@ -375,33 +374,50 @@ public final class WalletAddressesActivity extends AbstractWalletActivity {
 		if (application.getRemoteWallet() == null)
 			return;
 
-		MyRemoteWallet remoteWallet = application.getRemoteWallet();
+		final MyRemoteWallet remoteWallet = application.getRemoteWallet();
 
-		if (remoteWallet.isDoubleEncrypted() == false) {
-			reallyGenerateAddress();
-		} else {
-			if (remoteWallet.temporySecondPassword == null) {
-				RequestPasswordDialog.show(
-						getSupportFragmentManager(),
-						new SuccessCallback() {
+		if (remoteWallet == null)
+			return;
 
-							public void onSuccess() {
-								reallyGenerateAddress();
-							}
+		application.checkIfWalletHasUpdatedAndFetchTransactions(remoteWallet.getTemporyPassword(), new SuccessCallback() {
+			@Override
+			public void onSuccess() {
+				if (remoteWallet.isDoubleEncrypted() == false) {
+					reallyGenerateAddress();
+				} else {
+					if (remoteWallet.temporySecondPassword == null) {
+						RequestPasswordDialog.show(
+								getSupportFragmentManager(),
+								new SuccessCallback() {
 
-							public void onFail() {
-								Toast.makeText(
-										getApplication(),
-										R.string.generate_key_no_password_error,
-										Toast.LENGTH_LONG)
-										.show();
-							}
-						}, RequestPasswordDialog.PasswordTypeSecond);
-			} else {
-				reallyGenerateAddress();
+									public void onSuccess() {
+										reallyGenerateAddress();
+									}
+
+									public void onFail() {
+										Toast.makeText(
+												getApplication(),
+												R.string.generate_key_no_password_error,
+												Toast.LENGTH_LONG)
+												.show();
+									}
+								}, RequestPasswordDialog.PasswordTypeSecond);
+					} else {
+						reallyGenerateAddress();
+					}
+				}
 			}
-		}
 
+			@Override
+			public void onFail() {
+				Toast.makeText(
+						getApplication(),
+						R.string.toast_error_syncing_wallet,
+						Toast.LENGTH_LONG)
+						.show();
+			}
+		});
+		
 		updateFragments();
 	}
 

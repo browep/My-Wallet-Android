@@ -144,7 +144,8 @@ public final class RequestIdentifierDialog extends DialogFragment {
 
 					validateGUIDorThrow(guid); 
 
-					callback.onSuccess(guid);
+					if (callback != null)
+						callback.onSuccess(guid);
 
 					dismiss();
 				} catch (Exception e) {
@@ -152,7 +153,8 @@ public final class RequestIdentifierDialog extends DialogFragment {
 
 					dismiss();
 
-					callback.onFail(e.getLocalizedMessage());
+					if (callback != null)
+						callback.onFail(e.getLocalizedMessage());
 				}
 			}
 		});

@@ -405,26 +405,26 @@ public final class SendCoinsFragment extends Fragment
 									AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
 									builder.setMessage(R.string.ask_for_fee)
 									.setCancelable(false);
-									
+
 									AlertDialog alert = builder.create();
-									
+
 									alert.setButton(AlertDialog.BUTTON_NEUTRAL, getString(R.string.continue_without_fee), new DialogInterface.OnClickListener() {
-									      public void onClick(DialogInterface dialog, int id) {
-												 makeTransaction(FeePolicy.FeeNever);
-												dialog.dismiss();
-									    } }); 
+										public void onClick(DialogInterface dialog, int id) {
+											makeTransaction(FeePolicy.FeeNever);
+											dialog.dismiss();
+										} }); 
 
 									alert.setButton(AlertDialog.BUTTON_POSITIVE, getString(R.string.add_fee), new DialogInterface.OnClickListener() {
-									      public void onClick(DialogInterface dialog, int id) {
-									    	    makeTransaction(FeePolicy.FeeForce);
-									    	  
-												dialog.dismiss();
-									    }}); 
+										public void onClick(DialogInterface dialog, int id) {
+											makeTransaction(FeePolicy.FeeForce);
+
+											dialog.dismiss();
+										}}); 
 
 									alert.setButton(AlertDialog.BUTTON_NEGATIVE, getString(R.string.cancel), new DialogInterface.OnClickListener() {
-									      public void onClick(DialogInterface dialog, int id) {
-												dialog.dismiss();
-									    }});
+										public void onClick(DialogInterface dialog, int id) {
+											dialog.dismiss();
+										}});
 
 									alert.show();
 								}
@@ -673,23 +673,19 @@ public final class SendCoinsFragment extends Fragment
 
 				MyRemoteWallet remoteWallet = application.getRemoteWallet();
 
-				if (remoteWallet.isDoubleEncrypted() == false) {
-					makeTransaction(FeePolicy.FeeOnlyIfNeeded);
+				if (remoteWallet.isDoubleEncrypted() && remoteWallet.temporySecondPassword == null) {
+					RequestPasswordDialog.show(getFragmentManager(), new SuccessCallback() {
+
+						public void onSuccess() {
+							makeTransaction(FeePolicy.FeeOnlyIfNeeded);
+						}
+
+						public void onFail() {
+							Toast.makeText(application, R.string.send_no_password_error, Toast.LENGTH_LONG).show();
+						}
+					}, RequestPasswordDialog.PasswordTypeSecond);
 				} else {
-					if (remoteWallet.temporySecondPassword == null) {
-						RequestPasswordDialog.show(getFragmentManager(), new SuccessCallback() {
-
-							public void onSuccess() {
-								makeTransaction(FeePolicy.FeeOnlyIfNeeded);
-							}
-
-							public void onFail() {
-								Toast.makeText(application, R.string.send_no_password_error, Toast.LENGTH_LONG).show();
-							}
-						}, RequestPasswordDialog.PasswordTypeSecond);
-					} else {
-						makeTransaction(FeePolicy.FeeOnlyIfNeeded);
-					}
+					makeTransaction(FeePolicy.FeeOnlyIfNeeded);
 				}
 			}
 		});

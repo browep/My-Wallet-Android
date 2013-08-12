@@ -137,7 +137,7 @@ public final class AddNoteDialog extends DialogFragment {
 					String text = noteView.getText().toString().trim();
 
 					if (text.length() == 0) {
-						Toast.makeText(getActivity().getApplication(),
+						Toast.makeText(activity.getApplication(),
 								R.string.please_enter_note,
 								Toast.LENGTH_SHORT).show();
 						return;
@@ -148,7 +148,7 @@ public final class AddNoteDialog extends DialogFragment {
 							@Override
 							public void onSuccess() {
 
-								Toast.makeText(getActivity().getApplication(),
+								Toast.makeText(activity.getApplication(),
 										R.string.note_saved,
 										Toast.LENGTH_SHORT).show();
 
@@ -158,7 +158,7 @@ public final class AddNoteDialog extends DialogFragment {
 							@Override
 							public void onFail() {
 								
-								Toast.makeText(getActivity().getApplication(),
+								Toast.makeText(activity.getApplication(),
 										R.string.toast_error_syncing_wallet,
 										Toast.LENGTH_SHORT).show();
 
@@ -169,7 +169,7 @@ public final class AddNoteDialog extends DialogFragment {
 				} catch (Exception e) {
 					e.printStackTrace();
 
-					Toast.makeText(getActivity().getApplication(),
+					Toast.makeText(activity.getApplication(),
 							e.getLocalizedMessage(),
 							Toast.LENGTH_SHORT).show();
 				}

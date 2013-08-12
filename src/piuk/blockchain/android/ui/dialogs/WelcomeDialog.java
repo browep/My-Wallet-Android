@@ -61,7 +61,6 @@ public final class WelcomeDialog extends DialogFragment {
 	}
 
 	public static void show(final FragmentManager fm, Activity activity, WalletApplication application) {
-
 		try {
 			if (activity.isFinishing())
 				return;

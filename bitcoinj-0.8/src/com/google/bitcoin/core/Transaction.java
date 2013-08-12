@@ -16,6 +16,8 @@
 
 package com.google.bitcoin.core;
 
+import com.google.bitcoin.core.Address;
+import com.google.bitcoin.core.Message;
 import com.google.bitcoin.core.TransactionConfidence.ConfidenceType;
 import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
@@ -729,8 +731,8 @@ public class Transaction extends ChildMessage implements Serializable {
             }
 
             // This assert should never fire. If it does, it means the wallet is inconsistent.
-            Preconditions.checkNotNull(key, "Transaction exists in wallet that we cannot redeem: %s",
-                                       input.getOutpoint().getHash());
+            Preconditions.checkNotNull(key, "Transaction exists in wallet that we cannot redeem: %s - %s",
+                                       input.getOutpoint().getHash(), new Address(params, connectedPubKeyHash));
             // Keep the key around for the script creation step below.
             signingKeys[i] = key;
             // The anyoneCanPay feature isn't used at the moment.

@@ -32,6 +32,7 @@ import piuk.blockchain.android.R;
 import piuk.blockchain.android.WalletApplication;
 import piuk.blockchain.android.ui.AbstractWalletActivity;
 import piuk.blockchain.android.ui.PinEntryActivity;
+import piuk.blockchain.android.ui.SuccessCallback;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.AlertDialog.Builder;
@@ -182,8 +183,8 @@ public final class NewAccountDialog extends DialogFragment {
 		dialog.setView(view);
 
 		final Button createButton = (Button) view.findViewById(R.id.create_button);
-		final TextView password = (TextView) view.findViewById(R.id.password);
-		final TextView password2 = (TextView) view.findViewById(R.id.password2);
+		final TextView passwordField = (TextView) view.findViewById(R.id.password);
+		final TextView passwordField2 = (TextView) view.findViewById(R.id.password2);
 		final TextView captcha = (TextView) view.findViewById(R.id.captcha);
 
 		refreshCaptcha(view);
@@ -193,16 +194,16 @@ public final class NewAccountDialog extends DialogFragment {
 				final WalletApplication application = (WalletApplication) getActivity()
 						.getApplication();
 
-				if (password.getText().length() < 11
-						|| password.getText().length() > 255) {
+				if (passwordField.getText().length() < 11
+						|| passwordField.getText().length() > 255) {
 					Toast.makeText(application,
 							R.string.new_account_password_length_error,
 							Toast.LENGTH_LONG).show();
 					return;
 				}
 
-				if (!password.getText().toString()
-						.equals(password2.getText().toString())) {
+				if (!passwordField2.getText().toString()
+						.equals(passwordField2.getText().toString())) {
 					Toast.makeText(application,
 							R.string.new_account_password_mismatch_error,
 							Toast.LENGTH_LONG).show();
@@ -233,8 +234,12 @@ public final class NewAccountDialog extends DialogFragment {
 							} catch (Exception e1) {
 								throw new Exception("Error Generating Wallet");
 							}
-
-							application.getRemoteWallet().setTemporyPassword(password.getText().toString());
+							
+							final String guid = application.getRemoteWallet().getGUID();
+							final String sharedKey = application.getRemoteWallet().getSharedKey();
+							final String password = passwordField.getText().toString();
+							
+							application.getRemoteWallet().setTemporyPassword(password);
 
 							if (!application.getRemoteWallet().remoteSave(captcha.getText().toString())) {
 								throw new Exception("Unknown Error Inserting wallet");
@@ -249,8 +254,9 @@ public final class NewAccountDialog extends DialogFragment {
 
 										dismiss();
 
-										Toast.makeText(
-												getActivity().getApplication(),
+										final AbstractWalletActivity activity = (AbstractWalletActivity) getActivity();
+
+										Toast.makeText(activity.getApplication(),
 												R.string.new_account_success,
 												Toast.LENGTH_LONG).show();
 
@@ -262,15 +268,29 @@ public final class NewAccountDialog extends DialogFragment {
 														.getApplicationContext())
 														.edit();
 
-										edit.putString("guid", application
-												.getRemoteWallet().getGUID());
-										edit.putString("sharedKey", application
-												.getRemoteWallet().getSharedKey());
-
-										AbstractWalletActivity activity = (AbstractWalletActivity) getActivity();
+										edit.putString("guid", guid);
+										edit.putString("sharedKey", sharedKey);
 
 										if (edit.commit()) {
-											application.checkWalletStatus(activity);
+											handler.post(new Runnable() {
+
+												@Override
+												public void run() {
+													application.checkIfWalletHasUpdatedAndFetchTransactions(password, guid, sharedKey, new SuccessCallback(){
+
+														@Override
+														public void onSuccess() {	
+															activity.registerNotifications();
+														}
+
+														@Override
+														public void onFail() {
+															Toast.makeText(application, R.string.toast_error_syncing_wallet, Toast.LENGTH_LONG)
+															.show();
+														}
+													});
+												}
+											});
 										} else {
 											throw new Exception("Error saving preferences");
 										}
@@ -279,8 +299,7 @@ public final class NewAccountDialog extends DialogFragment {
 
 										application.clearWallet();
 
-										Toast.makeText(
-												getActivity().getApplication(),
+										Toast.makeText(activity.getApplication(),
 												e.getLocalizedMessage(),
 												Toast.LENGTH_LONG).show();
 									}
@@ -299,8 +318,7 @@ public final class NewAccountDialog extends DialogFragment {
 
 									captcha.setText(null);
 
-									Toast.makeText(
-											getActivity().getApplication(),
+									Toast.makeText(activity.getApplication(),
 											e.getLocalizedMessage(),
 											Toast.LENGTH_LONG).show();
 								}

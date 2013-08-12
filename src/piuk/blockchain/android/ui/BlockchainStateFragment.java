@@ -51,8 +51,6 @@ import android.widget.TextView;
 public final class BlockchainStateFragment extends Fragment implements OnSharedPreferenceChangeListener
 {
 	private Activity activity;
-	private SharedPreferences prefs;
-
 	private TextView progressView;
 
 	private int download;
@@ -95,7 +93,7 @@ public final class BlockchainStateFragment extends Fragment implements OnSharedP
 		super.onAttach(activity);
 
 		this.activity = activity;
-		prefs = PreferenceManager.getDefaultSharedPreferences(activity);
+		PreferenceManager.getDefaultSharedPreferences(activity);
 	}
 
 	@Override

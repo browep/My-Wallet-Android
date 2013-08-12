@@ -22,6 +22,7 @@ import org.spongycastle.util.encoders.Hex;
 import com.google.bitcoin.core.Base58;
 import com.google.bitcoin.core.ECKey;
 import com.google.bitcoin.core.NetworkParameters;
+import com.google.bitcoin.core.Utils;
 import com.google.bitcoin.core.Wallet;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
@@ -46,6 +47,7 @@ import org.spongycastle.crypto.paddings.PaddedBufferedBlockCipher;
 import org.spongycastle.crypto.params.KeyParameter;
 import org.spongycastle.crypto.params.ParametersWithIV;
 
+import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.util.LinuxSecureRandom;
 import piuk.blockchain.android.util.RandomOrgGenerator;
 
@@ -70,9 +72,9 @@ public class MyWallet {
 		LinuxSecureRandom.init();
 	}
 	
-	public static ECKey generateECKey() {
+	public ECKey generateECKey() {
 		SecureRandom random = new SecureRandom();
-		
+
 		if (extra_seed != null) {
 			random.setSeed(extra_seed);
 		}
@@ -81,9 +83,8 @@ public class MyWallet {
 	}
 	
 	// Create a new Wallet
-	public MyWallet() throws Exception {
+	protected MyWallet() throws Exception {
 		this.root = new HashMap<String, Object>();
-
 		root.put("guid", UUID.randomUUID().toString());
 		root.put("sharedKey", UUID.randomUUID().toString());
 
@@ -137,7 +138,7 @@ public class MyWallet {
 		Map<String, String> tx_notes = (Map<String, String>) root.get("tx_notes");
 
 		if (tx_notes == null) {
-			tx_notes = Collections.emptyMap();
+			tx_notes = new HashMap<String, String>();
 
 			root.put("tx_notes", tx_notes);
 		}
@@ -173,7 +174,7 @@ public class MyWallet {
 		Map<String, Object> options = (Map<String, Object>) root.get("options");
 
 		if (options == null) {
-			options = Collections.emptyMap();
+			options = new HashMap<String, Object>();
 
 			root.put("options", options);
 		}
@@ -402,7 +403,7 @@ public class MyWallet {
 
 				encoded_key.setTag((int) (long) tag);
 			}
-
+			
 			try {
 				if (!enableTagFiler || tag == tagFilter)
 					wallet.addKey(encoded_key);
@@ -422,14 +423,13 @@ public class MyWallet {
 		// Construct a BitcoinJ wallet containing all our private keys
 		Wallet keywallet = new WalletOverride(params);
 		
-		addKeysTobitoinJWallet(keywallet, true, 0);
+		addKeysTobitoinJWallet(keywallet, false, 0);
 
 		return keywallet;
 	}
 
 
 	public synchronized boolean removeKey(ECKey key) {
-		
 		final String address = key.toAddress(params).toString();
 
 		final List<Map<String, Object>> keyMap = getKeysMap();
@@ -446,17 +446,24 @@ public class MyWallet {
 		return true;
 	}
 
-	public boolean addWatchOnly(String address) {
+	public boolean addWatchOnly(String address, String source) {
 		Map<String, Object> map = new HashMap<String, Object>();
 
 		map.put("addr", address);
+		map.put("created_device_name", source);
+		map.put("created_device_version", "0");
 
 		getKeysMap().add(map);
 
 		return true;
 	}
 
+	
 	public boolean addKey(ECKey key, String label) throws Exception {
+		return addKey(key, label, System.getProperty("device_name"), System.getProperty("device_version"));
+	}
+	
+	public boolean addKey(ECKey key, String label, String device_name, String device_version) throws Exception {
 		Map<String, Object> map = new HashMap<String, Object>();
 
 		String base58Priv = new String(Base58.encode(key.getPrivKeyBytes()));
@@ -479,6 +486,19 @@ public class MyWallet {
 		} else {
 			map.put("priv", base58Priv);
 		}
+		
+		
+		System.out.println("System.getProperty(device_name) " + System.getProperty("device_name"));
+		
+		map.put("created_time", System.currentTimeMillis());
+		
+		if (device_name != null)
+			map.put("created_device_name", device_name);
+		
+		if (device_version != null)
+			map.put("created_device_version", device_version);
+
+		System.out.println("map " + map);
 
 		getKeysMap().add(map);
 

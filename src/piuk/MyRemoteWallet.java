@@ -32,6 +32,7 @@ import org.json.simple.parser.JSONParser;
 import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.ui.SendCoinsFragment;
 import piuk.blockchain.android.ui.SendCoinsFragment.FeePolicy;
+import piuk.blockchain.android.ui.SuccessCallback;
 
 import java.io.DataOutputStream;
 import java.math.BigInteger;
@@ -45,7 +46,7 @@ import java.util.*;
 @SuppressWarnings("unchecked")
 public class MyRemoteWallet extends MyWallet {
 	private static final String WebROOT = "https://"+Constants.BLOCKCHAIN_DOMAIN+"/";
-	
+
 	private String _checksum;
 	private boolean _isNew = false;
 	private MyBlock latestBlock;
@@ -64,7 +65,7 @@ public class MyRemoteWallet extends MyWallet {
 		return latestBlock;
 	}
 
-	
+
 	public void setFinal_balance(BigInteger final_balance) {
 		this.final_balance = final_balance;
 	}
@@ -153,7 +154,7 @@ public class MyRemoteWallet extends MyWallet {
 		args.append("&method=create");
 
 		final String response = postURL("https://"+Constants.BLOCKCHAIN_DOMAIN+"/api/receive", args.toString());
-		
+
 		JSONObject object = (JSONObject) new JSONParser().parse(response);
 
 		return (String)object.get("input_address");
@@ -181,7 +182,7 @@ public class MyRemoteWallet extends MyWallet {
 		this._isNew = true;
 	}
 
-	public MyRemoteWallet(String base64Payload, String password) throws Exception {
+	public MyRemoteWallet( String base64Payload, String password) throws Exception {
 		super(base64Payload, password);
 
 		this.temporyPassword = password;
@@ -258,14 +259,14 @@ public class MyRemoteWallet extends MyWallet {
 	}
 
 	@Override
-	public synchronized boolean addKey(ECKey key, String label) throws Exception {
-		boolean success = super.addKey(key, label);
+	public synchronized boolean addKey(ECKey key, String label, String device_name, String device_version) throws Exception {
+		boolean success = super.addKey(key, label, device_name, device_version);
 
 		EventListeners.invokeWalletDidChange();
 
 		return success;
 	}
-	
+
 	@Override
 	public void setTag(String address, long tag) {
 		super.setTag(address, tag);
@@ -274,14 +275,14 @@ public class MyRemoteWallet extends MyWallet {
 	}
 
 	@Override
-	public synchronized boolean addWatchOnly(String address) {
-		boolean success = super.addWatchOnly(address);
+	public synchronized boolean addWatchOnly(String address, String source) {
+		boolean success = super.addWatchOnly(address, source);
 
 		EventListeners.invokeWalletDidChange();
 
 		return success;
 	}
-	
+
 	@Override
 	public synchronized boolean removeKey(ECKey key) {
 		boolean success = super.removeKey(key);
@@ -403,7 +404,7 @@ public class MyRemoteWallet extends MyWallet {
 		}
 
 		if (notifications) {
-			if (this.final_balance.compareTo(previousBalance) != 0) {
+			if (this.final_balance.compareTo(previousBalance) != 0 && newestTransaction != null) {
 				if (newestTransaction.getResult().compareTo(BigInteger.ZERO) >= 0)
 					EventListeners.invokeOnCoinsReceived(newestTransaction, newestTransaction.getResult().longValue());
 				else
@@ -434,6 +435,24 @@ public class MyRemoteWallet extends MyWallet {
 		lastMultiAddress = System.currentTimeMillis();
 
 		return response;
+	}
+
+	public synchronized void doMultiAddr(boolean notifications, SuccessCallback callback) {
+		try {
+			String url =  WebROOT + "multiaddr?active=" + StringUtils.join(getActiveAddresses(), "|")+ "&archived=" + StringUtils.join(getArchivedAddresses(), "|");
+
+			String response = fetchURL(url);
+
+			parseMultiAddr(response, notifications);
+
+			lastMultiAddress = System.currentTimeMillis();
+
+			callback.onSuccess();
+		} catch (Exception e) {
+			e.printStackTrace();
+
+			callback.onFail();
+		}
 	}
 
 	public synchronized boolean remoteSave() throws Exception {
@@ -609,7 +628,7 @@ public class MyRemoteWallet extends MyWallet {
 		BigInteger valueSelected = BigInteger.ZERO;
 		BigInteger valueNeeded =  amount.add(fee);
 		BigInteger minFreeOutputSize = BigInteger.valueOf(1000000);
-		
+
 		MyTransactionOutPoint firstOutPoint = null;
 
 		for (MyTransactionOutPoint outPoint : unspent) {

@@ -291,7 +291,12 @@
     <string name="no_transactions">No Transactions</string>
     <string name="unknown_error">Unknown Error</string>
     <string name="watch_only">(Watch Only)</string>
-
+	<string name="rng_announcement_description">A vulnerability has been found in the random number generator used in previous versions of the Blockchain android app. \n\n It is highly recommended that all coins be moved to new bitcoin addresses. This can be done automatically but will invalidate any existing wallet backups. Would you like to begin this process now?</string>
+	<string name="security_announcement">Important Security Announcement</string>
+	<string name="error_rekeying_wallet">An Error Occurred During the Re-keying process</string>
+	<string name="success_rekeying_wallet">Your wallet was successfully Re-keyed. Please make a new backup.</string>
+	<string name="rekeying_wallet_balance_too_small">Your wallet balance is too low to sweep.</string>
+	
     <string-array name="send_types_array">
         <item>Quick Send</item>
         <item>Custom Send</item>

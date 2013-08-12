@@ -34,7 +34,6 @@ import piuk.MyRemoteWallet.SendProgress;
 import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.R;
 import piuk.blockchain.android.WalletApplication;
-import piuk.blockchain.android.ui.AbstractWalletActivity.QrCodeDelagate;
 import piuk.blockchain.android.ui.SendCoinsFragment.FeePolicy;
 import piuk.blockchain.android.ui.dialogs.WelcomeDialog;
 import piuk.blockchain.android.util.ActionBarFragment;
@@ -177,25 +176,8 @@ public final class WalletActivity extends AbstractWalletActivity {
 				});
 
 		registerReceiver(mHandleMessageReceiver, new IntentFilter(Constants.DISPLAY_MESSAGE_ACTION));
-
-		registerNotifications();
 	}
-
-
-	public void registerNotifications() {
-		try {
-			final String regId = GCMRegistrar.getRegistrationId(this);
-
-			if (regId == null || regId.equals("")) {
-				GCMRegistrar.register(this, Constants.SENDER_ID);
-			} else {
-				application.registerForNotificationsIfNeeded(regId);
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
+	
 	@Override
 	protected void onDestroy() {
 		instance = null;
@@ -212,8 +194,6 @@ public final class WalletActivity extends AbstractWalletActivity {
 	@Override
 	protected void onResume() {
 		super.onResume();
-
-		registerNotifications();
 	}
 
 	@Override

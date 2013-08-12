@@ -42,15 +42,15 @@ import com.google.bitcoin.core.Sha256Hash;
 import com.google.bitcoin.core.TransactionInput;
 import com.google.bitcoin.core.TransactionOutput;
 
+import de.tavendo.autobahn.WebSocketConnection;
+
 public class WebSocketHandler {
 	final static String URL = "ws://ws."+Constants.BLOCKCHAIN_DOMAIN+"/inv";
 	int nfailures = 0;
 	static WalletApplication application;
-	boolean isConnected = false;
 	boolean isRunning = true;
 	long lastConnectAttempt = 0;
-	
-	private WebSocketClient client;
+	private final WebSocketConnection mConnection = new WebSocketConnection();
 
 	public int getBestChainHeight() {
 		return getChainHead().getHeight();
@@ -69,7 +69,7 @@ public class WebSocketHandler {
 		public String getDescription() {
 			return "Websocket Listener";
 		}
-		
+
 		@Override
 		public void onWalletDidChange() {
 			try {
@@ -93,7 +93,8 @@ public class WebSocketHandler {
 
 	public void send(String message) {
 		try {
-			if (client != null) client.send(message);
+			if (mConnection.isConnected())
+				mConnection.sendTextMessage(message);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -117,204 +118,181 @@ public class WebSocketHandler {
 
 
 	public boolean isConnected() {
-		return this.isConnected || (client != null && client.isConnected());
+		return  mConnection != null && mConnection.isConnected();
 	}
 
 	public void stop() {
 		this.isRunning = false;
 
-		if (client != null) {
-			client.disconnect();
-
-			client = null;
-		}
+		if (mConnection.isConnected())
+			mConnection.disconnect();
 
 		EventListeners.removeEventListener(walletEventListener);
 	}
 
-	public static WebSocketClient newClient(final WebSocketHandler handler) throws URISyntaxException {
-		return new WebSocketClient(new URI(URL), new WebSocketClient.Listener() {
-
-			@Override
-			public void onConnect() {
-				handler.isConnected = true;
-
-				handler.subscribe();
-
-				handler.nfailures = 0;				
-			}
-
-			@Override
-			public void onMessage(String message) {
-				if (application.getRemoteWallet() == null)
-					return;
-
-				System.out.println("onMessage() text "  + message);
-
-				MyRemoteWallet wallet = application.getRemoteWallet();
-
-				try {
-					Map<String, Object> top = (Map<String, Object>) JSONValue.parse(message);
-
-					if (top == null)
-						return;
-
-					String op = (String) top.get("op");
-
-					if (op.equals("block")) {
-						Map<String, Object> x = (Map<String, Object>) top.get("x");
-
-						if (x == null)
-							return;
-
-						Sha256Hash hash = new Sha256Hash(Hex.decode((String) x
-								.get("hash")));
-						int blockIndex = ((Number) x.get("blockIndex")).intValue();
-						int blockHeight = ((Number) x.get("height")).intValue();
-						long time = ((Number) x.get("time")).longValue();
-
-						MyBlock block = new MyBlock();
-
-						block.height = blockHeight;
-						block.hash = hash;
-						block.blockIndex = blockIndex;
-						block.time = time;
-
-
-						if (application.getRemoteWallet() != null) {					
-							application.getRemoteWallet().setLatestBlock(block);
-						}
-
-						List<MyTransaction> transactions = wallet.getMyTransactions();
-						List<Number> txIndexes = (List<Number>) x.get("txIndexes");
-						for (Number txIndex : txIndexes) {
-							for (MyTransaction tx : transactions) {
-
-								MyTransactionConfidence confidence = (MyTransactionConfidence) tx
-										.getConfidence();
-
-								if (tx.txIndex == txIndex.intValue()
-										&& confidence.height != blockHeight) {
-									confidence.height = blockHeight;
-									confidence.runListeners();
-								}
-							}
-						}
-
-					} else if (op.equals("utx")) {
-						Map<String, Object> x = (Map<String, Object>) top.get("x");
-
-						MyTransaction tx = MyTransaction.fromJSONDict(x);
-
-						BigInteger result = BigInteger.ZERO;
-
-						for (TransactionInput input : tx.getInputs()) {
-							// if the input is from me subtract the value
-							MyTransactionInput myinput = (MyTransactionInput) input;
-
-							if (wallet.isAddressMine(input.getFromAddress()
-									.toString())) {
-								result = result.subtract(myinput.value);
-
-								wallet.setFinal_balance(wallet.getFinal_balance()
-										.subtract(myinput.value));
-								wallet.setTotal_sent(wallet.getTotal_sent()
-										.add(myinput.value));
-							}
-						}
-
-						for (TransactionOutput output : tx.getOutputs()) {
-							// if the input is from me subtract the value
-							MyTransactionOutput myoutput = (MyTransactionOutput) output;
-
-							if (wallet.isAddressMine(myoutput.getToAddress()
-									.toString())) {
-								result = result.add(myoutput.getValue());
-
-								wallet.setFinal_balance(wallet.getFinal_balance().add(myoutput
-												.getValue()));
-								wallet.setTotal_received(wallet.getTotal_sent().add(myoutput
-												.getValue()));
-							}
-						}
-
-						tx.result = result;
-
-						wallet.prependTransaction(tx);
-
-						if (result.compareTo(BigInteger.ZERO) >= 0) {
-							EventListeners.invokeOnCoinsReceived(tx, result.longValue());
-						} else {
-							EventListeners.invokeOnCoinsSent(tx, result.longValue());
-						}
-					} else if (op.equals("on_change")) {
-						String newChecksum = (String) top.get("checksum");
-						String oldChecksum = wallet.getChecksum();
-
-						System.out.println("On change " + newChecksum + " " + oldChecksum);
-
-						if (!newChecksum.equals(oldChecksum)) {
-							try {
-								application.checkIfWalletHasUpdatedAndFetchTransactions(application.getRemoteWallet().getTemporyPassword());
-							} catch (Exception e) {
-								e.printStackTrace();
-							}
-						}
-					}
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			}
-
-			@Override
-			public void onMessage(byte[] data) {
-				System.out.println("onMessage() data");
-
-			}
-
-			@Override
-			public void onDisconnect(int code, String reason) {
-				handler.isConnected = false;
-
-				++handler.nfailures;
-			}
-
-			@Override
-			public void onError(Exception error) {
-				error.printStackTrace();
-			}
-
-		}, null);
-	}
-
 	public void connect() throws URISyntaxException, InterruptedException {
+
+		final WebSocketHandler handler = this;
 
 		if (application.getRemoteWallet() == null)
 			return;
 
-		client = newClient(this);
+		try {
+			mConnection.connect(URL, new de.tavendo.autobahn.WebSocketHandler() {			 
+				@Override
+				public void onOpen() {
+					handler.subscribe();
 
-		isConnected = false;
- 
+					handler.nfailures = 0;				
+				}
+
+				@Override
+				public void onTextMessage(String message) {
+					if (application.getRemoteWallet() == null)
+						return;
+
+					MyRemoteWallet wallet = application.getRemoteWallet();
+
+					try {
+						Map<String, Object> top = (Map<String, Object>) JSONValue.parse(message);
+
+						if (top == null)
+							return;
+
+						String op = (String) top.get("op");
+
+						if (op.equals("block")) {
+							Map<String, Object> x = (Map<String, Object>) top.get("x");
+
+							if (x == null)
+								return;
+
+							Sha256Hash hash = new Sha256Hash(Hex.decode((String) x
+									.get("hash")));
+							int blockIndex = ((Number) x.get("blockIndex")).intValue();
+							int blockHeight = ((Number) x.get("height")).intValue();
+							long time = ((Number) x.get("time")).longValue();
+
+							MyBlock block = new MyBlock();
+
+							block.height = blockHeight;
+							block.hash = hash;
+							block.blockIndex = blockIndex;
+							block.time = time;
+
+
+							if (application.getRemoteWallet() != null) {					
+								application.getRemoteWallet().setLatestBlock(block);
+							}
+
+							List<MyTransaction> transactions = wallet.getMyTransactions();
+							List<Number> txIndexes = (List<Number>) x.get("txIndexes");
+							for (Number txIndex : txIndexes) {
+								for (MyTransaction tx : transactions) {
+
+									MyTransactionConfidence confidence = (MyTransactionConfidence) tx
+											.getConfidence();
+
+									if (tx.txIndex == txIndex.intValue()
+											&& confidence.height != blockHeight) {
+										confidence.height = blockHeight;
+										confidence.runListeners();
+									}
+								}
+							}
+
+						} else if (op.equals("utx")) {
+							Map<String, Object> x = (Map<String, Object>) top.get("x");
+
+							MyTransaction tx = MyTransaction.fromJSONDict(x);
+
+							BigInteger result = BigInteger.ZERO;
+
+							for (TransactionInput input : tx.getInputs()) {
+								// if the input is from me subtract the value
+								MyTransactionInput myinput = (MyTransactionInput) input;
+
+								if (wallet.isAddressMine(input.getFromAddress()
+										.toString())) {
+									result = result.subtract(myinput.value);
+
+									wallet.setFinal_balance(wallet.getFinal_balance()
+											.subtract(myinput.value));
+									wallet.setTotal_sent(wallet.getTotal_sent()
+											.add(myinput.value));
+								}
+							}
+
+							for (TransactionOutput output : tx.getOutputs()) {
+								// if the input is from me subtract the value
+								MyTransactionOutput myoutput = (MyTransactionOutput) output;
+
+								if (wallet.isAddressMine(myoutput.getToAddress()
+										.toString())) {
+									result = result.add(myoutput.getValue());
+
+									wallet.setFinal_balance(wallet.getFinal_balance().add(myoutput
+											.getValue()));
+									wallet.setTotal_received(wallet.getTotal_sent().add(myoutput
+											.getValue()));
+								}
+							}
+
+							tx.result = result;
+
+							wallet.prependTransaction(tx);
+
+							if (result.compareTo(BigInteger.ZERO) >= 0) {
+								EventListeners.invokeOnCoinsReceived(tx, result.longValue());
+							} else {
+								EventListeners.invokeOnCoinsSent(tx, result.longValue());
+							}
+						} else if (op.equals("on_change")) {
+							String newChecksum = (String) top.get("checksum");
+							String oldChecksum = wallet.getChecksum();
+
+							System.out.println("On change " + newChecksum + " " + oldChecksum);
+
+							if (!newChecksum.equals(oldChecksum)) {
+								try {
+									application.checkIfWalletHasUpdatedAndFetchTransactions(application.getRemoteWallet().getTemporyPassword());
+								} catch (Exception e) {
+									e.printStackTrace();
+								}
+							}
+						}
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
+
+				@Override
+				public void onClose(int code, String reason) {
+					++handler.nfailures;
+				}
+			});
+		} catch (Exception e) {
+			e.printStackTrace();
+
+			++handler.nfailures;
+		}
+
 		lastConnectAttempt = System.currentTimeMillis();
-		
-		System.out.println("WebSocket connect()");
 
-		client.connect();
+		System.out.println("WebSocket connect()");
 
 		EventListeners.addEventListener(walletEventListener);
 	}
- 
+
 	public void start() {
 
 		if (lastConnectAttempt > System.currentTimeMillis()-30000)
 			return; 
-		
+
 		this.isRunning = true;
-		
+
 		try {
-			if (client != null)
-				stop();
+			stop();
 
 			connect();
 

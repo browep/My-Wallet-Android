@@ -101,8 +101,11 @@ public class PairWalletActivity extends AbstractWalletActivity {
 											String password = RequestPasswordDialog.getPasswordResult();
 
 											try {
-												MyWallet wallet = new MyWallet(payload, password);
+												final MyRemoteWallet wallet = new MyRemoteWallet(payload, password);
 
+												if (wallet == null)
+													return;
+												
 												String sharedKey = wallet.getSharedKey();
 
 												application.clearWallet();
@@ -119,7 +122,8 @@ public class PairWalletActivity extends AbstractWalletActivity {
 												application.checkIfWalletHasUpdatedAndFetchTransactions(password, guid, sharedKey, new SuccessCallback(){
 													@Override
 													public void onSuccess() {
-																											
+														registerNotifications();
+														
 														finish();
 													}
 
@@ -239,7 +243,9 @@ public class PairWalletActivity extends AbstractWalletActivity {
 									application.checkIfWalletHasUpdatedAndFetchTransactions(password, guid, sharedKey, new SuccessCallback(){
 
 										@Override
-										public void onSuccess() {													
+										public void onSuccess() {	
+											registerNotifications();
+
 											finish();
 										}
 

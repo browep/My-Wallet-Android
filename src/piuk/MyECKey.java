@@ -98,8 +98,6 @@ public class MyECKey extends ECKey {
 
 	/** Gets the hash160 form of the public key (as seen in addresses). */
 	public byte[] getPubKeyHash() {
-		
-		
 		return getInternalKey().getPubKeyHash();
 	}
 
@@ -113,9 +111,8 @@ public class MyECKey extends ECKey {
 	 * as the pubKeyHash/address.
 	 */
 	public byte[] getPubKeyCompressed() {
-		return toAddress(NetworkParameters.prodNet()).getHash160();
+		return getInternalKey().getPubKeyCompressed();
 	}
-
 
 	@Override
 	public Address toAddress(NetworkParameters params) {

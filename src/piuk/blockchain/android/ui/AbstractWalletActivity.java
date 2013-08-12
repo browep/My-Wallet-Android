@@ -46,6 +46,7 @@ import piuk.blockchain.android.util.ActionBarFragment;
 
 import com.dm.zbar.android.scanner.ZBarConstants;
 import com.dm.zbar.android.scanner.ZBarScannerActivity;
+import com.google.android.gcm.GCMRegistrar;
 
 /**
  * @author Andreas Schildbach
@@ -84,6 +85,20 @@ public abstract class AbstractWalletActivity extends FragmentActivity {
 					longToast(e.getLocalizedMessage());
 				}
 			}
+		}
+	}
+
+	public void registerNotifications() {
+		try {
+			final String regId = GCMRegistrar.getRegistrationId(this);
+
+			if (regId == null || regId.equals("")) {
+				GCMRegistrar.register(this, Constants.SENDER_ID);
+			} else {
+				application.registerForNotificationsIfNeeded(regId);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 	}
 	

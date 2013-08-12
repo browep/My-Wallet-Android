@@ -27,6 +27,7 @@ import piuk.MyWallet;
 import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.R;
 import piuk.blockchain.android.WalletApplication;
+import piuk.blockchain.android.ui.dialogs.RekeyWalletDialog;
 import piuk.blockchain.android.ui.dialogs.RequestPasswordDialog;
 import piuk.blockchain.android.ui.dialogs.WelcomeDialog;
 
@@ -249,9 +250,23 @@ public class PinEntryActivity extends AbstractWalletActivity {
 										Toast.makeText(application, "PIN Verified", Toast.LENGTH_SHORT)
 										.show();	
 
-										finish();
-
 										disableKeyPad(false);
+
+										if (application.needsWalletRekey()) {
+											RekeyWalletDialog.show(getSupportFragmentManager(), application, new SuccessCallback() {
+												@Override
+												public void onSuccess() {													
+													finish();
+												}
+
+												@Override
+												public void onFail() {													
+													finish();
+												}
+											});
+										} else {
+											finish();
+										}
 									}
 								});
 							}

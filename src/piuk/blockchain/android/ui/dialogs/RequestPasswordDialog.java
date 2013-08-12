@@ -183,7 +183,7 @@ public final class RequestPasswordDialog extends DialogFragment {
 
 							callback.onSuccess();
 						} else {
-							Toast.makeText(getActivity().getApplication(), R.string.password_incorrect, Toast.LENGTH_SHORT).show();
+							Toast.makeText(activity.getApplication(), R.string.password_incorrect, Toast.LENGTH_SHORT).show();
 						}
 					} else if (passwordType == PasswordTypeMain) {
 						String password = passwordField.getText().toString();
