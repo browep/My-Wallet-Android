@@ -98,7 +98,7 @@ public class RekeyWalletDialog extends DialogFragment {
 
 		dismiss();
 	}
-	
+
 
 	public void dismissDialogWithError(int error) {
 
@@ -146,12 +146,12 @@ public class RekeyWalletDialog extends DialogFragment {
 	public static List<String> getPossiblyInsecureAddresses(final MyRemoteWallet wallet) {
 		final List<String> insecure_addresses = new ArrayList<String>();
 
-		
+
 		for (Map<String, Object> keyMap  : wallet.getKeysMap()) {	
 			//Only include active addresses
 			if (keyMap.get("tag") == null || (Long) keyMap.get("tag") == 0) {
 				//Only archive keys which are not watch only
-				if (keyMap != null && keyMap.get("priv") != null && keyMap.get("created_device_name") == null) {
+				if (keyMap.get("priv") != null && keyMap.get("created_device_name") == null) {
 					insecure_addresses.add((String) keyMap.get("addr"));
 				}
 			}
@@ -159,6 +159,19 @@ public class RekeyWalletDialog extends DialogFragment {
 
 		return insecure_addresses;
 	}
+
+	public void unarchive(final MyRemoteWallet wallet, final List<String> addresses) {
+		for (String address : addresses) {
+			wallet.setTag(address, 0);
+		}
+	}
+
+	public void archive(final MyRemoteWallet wallet, final List<String> addresses) {
+		for (String address : addresses) {
+			wallet.setTag(address, 2);
+		}
+	}
+
 
 	public void reKeyWallet(final MyRemoteWallet wallet, final Handler handler) {
 		final BigInteger baseFee = wallet.getBaseFee();
@@ -185,18 +198,16 @@ public class RekeyWalletDialog extends DialogFragment {
 						BigInteger balanceOfInsecure = BigInteger.ZERO;
 						for (String insecure_address : insecure_addresses) {
 							balanceOfInsecure = balanceOfInsecure.add(wallet.getBalance(insecure_address));
-
-							//Archive the insecure address
-							wallet.setTag(insecure_address, 2);
 						}
 
 						final BigInteger balanceOfInsecureFinal = balanceOfInsecure;
-						
+
 						//If the wallet balance is ZERO no need to sweep anything
 						//So just save the wallet and dismiss
 						if (balanceOfInsecure.compareTo(BigInteger.ZERO) == 0) {
-							application.saveWallet(new SuccessCallback() {
+							archive(wallet, insecure_addresses);
 
+							application.saveWallet(new SuccessCallback() {
 								@Override
 								public void onSuccess() {
 									handler.post(new Runnable() {
@@ -210,14 +221,16 @@ public class RekeyWalletDialog extends DialogFragment {
 								public void onFail() {
 									handler.post(new Runnable() {
 										public void run() {
+											unarchive(wallet, insecure_addresses);
+
 											dismissDialogWithError(R.string.error_rekeying_wallet);
 										}
 									});	
 								}
-								
+
 							});
-							
-						//If the wallet balance is less than 2x the base fee don't try and sweep as its a waste of money
+
+							//If the wallet balance is less than 2x the base fee don't try and sweep as its a waste of money
 						} else if (balanceOfInsecure.compareTo(baseFee.multiply(BigInteger.valueOf(2))) < 0) {
 							handler.post(new Runnable() {
 								@Override
@@ -230,59 +243,69 @@ public class RekeyWalletDialog extends DialogFragment {
 							});
 						} else {
 							//Else save and sweep the wallet
-							application.saveWallet(new SuccessCallback() {
+							String[] type = new String[0];
+							wallet.sendCoinsAsync(insecure_addresses.toArray(type), new_address, balanceOfInsecureFinal.subtract(baseFee), FeePolicy.FeeForce, baseFee, new SendProgress() {
 								@Override
-								public void onSuccess() {
-									String[] type = new String[0];
-									wallet.sendCoinsAsync(insecure_addresses.toArray(type), new_address, balanceOfInsecureFinal.subtract(baseFee), FeePolicy.FeeForce, baseFee, new SendProgress() {
-										@Override
-										public boolean onReady(
-												Transaction tx,
-												BigInteger fee,
-												FeePolicy feePolicy,
-												long priority) {
-											return true;
-										}
-
-										@Override
-										public void onSend(Transaction tx, String message) {
-											handler.post(new Runnable() {
-												public void run() {
-													dismissDialogWithSuccess();
-												}
-											});	
-										}
-
-										@Override
-										public ECKey onPrivateKeyMissing(String address) {
-											return null;
-										}
-
-										@Override
-										public void onError(String message) {
-											handler.post(new Runnable() {
-												public void run() {
-													dismissDialogWithError(R.string.error_rekeying_wallet);
-												}
-											});		
-										}
-
-										@Override
-										public void onProgress(String message) {
-											//Ignore
-										}
-									});
+								public boolean onReady(
+										Transaction tx,
+										BigInteger fee,
+										FeePolicy feePolicy,
+										long priority) {
+									return true;
 								}
 
 								@Override
-								public void onFail() {
-
+								public void onSend(Transaction tx, String message) {
 									handler.post(new Runnable() {
-										@Override
 										public void run() {
-											dismissDialogWithError(R.string.error_rekeying_wallet);
+											//Archive the old addresses
+											archive(wallet, insecure_addresses);
+
+											application.saveWallet(new SuccessCallback() {
+												@Override
+												public void onFail() {
+													handler.post(new Runnable() {
+														@Override
+														public void run() {
+															dismissDialogWithError(R.string.error_rekeying_wallet);
+															
+															//Set it to true anyway because we will keep failing
+															application.setHasAskedRekeyedWallet(true);
+														}
+													});
+												}
+
+												@Override
+												public void onSuccess() {
+													handler.post(new Runnable() {
+														@Override
+														public void run() {
+															dismissDialogWithSuccess();
+														}
+													});
+												}
+											});	
 										}
-									});
+									});	
+								}
+
+								@Override
+								public ECKey onPrivateKeyMissing(String address) {
+									return null;
+								}
+
+								@Override
+								public void onError(final String message) {
+									handler.post(new Runnable() {
+										public void run() {
+											dismissDialogWithError(message);
+										}
+									});		
+								}
+
+								@Override
+								public void onProgress(String message) {
+									//Ignore
 								}
 							});	
 						}
