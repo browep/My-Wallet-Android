@@ -578,7 +578,7 @@ public class WalletApplication extends Application {
 	}
 
 	public boolean getHasAskedToRekeyWallet() { 
-		return false;// PreferenceManager.getDefaultSharedPreferences(this).getBoolean("has_asked_rekeyed_wallet4", false);
+		return PreferenceManager.getDefaultSharedPreferences(this).getBoolean("has_asked_rekeyed_wallet4", false);
 	}
 
 	public boolean setHasAskedRekeyedWallet(boolean value) { 
