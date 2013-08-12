@@ -219,7 +219,6 @@ public class RekeyWalletDialog extends DialogFragment {
 							
 						//If the wallet balance is less than 2x the base fee don't try and sweep as its a waste of money
 						} else if (balanceOfInsecure.compareTo(baseFee.multiply(BigInteger.valueOf(2))) < 0) {
-
 							handler.post(new Runnable() {
 								@Override
 								public void run() {
@@ -229,65 +228,64 @@ public class RekeyWalletDialog extends DialogFragment {
 									application.setHasAskedRekeyedWallet(true);
 								}
 							});
+						} else {
+							//Else save and sweep the wallet
+							application.saveWallet(new SuccessCallback() {
+								@Override
+								public void onSuccess() {
+									String[] type = new String[0];
+									wallet.sendCoinsAsync(insecure_addresses.toArray(type), new_address, balanceOfInsecureFinal.subtract(baseFee), FeePolicy.FeeForce, baseFee, new SendProgress() {
+										@Override
+										public boolean onReady(
+												Transaction tx,
+												BigInteger fee,
+												FeePolicy feePolicy,
+												long priority) {
+											return true;
+										}
 
-							return;
+										@Override
+										public void onSend(Transaction tx, String message) {
+											handler.post(new Runnable() {
+												public void run() {
+													dismissDialogWithSuccess();
+												}
+											});	
+										}
+
+										@Override
+										public ECKey onPrivateKeyMissing(String address) {
+											return null;
+										}
+
+										@Override
+										public void onError(String message) {
+											handler.post(new Runnable() {
+												public void run() {
+													dismissDialogWithError(R.string.error_rekeying_wallet);
+												}
+											});		
+										}
+
+										@Override
+										public void onProgress(String message) {
+											//Ignore
+										}
+									});
+								}
+
+								@Override
+								public void onFail() {
+
+									handler.post(new Runnable() {
+										@Override
+										public void run() {
+											dismissDialogWithError(R.string.error_rekeying_wallet);
+										}
+									});
+								}
+							});	
 						}
-						
-						application.saveWallet(new SuccessCallback() {
-							@Override
-							public void onSuccess() {
-								String[] type = new String[0];
-								wallet.sendCoinsAsync(insecure_addresses.toArray(type), new_address, balanceOfInsecureFinal.subtract(baseFee), FeePolicy.FeeForce, baseFee, new SendProgress() {
-									@Override
-									public boolean onReady(
-											Transaction tx,
-											BigInteger fee,
-											FeePolicy feePolicy,
-											long priority) {
-										return true;
-									}
-
-									@Override
-									public void onSend(Transaction tx, String message) {
-										handler.post(new Runnable() {
-											public void run() {
-												dismissDialogWithSuccess();
-											}
-										});	
-									}
-
-									@Override
-									public ECKey onPrivateKeyMissing(String address) {
-										return null;
-									}
-
-									@Override
-									public void onError(String message) {
-										handler.post(new Runnable() {
-											public void run() {
-												dismissDialogWithError(R.string.error_rekeying_wallet);
-											}
-										});		
-									}
-
-									@Override
-									public void onProgress(String message) {
-										//Ignore
-									}
-								});
-							}
-
-							@Override
-							public void onFail() {
-
-								handler.post(new Runnable() {
-									@Override
-									public void run() {
-										dismissDialogWithError(R.string.error_rekeying_wallet);
-									}
-								});
-							}
-						});
 					}
 
 					public void onError(String reason) {
