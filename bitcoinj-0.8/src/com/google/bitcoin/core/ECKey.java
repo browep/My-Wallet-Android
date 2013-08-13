@@ -74,13 +74,16 @@ public class ECKey implements Serializable {
     // can only verify signatures not make them.
     // TODO: Redesign this class to use consistent internals and more efficient serialization.
     private BigInteger priv;
+    private byte[] pubCompressed;
     private byte[] pub;
+
     // Creation time of the key in seconds since the epoch, or zero if the key was deserialized from a version that did
     // not have this field.
     private long creationTimeSeconds;
 
     // Transient because it's calculated on demand.
     transient private byte[] pubKeyHash;
+
 
     public ECKey() {
        this(new SecureRandom());
@@ -101,8 +104,10 @@ public class ECKey implements Serializable {
         // Unfortunately Bouncy Castle does not let us explicitly change a point to be compressed, even though it
         // could easily do so. We must re-build it here so the ECPoints withCompression flag can be set to true.
         ECPoint uncompressed = pubParams.getQ();
+        pub = uncompressed.getEncoded();
+
         ECPoint compressed = compressPoint(uncompressed);
-        pub = compressed.getEncoded();
+        pubCompressed = compressed.getEncoded();
 
         creationTimeSeconds = Utils.now().getTime() / 1000;
     }
@@ -156,8 +161,10 @@ public class ECKey implements Serializable {
         this.priv = privKey;
         this.pub = null;
         if (pubKey == null && privKey != null) {
-            // Derive public from private.
-            this.pub = publicKeyFromPrivate(privKey, compressed);
+            ECPoint point = ecParams.getG().multiply(privKey);
+
+            this.pubCompressed = compressPoint(point).getEncoded();
+            this.pub = point.getEncoded();
         } else if (pubKey != null) {
             // We expect the pubkey to be in regular encoded form, just as a BigInteger. Therefore the first byte is
             // a special marker byte.
@@ -207,26 +214,15 @@ public class ECKey implements Serializable {
     }
 
     /**
-     * Returns public key bytes from the given public key. To convert a byte array into a BigInteger, use <tt>
-     * new BigInteger(1, bytes);</tt>
-     */
-    public static byte[] publicKeyCompressed(BigInteger privKey) {
-        ECPoint point = ecParams.getG();
-
-        ECPoint dd = point.multiply(privKey);
-
-        dd = ecParams.getCurve().createPoint(dd.getX().toBigInteger(), dd.getY().toBigInteger(), true);
-
-        return dd.getEncoded();
-    }
-
-
-    /**
      * Gets the raw public key value. This appears in transaction scriptSigs. Note that this is <b>not</b> the same
      * as the pubKeyHash/address.
      */
     public byte[] getPubKeyCompressed() {
-        return publicKeyCompressed(priv);
+        if (pubCompressed == null) {
+            pubCompressed = publicKeyFromPrivate(priv, true);
+        }
+
+        return pubCompressed;
     }
 
 
@@ -242,14 +238,14 @@ public class ECKey implements Serializable {
     /** Gets the hash160 form of the public key (as seen in addresses). */
     public byte[] getPubKeyHash() {
         if (pubKeyHash == null)
-            pubKeyHash = Utils.sha256hash160(this.pub);
+            pubKeyHash = Utils.sha256hash160(getPubKey());
 
         return pubKeyHash;
     }
 
     /** Gets the hash160 form of the public key (as seen in addresses). */
     public byte[] getCompressedPubKeyHash() {
-        return Utils.sha256hash160(publicKeyCompressed(priv));
+        return Utils.sha256hash160(getPubKeyCompressed());
     }
 
     /**
@@ -257,6 +253,10 @@ public class ECKey implements Serializable {
      * as the pubKeyHash/address.
      */
     public byte[] getPubKey() {
+        if (pub == null) {
+            pub = publicKeyFromPrivate(priv, false);
+        }
+
         return pub;
     }
 

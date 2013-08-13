@@ -234,7 +234,7 @@ public class MyRemoteWallet extends MyWallet {
 			connection.setRequestProperty("charset", "utf-8");
 			connection.setRequestProperty("Accept", "application/json");
 			connection.setRequestProperty("Content-Length", "" + Integer.toString(urlParameters.getBytes().length));
-			connection.setUseCaches (false);
+			connection.setUseCaches(false);
 
 			connection.setConnectTimeout(30000);
 			connection.setReadTimeout(30000);
@@ -259,12 +259,22 @@ public class MyRemoteWallet extends MyWallet {
 	}
 
 	@Override
-	public synchronized boolean addKey(ECKey key, String label, String device_name, String device_version) throws Exception {
-		boolean success = super.addKey(key, label, device_name, device_version);
+	public synchronized String addKey(ECKey key, String label) throws Exception {
+		String address = super.addKey(key, label);
 
 		EventListeners.invokeWalletDidChange();
 
-		return success;
+		return address;
+	}
+	
+	
+	@Override
+	public synchronized String addKey(ECKey key, String label, String device_name, String device_version) throws Exception {
+		String address = super.addKey(key, label, device_name, device_version);
+
+		EventListeners.invokeWalletDidChange();
+
+		return address;
 	}
 
 	@Override
@@ -296,12 +306,28 @@ public class MyRemoteWallet extends MyWallet {
 		return transactions;
 	}
 
-	public void addTransaction(MyTransaction tx) {
+	public boolean addTransaction(MyTransaction tx) {
+
+		for (MyTransaction existing_tx : transactions) {
+			if (existing_tx.getTxIndex() == tx.getTxIndex())
+				return false;
+		}
+		
 		this.transactions.add(tx);
+
+		return true;
 	}
 
-	public void prependTransaction(MyTransaction tx) {
+	public boolean prependTransaction(MyTransaction tx) {
+		
+		for (MyTransaction existing_tx : transactions) {
+			if (existing_tx.getTxIndex() == tx.getTxIndex())
+				return false;
+		}
+		
 		this.transactions.add(0, tx);
+		
+		return true;
 	}
 
 	public BigInteger getBaseFee() {
@@ -697,8 +723,6 @@ public class MyRemoteWallet extends MyWallet {
 
 		List<MyTransactionOutPoint> outputs = new ArrayList<MyTransactionOutPoint>();
 
-		System.out.println("buffer " + buffer);
-
 		String response = fetchURL(buffer.toString());
 
 		Map<String, Object> root = (Map<String, Object>) JSONValue.parse(response);
@@ -899,7 +923,9 @@ public class MyRemoteWallet extends MyWallet {
 
 		this.root = tempWallet.root;
 
-		this.temporySecondPassword = null;
+		if (this.temporySecondPassword != null && !this.validateSecondPassword(temporySecondPassword)) {
+			this.temporySecondPassword = null;
+		}
 
 		this._checksum = tempWallet._checksum;
 

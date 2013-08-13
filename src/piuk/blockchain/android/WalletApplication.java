@@ -70,6 +70,7 @@ import java.net.CookieManager;
 import java.security.MessageDigest;
 import java.security.Security;
 import java.text.SimpleDateFormat;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Date;
 import java.util.List;
@@ -568,7 +569,7 @@ public class WalletApplication extends Application {
 
 	public boolean needsWalletRekey() { 
 		MyRemoteWallet wallet = getRemoteWallet();
- 
+
 		if (wallet == null || wallet.isNew())
 			return false;
 
@@ -861,7 +862,7 @@ public class WalletApplication extends Application {
 						blockchainWallet = new MyRemoteWallet(payload, password);
 					} else {						
 						blockchainWallet.setTemporyPassword(password);
-
+						
 						blockchainWallet.setPayload(payload);
 					}
 
@@ -963,7 +964,7 @@ public class WalletApplication extends Application {
 
 	public void doMultiAddr(final boolean notifications, final SuccessCallback callback) {
 		final MyRemoteWallet blockchainWallet = this.blockchainWallet;
-		
+
 		if (blockchainWallet == null) {
 			if (callback != null)
 				callback.onFail();
@@ -1051,15 +1052,22 @@ public class WalletApplication extends Application {
 			@Override
 			public void run() {
 				try {
-					blockchainWallet.remoteSave();
+					if (blockchainWallet.remoteSave()) {
+						handler.post(new Runnable() {
+							public void run() {
 
-					handler.post(new Runnable() {
-						public void run() {
-							callback.onSuccess();
+								callback.onSuccess();
 
-							notifyWidgets();
-						}
-					});
+								notifyWidgets();
+							}
+						});
+					} else {
+						handler.post(new Runnable() {
+							public void run() {
+								callback.onFail();
+							}
+						});
+					}
 
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -1083,8 +1091,10 @@ public class WalletApplication extends Application {
 	public void addKeyToWallet(final ECKey key, final String label, final int tag,
 			final AddAddressCallback callback) {
 
-		if (blockchainWallet == null)
+		if (blockchainWallet == null) {
+			callback.onError("Wallet null.");
 			return;
+		}
 
 		if (isInP2PFallbackMode()) {
 			callback.onError("Error saving wallet.");
@@ -1092,28 +1102,55 @@ public class WalletApplication extends Application {
 		}
 
 		try {
-			blockchainWallet.addKey(key, label);
+			final String address = blockchainWallet.addKey(key, label);
+			if (address != null) {
+				if (tag != 0) {
+					blockchainWallet.setTag(address, tag);
+				}
+	
+				localSaveWallet();
 
-			final String address = new BitcoinAddress(new Hash(
-					key.getPubKeyHash()), (short) 0).toString();
+				saveWallet(new SuccessCallback() {
+					@Override
+					public void onSuccess() {
+						checkIfWalletHasUpdatedAndFetchTransactions(blockchainWallet.getTemporyPassword(), new SuccessCallback() {
+							@Override
+							public void onSuccess() {	
+								try {
+									ECKey key = blockchainWallet.getECKey(address);									
+									if (key != null && key.toAddress(NetworkParameters.prodNet()).toString().equals(address)) {
+										callback.onSavedAddress(address);
+									} else {
+										blockchainWallet.removeKey(key);
 
-			if (tag != 0) {
-				blockchainWallet.setTag(address, tag);
+										callback.onError("WARNING! Wallet saved but address doesn't seem to exist after re-read.");
+									}
+								} catch (Exception e) {
+									blockchainWallet.removeKey(key);
+
+									callback.onError("WARNING! Error checking if ECKey is valid on re-read.");
+								}
+							}
+
+							@Override
+							public void onFail() {
+								blockchainWallet.removeKey(key);
+
+								callback.onError("WARNING! Error checking if address was correctly saved.");
+							}
+						});
+					}
+
+					@Override
+					public void onFail() {
+						blockchainWallet.removeKey(key);
+
+						callback.onError("Error saving wallet");
+					}
+				});
+			} else {
+				callback.onError("addKey returned false");
 			}
-
-			saveWallet(new SuccessCallback() {
-				@Override
-				public void onSuccess() {
-					callback.onSavedAddress(address);
-				}
-
-				@Override
-				public void onFail() {
-					blockchainWallet.removeKey(key);
-
-					callback.onError("Error saving wallet");
-				}
-			});
 
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -1122,9 +1159,6 @@ public class WalletApplication extends Application {
 
 			callback.onError(e.getLocalizedMessage());
 		}
-
-		localSaveWallet();
-
 	}
 
 	public void setAddressLabel(final String address, final String label) {

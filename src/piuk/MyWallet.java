@@ -234,6 +234,9 @@ public class MyWallet {
 	}
 
 	public String getPayload() throws Exception {
+		if (this.temporyPassword == null)
+			throw new Exception("getPayload() called with temporyPassword == null");
+		
 		return encrypt(toJSONString(), this.temporyPassword, DefaultPBKDF2Iterations);
 	}
 
@@ -274,7 +277,7 @@ public class MyWallet {
 	public String decryptPK(String base58Priv) throws Exception {
 		if (this.isDoubleEncrypted()) {
 
-			if (this.temporySecondPassword == null)
+			if (this.temporySecondPassword == null || !this.validateSecondPassword(temporySecondPassword))
 				throw new Exception("You must provide a second password");
 
 			base58Priv = decryptPK(base58Priv, getSharedKey(), this.temporySecondPassword, this.getPbkdf2Iterations());
@@ -378,6 +381,21 @@ public class MyWallet {
 		EventListeners.invokeWalletDidChange();
 	}
 
+	public ECKey getECKey(String address) throws Exception {
+		Map<String, Object> key = this.findKey(address);
+		      
+		if (key == null) {
+			throw new Exception("Key not found");
+		}
+				
+		String base58Priv = (String) key.get("priv");
+
+		if (base58Priv == null) {
+			throw new Exception("Watch Only Bitcoin Address");
+		}
+		
+		return this.decodePK(base58Priv);
+	}
 	
 	protected void addKeysTobitoinJWallet(Wallet wallet, boolean enableTagFiler, int tagFilter) throws Exception {
 
@@ -459,16 +477,18 @@ public class MyWallet {
 	}
 
 	
-	public boolean addKey(ECKey key, String label) throws Exception {
+	protected String addKey(ECKey key, String label) throws Exception {
 		return addKey(key, label, System.getProperty("device_name"), System.getProperty("device_version"));
 	}
 	
-	public boolean addKey(ECKey key, String label, String device_name, String device_version) throws Exception {
+	protected String addKey(ECKey key, String label, String device_name, String device_version) throws Exception {
 		Map<String, Object> map = new HashMap<String, Object>();
 
 		String base58Priv = new String(Base58.encode(key.getPrivKeyBytes()));
 
-		map.put("addr", key.toAddress(params).toString());
+		String address = key.toAddress(params).toString();
+		
+		map.put("addr", address);
 
 		if (label != null) {
 			if (label.length() == 0 || label.length() > 255)
@@ -482,13 +502,9 @@ public class MyWallet {
 				throw new Exception("You must provide a second password");
 
 			map.put("priv", encryptPK(base58Priv, getSharedKey(), temporySecondPassword, this.getPbkdf2Iterations()));
-
 		} else {
 			map.put("priv", base58Priv);
 		}
-		
-		
-		System.out.println("System.getProperty(device_name) " + System.getProperty("device_name"));
 		
 		map.put("created_time", System.currentTimeMillis());
 		
@@ -498,11 +514,11 @@ public class MyWallet {
 		if (device_version != null)
 			map.put("created_device_version", device_version);
 
-		System.out.println("map " + map);
-
-		getKeysMap().add(map);
-
-		return true;
+		if (getKeysMap().add(map)) {
+			return address;
+		} else {
+			throw new Exception("Error inserting address into keymap");
+		}
 	}
 
 	public boolean validateSecondPassword(String secondPassword) {

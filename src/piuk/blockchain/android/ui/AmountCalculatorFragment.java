@@ -59,6 +59,8 @@ public final class AmountCalculatorFragment extends DialogFragment implements Lo
 	private CurrencyAmountView btcAmountView, localAmountView;
 	private Listener listener;
 
+	public AmountCalculatorFragment() {	}
+	
 	public AmountCalculatorFragment(final Listener listener)
 	{
 		this.listener = listener;
@@ -192,7 +194,8 @@ public final class AmountCalculatorFragment extends DialogFragment implements Lo
 		final BigInteger amount = exchangeDirection ? btcAmountView.getAmount() : new BigDecimal(localAmountView.getAmount()).divide(
 				new BigDecimal(exchangeRate), RoundingMode.HALF_UP).toBigInteger();
 
-		listener.use(amount);
+		if (listener != null)
+			listener.use(amount);
 
 		dismiss();
 	}

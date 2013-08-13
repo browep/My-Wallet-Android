@@ -206,46 +206,46 @@ public class WebSocketHandler {
 
 							MyTransaction tx = MyTransaction.fromJSONDict(x);
 
-							BigInteger result = BigInteger.ZERO;
+							if (wallet.prependTransaction(tx)) {
+								BigInteger result = BigInteger.ZERO;
 
-							for (TransactionInput input : tx.getInputs()) {
-								// if the input is from me subtract the value
-								MyTransactionInput myinput = (MyTransactionInput) input;
+								for (TransactionInput input : tx.getInputs()) {
+									// if the input is from me subtract the value
+									MyTransactionInput myinput = (MyTransactionInput) input;
 
-								if (wallet.isAddressMine(input.getFromAddress()
-										.toString())) {
-									result = result.subtract(myinput.value);
+									if (wallet.isAddressMine(input.getFromAddress()
+											.toString())) {
+										result = result.subtract(myinput.value);
 
-									wallet.setFinal_balance(wallet.getFinal_balance()
-											.subtract(myinput.value));
-									wallet.setTotal_sent(wallet.getTotal_sent()
-											.add(myinput.value));
+										wallet.setFinal_balance(wallet.getFinal_balance()
+												.subtract(myinput.value));
+										wallet.setTotal_sent(wallet.getTotal_sent()
+												.add(myinput.value));
+									}
 								}
-							}
 
-							for (TransactionOutput output : tx.getOutputs()) {
-								// if the input is from me subtract the value
-								MyTransactionOutput myoutput = (MyTransactionOutput) output;
+								for (TransactionOutput output : tx.getOutputs()) {
+									// if the input is from me subtract the value
+									MyTransactionOutput myoutput = (MyTransactionOutput) output;
 
-								if (wallet.isAddressMine(myoutput.getToAddress()
-										.toString())) {
-									result = result.add(myoutput.getValue());
+									if (wallet.isAddressMine(myoutput.getToAddress()
+											.toString())) {
+										result = result.add(myoutput.getValue());
 
-									wallet.setFinal_balance(wallet.getFinal_balance().add(myoutput
-											.getValue()));
-									wallet.setTotal_received(wallet.getTotal_sent().add(myoutput
-											.getValue()));
+										wallet.setFinal_balance(wallet.getFinal_balance().add(myoutput
+												.getValue()));
+										wallet.setTotal_received(wallet.getTotal_sent().add(myoutput
+												.getValue()));
+									}
 								}
-							}
 
-							tx.result = result;
-
-							wallet.prependTransaction(tx);
-
-							if (result.compareTo(BigInteger.ZERO) >= 0) {
-								EventListeners.invokeOnCoinsReceived(tx, result.longValue());
-							} else {
-								EventListeners.invokeOnCoinsSent(tx, result.longValue());
+								tx.result = result;
+								
+								if (result.compareTo(BigInteger.ZERO) >= 0) {
+									EventListeners.invokeOnCoinsReceived(tx, result.longValue());
+								} else {
+									EventListeners.invokeOnCoinsSent(tx, result.longValue());
+								}
 							}
 						} else if (op.equals("on_change")) {
 							String newChecksum = (String) top.get("checksum");

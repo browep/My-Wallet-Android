@@ -192,9 +192,10 @@ public class RekeyWalletDialog extends DialogFragment {
 					return;
 				}
 
+				//Generate a new address which we will sweep to
 				application.addKeyToWallet(wallet.generateECKey(), null, 0, new AddAddressCallback() {
 					public void onSavedAddress(final String new_address) {
-
+						
 						BigInteger balanceOfInsecure = BigInteger.ZERO;
 						for (String insecure_address : insecure_addresses) {
 							balanceOfInsecure = balanceOfInsecure.add(wallet.getBalance(insecure_address));
@@ -227,7 +228,6 @@ public class RekeyWalletDialog extends DialogFragment {
 										}
 									});	
 								}
-
 							});
 
 							//If the wallet balance is less than 2x the base fee don't try and sweep as its a waste of money
