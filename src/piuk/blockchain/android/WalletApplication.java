@@ -755,12 +755,16 @@ public class WalletApplication extends Application {
 	}
 
 	public synchronized void checkIfWalletHasUpdatedAndFetchTransactions(final String password, final SuccessCallback callbackFinal) {
+		checkIfWalletHasUpdated(password, true, callbackFinal);
+	}
+	
+	public synchronized void checkIfWalletHasUpdated(final String password, boolean fetchTransactions, final SuccessCallback callbackFinal) {
 		if (getGUID() == null || getSharedKey() == null) {
 			if (callbackFinal != null) callbackFinal.onFail();
 			return;
 		}
 
-		checkIfWalletHasUpdatedAndFetchTransactions(password, getGUID(), getSharedKey(), callbackFinal);
+		checkIfWalletHasUpdated(password, getGUID(), getSharedKey(), fetchTransactions, callbackFinal);
 	}
 
 	public void seedFromRandomOrg() {
@@ -775,7 +779,7 @@ public class WalletApplication extends Application {
 		}).start();
 	}
 
-	public synchronized void checkIfWalletHasUpdatedAndFetchTransactions(final String password, final String guid, final String sharedKey, final SuccessCallback callbackFinal) {
+	public synchronized void checkIfWalletHasUpdated(final String password, final String guid, final String sharedKey, final boolean fetchTransactions, final SuccessCallback callbackFinal) {
 
 		System.out.println("checkIfWalletHasUpdatedAndFetchTransactions()");
 
@@ -808,7 +812,7 @@ public class WalletApplication extends Application {
 
 							Thread.sleep(1000);
 
-							checkIfWalletHasUpdatedAndFetchTransactions(password, guid, sharedKey, null);
+							checkIfWalletHasUpdated(password, guid, sharedKey, fetchTransactions, null);
 
 							return;
 						} else {
@@ -830,7 +834,7 @@ public class WalletApplication extends Application {
 							callback = null;
 						}
 
-						if (!blockchainWallet.isUptoDate(Constants.MultiAddrTimeThreshold)) {
+						if (fetchTransactions && !blockchainWallet.isUptoDate(Constants.MultiAddrTimeThreshold)) {
 							doMultiAddr(true);
 						} 
 
@@ -850,7 +854,7 @@ public class WalletApplication extends Application {
 						callback = null;
 					}
 
-					if (blockchainWallet != null) {
+					if (fetchTransactions && blockchainWallet != null) {
 						doMultiAddr(true);
 					}
 
@@ -936,7 +940,8 @@ public class WalletApplication extends Application {
 
 				try {
 					// Get the balance and transaction
-					doMultiAddr(true);
+					if (fetchTransactions)
+						doMultiAddr(true);
 
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -1113,7 +1118,7 @@ public class WalletApplication extends Application {
 				saveWallet(new SuccessCallback() {
 					@Override
 					public void onSuccess() {
-						checkIfWalletHasUpdatedAndFetchTransactions(blockchainWallet.getTemporyPassword(), new SuccessCallback() {
+						checkIfWalletHasUpdated(blockchainWallet.getTemporyPassword(), false, new SuccessCallback() {
 							@Override
 							public void onSuccess() {	
 								try {

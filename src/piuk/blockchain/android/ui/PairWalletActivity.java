@@ -119,7 +119,7 @@ public class PairWalletActivity extends AbstractWalletActivity {
 
 												edit.commit();
 
-												application.checkIfWalletHasUpdatedAndFetchTransactions(password, guid, sharedKey, new SuccessCallback(){
+												application.checkIfWalletHasUpdated(password, guid, sharedKey, true, new SuccessCallback(){
 													@Override
 													public void onSuccess() {
 														registerNotifications();
@@ -240,7 +240,7 @@ public class PairWalletActivity extends AbstractWalletActivity {
 
 								@Override
 								public void run() {
-									application.checkIfWalletHasUpdatedAndFetchTransactions(password, guid, sharedKey, new SuccessCallback(){
+									application.checkIfWalletHasUpdated(password, guid, sharedKey, true, new SuccessCallback(){
 
 										@Override
 										public void onSuccess() {	

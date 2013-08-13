@@ -276,7 +276,7 @@ public final class NewAccountDialog extends DialogFragment {
 
 												@Override
 												public void run() {
-													application.checkIfWalletHasUpdatedAndFetchTransactions(password, guid, sharedKey, new SuccessCallback(){
+													application.checkIfWalletHasUpdated(password, guid, sharedKey, true, new SuccessCallback(){
 
 														@Override
 														public void onSuccess() {	
