@@ -82,7 +82,7 @@ public abstract class AbstractWalletActivity extends FragmentActivity {
 				} catch (Exception e) {
 					e.printStackTrace();
 					
-					longToast(e.getLocalizedMessage());
+					longToast(R.string.unknown_error);
 				}
 			}
 		}
