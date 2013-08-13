@@ -42,9 +42,7 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.spongycastle.util.encoders.Hex;
 
-import piuk.BitcoinAddress;
 import piuk.EventListeners;
-import piuk.Hash;
 import piuk.MyRemoteWallet;
 import piuk.MyRemoteWallet.NotModfiedException;
 import piuk.MyWallet;
@@ -70,7 +68,6 @@ import java.net.CookieManager;
 import java.security.MessageDigest;
 import java.security.Security;
 import java.text.SimpleDateFormat;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Date;
 import java.util.List;
