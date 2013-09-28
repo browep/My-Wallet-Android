@@ -26,10 +26,11 @@ import com.google.bitcoin.core.Utils;
 import com.google.bitcoin.core.Wallet;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
+import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 
-import java.io.IOException;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
@@ -47,41 +48,54 @@ import org.spongycastle.crypto.paddings.PaddedBufferedBlockCipher;
 import org.spongycastle.crypto.params.KeyParameter;
 import org.spongycastle.crypto.params.ParametersWithIV;
 
-import piuk.blockchain.android.Constants;
 import piuk.blockchain.android.util.LinuxSecureRandom;
-import piuk.blockchain.android.util.RandomOrgGenerator;
 
 public class MyWallet {
 	private static final int AESBlockSize = 4;
 	public static final int DefaultPBKDF2Iterations = 10;
 	public Map<String, Object> root;
+    public JSONObject rootContainer;
+
 	public String temporyPassword;
 	public String temporySecondPassword;
+	public static final double SupportedEncryptionVersion = 2.0;
 
 	public static final NetworkParameters params = NetworkParameters.prodNet();
 	public static byte[] extra_seed;
-	
+
 	public MyWallet(String base64Payload, String password) throws Exception {
-		this.root = decryptPayload(base64Payload, password);
+		if (base64Payload == null || base64Payload.length() == 0 || password == null || password.length() == 0)
+			throw new Exception("Error Decrypting Wallet");
+
+		String decrypted = decryptWallet(base64Payload, password);
+
+		if (decrypted == null || decrypted.length() == 0)
+			throw new Exception("Error Decrypting Wallet");
+
+		JSONParser parser = new JSONParser();
+
+		this.root = (Map<String, Object>) parser.parse(decrypted);
 
 		if (root == null)
 			throw new Exception("Error Decrypting Wallet");
+
+		temporyPassword = password;
 	}
 
 	static {
 		LinuxSecureRandom.init();
 	}
-	
+
 	public ECKey generateECKey() {
 		SecureRandom random = new SecureRandom();
 
 		if (extra_seed != null) {
 			random.setSeed(extra_seed);
 		}
-		
-	    return new ECKey(random);
+
+		return new ECKey(random);
 	}
-	
+
 	// Create a new Wallet
 	protected MyWallet() throws Exception {
 		this.root = new HashMap<String, Object>();
@@ -182,7 +196,7 @@ public class MyWallet {
 		return options;
 	}
 
-	public int getPbkdf2Iterations() {
+	public int getDoubleEncryptionPbkdf2Iterations() {
 		Map<String, Object> options = getOptions();
 
 		int iterations = DefaultPBKDF2Iterations;
@@ -191,6 +205,28 @@ public class MyWallet {
 		}
 
 		return iterations;
+	}
+
+	public int getMainPasswordPbkdf2Iterations() {
+		int iterations = DefaultPBKDF2Iterations;
+		if (rootContainer != null && rootContainer.containsKey("pbkdf2_iterations")) {
+			iterations = Integer.valueOf(rootContainer.get("pbkdf2_iterations").toString());
+		}
+		System.out.println("getMainPasswordPbkdf2Iterations() " + iterations);
+
+
+		return iterations;
+	}
+
+	public double getEncryptionVersionUsed() {
+		double version = 0.0;
+		if (rootContainer != null && rootContainer.containsKey("version")) {
+			version = Double.valueOf(rootContainer.get("version").toString());
+		}
+		
+		System.out.println("getEncryptionVersionUsed() " + version);
+
+		return version;
 	}
 
 	public boolean isDoubleEncrypted() {
@@ -236,59 +272,10 @@ public class MyWallet {
 	public String getPayload() throws Exception {
 		if (this.temporyPassword == null)
 			throw new Exception("getPayload() called with temporyPassword == null");
-		
-		return encrypt(toJSONString(), this.temporyPassword, DefaultPBKDF2Iterations);
+
+		return encryptWallet(toJSONString(), this.temporyPassword);
 	}
 
-	public static ECKey decodeBase58PK(String base58Priv) throws Exception {
-		byte[] privBytes = Base58.decode(base58Priv);
-
-		// Prppend a zero byte to make the biginteger unsigned
-		byte[] appendZeroByte = ArrayUtils.addAll(new byte[1], privBytes);
-
-		ECKey ecKey = new ECKey(new BigInteger(appendZeroByte));
-
-		return ecKey;
-	}
-
-	public static ECKey decodeBase64PK(String base64Priv) throws Exception {
-		byte[] privBytes = Base64.decode(base64Priv, Base64.NO_PADDING);
-
-		// Prppend a zero byte to make the biginteger unsigned
-		byte[] appendZeroByte = ArrayUtils.addAll(new byte[1], privBytes);
-
-		ECKey ecKey = new ECKey(new BigInteger(appendZeroByte));
-
-		return ecKey;
-	}
-
-
-	public static ECKey decodeHexPK(String hex) throws Exception {
-		byte[] privBytes = Hex.decode(hex);
-
-		// Prppend a zero byte to make the biginteger unsigned
-		byte[] appendZeroByte = ArrayUtils.addAll(new byte[1], privBytes);
-
-		ECKey ecKey = new ECKey(new BigInteger(appendZeroByte));
-
-		return ecKey;
-	}
-
-	public String decryptPK(String base58Priv) throws Exception {
-		if (this.isDoubleEncrypted()) {
-
-			if (this.temporySecondPassword == null || !this.validateSecondPassword(temporySecondPassword))
-				throw new Exception("You must provide a second password");
-
-			base58Priv = decryptPK(base58Priv, getSharedKey(), this.temporySecondPassword, this.getPbkdf2Iterations());
-		}
-
-		return base58Priv;
-	}
-
-	public ECKey decodePK(String base58Priv) throws Exception {
-		return decodeBase58PK(decryptPK(base58Priv));
-	}
 
 	public Map<String, String> getLabelMap() {
 		Map<String, String> _labelMap = new HashMap<String, String>();
@@ -383,20 +370,20 @@ public class MyWallet {
 
 	public ECKey getECKey(String address) throws Exception {
 		Map<String, Object> key = this.findKey(address);
-		      
+
 		if (key == null) {
 			throw new Exception("Key not found");
 		}
-				
+
 		String base58Priv = (String) key.get("priv");
 
 		if (base58Priv == null) {
 			throw new Exception("Watch Only Bitcoin Address");
 		}
-		
+
 		return this.decodePK(base58Priv);
 	}
-	
+
 	protected void addKeysTobitoinJWallet(Wallet wallet, boolean enableTagFiler, int tagFilter) throws Exception {
 
 		wallet.keychain.clear();
@@ -421,7 +408,7 @@ public class MyWallet {
 
 				encoded_key.setTag((int) (long) tag);
 			}
-			
+
 			try {
 				if (!enableTagFiler || tag == tagFilter)
 					wallet.addKey(encoded_key);
@@ -436,11 +423,11 @@ public class MyWallet {
 			super(params);
 		}
 	}
-	
+
 	public Wallet getBitcoinJWallet() throws Exception {
 		// Construct a BitcoinJ wallet containing all our private keys
 		Wallet keywallet = new WalletOverride(params);
-		
+
 		addKeysTobitoinJWallet(keywallet, false, 0);
 
 		return keywallet;
@@ -451,16 +438,16 @@ public class MyWallet {
 		final String address = key.toAddress(params).toString();
 
 		final List<Map<String, Object>> keyMap = getKeysMap();
-		
+
 		for (int ii = 0; ii < keyMap.size(); ++ii) {
 			Map<String, Object> map = keyMap.get(ii);
-			
+
 			if (map.get("addr").equals(address)) {
 				keyMap.remove(ii);
 				break;
 			}
 		}
-		
+
 		return true;
 	}
 
@@ -476,18 +463,18 @@ public class MyWallet {
 		return true;
 	}
 
-	
+
 	protected String addKey(ECKey key, String label) throws Exception {
 		return addKey(key, label, System.getProperty("device_name"), System.getProperty("device_version"));
 	}
-	
+
 	protected String addKey(ECKey key, String label, String device_name, String device_version) throws Exception {
 		Map<String, Object> map = new HashMap<String, Object>();
 
 		String base58Priv = new String(Base58.encode(key.getPrivKeyBytes()));
 
 		String address = key.toAddress(params).toString();
-		
+
 		map.put("addr", address);
 
 		if (label != null) {
@@ -501,16 +488,16 @@ public class MyWallet {
 			if (temporySecondPassword == null)
 				throw new Exception("You must provide a second password");
 
-			map.put("priv", encryptPK(base58Priv, getSharedKey(), temporySecondPassword, this.getPbkdf2Iterations()));
+			map.put("priv", encryptPK(base58Priv, getSharedKey(), temporySecondPassword, this.getDoubleEncryptionPbkdf2Iterations()));
 		} else {
 			map.put("priv", base58Priv);
 		}
-		
+
 		map.put("created_time", System.currentTimeMillis());
-		
+
 		if (device_name != null)
 			map.put("created_device_name", device_name);
-		
+
 		if (device_version != null)
 			map.put("created_device_version", device_version);
 
@@ -529,7 +516,7 @@ public class MyWallet {
 				// N Rounds of SHA256
 				byte[] data = md.digest((getSharedKey() + secondPassword).getBytes("UTF-8"));
 
-				for (int ii = 1; ii < this.getPbkdf2Iterations(); ++ii) {
+				for (int ii = 1; ii < this.getDoubleEncryptionPbkdf2Iterations(); ++ii) {
 					data = md.digest(data);
 				}
 
@@ -544,6 +531,42 @@ public class MyWallet {
 
 		return false;
 	}
+
+    private String decryptWallet(String ciphertext, String password) throws Exception {
+        JSONParser parser = new JSONParser();
+        try {
+            JSONObject obj = (JSONObject)parser.parse(ciphertext);
+
+            String payload = (String) obj.get("payload");
+            int pbkdf2_iterations = Integer.valueOf(obj.get("pbkdf2_iterations").toString());
+            double version = Integer.valueOf(obj.get("version").toString());
+
+            if (version != SupportedEncryptionVersion)
+                throw new Exception("Wallet version " + version + " not supported");
+
+            String result = decrypt(payload, password, pbkdf2_iterations);
+
+            rootContainer = obj;
+
+            return result;
+        } catch (ParseException e) {
+            return decrypt(ciphertext, password, DefaultPBKDF2Iterations);
+        }
+    }
+ 
+    private String encryptWallet(String text, String password) throws Exception {
+        double encryptionVersionUsed = getEncryptionVersionUsed();
+
+        if (encryptionVersionUsed == 2.0) {
+            rootContainer.put("payload", encrypt(text, password, this.getMainPasswordPbkdf2Iterations()));
+
+            return rootContainer.toJSONString();
+        } else if (encryptionVersionUsed == 0.0)  {
+            return encrypt(text, password, this.getMainPasswordPbkdf2Iterations());
+        } else {
+            throw new Exception("Unknown Encryption Version " + encryptionVersionUsed);
+        }
+    }
 
 
 	private static byte[] copyOfRange(byte[] source, int from, int to) {
@@ -646,27 +669,53 @@ public class MyWallet {
 		return encrypt(key, sharedKey + password, PBKDF2Iterations);
 	}
 
-	// Decrypt a Wallet file and parse the JSON
-	@SuppressWarnings("unchecked")
-	public static Map<String, Object> decryptPayload(String payload, String password) throws Exception {
-		if (payload == null || payload.length() == 0 || password == null
-				|| password.length() == 0)
-			return null;
+	public static ECKey decodeBase58PK(String base58Priv) throws Exception {
+		byte[] privBytes = Base58.decode(base58Priv);
 
-		String decrypted = decrypt(payload, password, DefaultPBKDF2Iterations);
+		// Prppend a zero byte to make the biginteger unsigned
+		byte[] appendZeroByte = ArrayUtils.addAll(new byte[1], privBytes);
 
-		if (decrypted == null || decrypted.length() == 0)
-			return null;
+		ECKey ecKey = new ECKey(new BigInteger(appendZeroByte));
 
-		JSONParser parser = new JSONParser();
-
-		try {
-			return (Map<String, Object>) parser.parse(decrypted);
-		} catch (Exception e) {
-			System.out.println(decrypted);
-
-			throw e;
-		}
+		return ecKey;
 	}
 
+	public static ECKey decodeBase64PK(String base64Priv) throws Exception {
+		byte[] privBytes = Base64.decode(base64Priv, Base64.NO_PADDING);
+
+		// Prppend a zero byte to make the biginteger unsigned
+		byte[] appendZeroByte = ArrayUtils.addAll(new byte[1], privBytes);
+
+		ECKey ecKey = new ECKey(new BigInteger(appendZeroByte));
+
+		return ecKey;
+	}
+
+
+	public static ECKey decodeHexPK(String hex) throws Exception {
+		byte[] privBytes = Hex.decode(hex);
+
+		// Prppend a zero byte to make the biginteger unsigned
+		byte[] appendZeroByte = ArrayUtils.addAll(new byte[1], privBytes);
+
+		ECKey ecKey = new ECKey(new BigInteger(appendZeroByte));
+
+		return ecKey;
+	}
+
+	public String decryptPK(String base58Priv) throws Exception {
+		if (this.isDoubleEncrypted()) {
+
+			if (this.temporySecondPassword == null || !this.validateSecondPassword(temporySecondPassword))
+				throw new Exception("You must provide a second password");
+
+			base58Priv = decryptPK(base58Priv, getSharedKey(), this.temporySecondPassword, this.getDoubleEncryptionPbkdf2Iterations());
+		}
+
+		return base58Priv;
+	}
+
+	public ECKey decodePK(String base58Priv) throws Exception {
+		return decodeBase58PK(decryptPK(base58Priv));
+	}
 }

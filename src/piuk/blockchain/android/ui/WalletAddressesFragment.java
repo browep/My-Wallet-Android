@@ -123,6 +123,7 @@ public class WalletAddressesFragment extends ListFragment
 
 				try {
 					List<Map<String, Object>> keysMap = application.getRemoteWallet().getKeysMap();
+										
 					synchronized(application.getRemoteWallet()) {
 						for (Map<String, Object> map : keysMap) {
 

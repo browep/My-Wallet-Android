@@ -922,6 +922,7 @@ public class MyRemoteWallet extends MyWallet {
 		MyRemoteWallet tempWallet = new MyRemoteWallet(payload, temporyPassword);
 
 		this.root = tempWallet.root;
+		this.rootContainer = tempWallet.rootContainer;
 
 		if (this.temporySecondPassword != null && !this.validateSecondPassword(temporySecondPassword)) {
 			this.temporySecondPassword = null;

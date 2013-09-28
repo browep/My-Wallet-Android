@@ -41,7 +41,7 @@ public class MyECKey extends ECKey {
 		this.base58 = base58;
 		this.sharedKey = wallet.getSharedKey();
 		this.password = wallet.getTemporySecondPassword();
-		this.iterations = wallet.getPbkdf2Iterations();
+		this.iterations = wallet.getDoubleEncryptionPbkdf2Iterations();
 		this.encrypted = wallet.isDoubleEncrypted();
 		
 		if (encrypted && password == null)
