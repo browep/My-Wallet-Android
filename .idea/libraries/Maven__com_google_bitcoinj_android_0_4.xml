@@ -1,9 +1,0 @@
-<component name="libraryTable">
-  <library name="Maven: com.google:bitcoinj:android:0.4">
-    <CLASSES>
-      <root url="jar://$PROJECT_DIR$/../bitcoinj/target/bitcoinj-0.5-SNAPSHOT-android.jar!/" />
-    </CLASSES>
-    <JAVADOC />
-    <SOURCES />
-  </library>
-</component>

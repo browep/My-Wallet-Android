@@ -5,3 +5,7 @@ bin/
 gen/
 target/
 .DS_Store
+
+# IDEA files
+*iml
+.idea/
