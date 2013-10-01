@@ -296,7 +296,8 @@
 	<string name="error_rekeying_wallet">An Error Occurred During the Re-keying process</string>
 	<string name="success_rekeying_wallet">Your wallet was successfully Re-keyed. Please make a new backup.</string>
 	<string name="rekeying_wallet_balance_too_small">Your wallet balance is too low to sweep.</string>
-	
+    <string name="qr_scanner_instructions">Place a QR code inside the viewfinder rectangle to scan it.</string>
+
     <string-array name="send_types_array">
         <item>Quick Send</item>
         <item>Custom Send</item>

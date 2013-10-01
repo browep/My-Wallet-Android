@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="0dp"
+
+        >
+
+    <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                 android:layout_width="match_parent"
+                 android:layout_height="match_parent"
+                 android:id="@+id/camera_holder"
+            >
+
+    </FrameLayout>
+
+    <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            >
+
+        <View
+                android:id="@+id/image_mask_top_pane"
+                android:layout_height="@dimen/qr_scanner_mask_height"
+                android:layout_width="match_parent"
+                style="@style/ScannerImageMask"/>
+
+        <View
+                android:id="@+id/image_mask_left_pane"
+                android:layout_width="@dimen/qr_scanner_mask_width"
+                android:layout_height="match_parent"
+                android:layout_above="@+id/image_mask_bottom_pane"
+                android:layout_below="@+id/image_mask_top_pane"
+                style="@style/ScannerImageMask"/>
+
+        <View
+                android:id="@+id/image_mask_right_pane"
+                android:layout_width="@dimen/qr_scanner_mask_width"
+                android:layout_height="match_parent"
+                android:layout_above="@+id/image_mask_bottom_pane"
+                android:layout_below="@+id/image_mask_top_pane"
+                android:layout_alignParentRight="true"
+                style="@style/ScannerImageMask"/>
+
+        <View
+                android:id="@+id/image_mask_bottom_pane"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/qr_scanner_mask_height"
+                android:layout_alignParentBottom="true"
+                style="@style/ScannerImageMask"/>
+
+        <View
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/white_mask_box"
+                android:layout_marginTop="@dimen/qr_scanner_mask_height"
+                android:layout_marginBottom="@dimen/qr_scanner_mask_height"
+                android:layout_marginLeft="@dimen/qr_scanner_mask_width"
+                android:layout_marginRight="@dimen/qr_scanner_mask_width"
+
+                />
+
+
+        <TextView android:text="@string/qr_scanner_instructions"
+                  android:layout_height="wrap_content"
+                  android:layout_width="wrap_content"
+                  android:layout_centerHorizontal="true"
+                  android:layout_alignParentBottom="true"
+                  android:gravity="center"
+                  android:textSize="18sp"
+                  android:layout_margin="20dp"
+                  android:textColor="@android:color/white"
+                />
+
+    </RelativeLayout>
+
+
+</FrameLayout>

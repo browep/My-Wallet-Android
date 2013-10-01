@@ -119,7 +119,7 @@ public abstract class AbstractWalletActivity extends FragmentActivity {
 	public void showQRReader(ActivityDelegate activityDelegate) {
 		this.activityDelegate = activityDelegate;
 
-		Intent intent = new Intent(this, ZBarScannerActivity.class);
+        Intent intent = new Intent(this, QrScannerActivity.class);
 		startActivityForResult(intent, ZBAR_QR_SCANNER_REQUEST);
 	}
 
