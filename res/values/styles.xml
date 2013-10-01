@@ -11,4 +11,8 @@
 
     <style name="Theme.MyPIN" parent="@android:style/Theme.Black.NoTitleBar" />
 
+    <style name="ScannerImageMask">
+        <item name="android:background">#44000000</item>
+    </style>
+
 </resources>

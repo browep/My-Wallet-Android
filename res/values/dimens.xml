@@ -13,6 +13,8 @@
 	<dimen name="action_bar_button_separator_width">1dp</dimen>
 	<dimen name="action_bar_button_separator_margin">8dp</dimen>
 	<dimen name="wallet_address_qr_size">96dp</dimen>
+    <dimen name="qr_scanner_mask_width">40dp</dimen>
+    <dimen name="qr_scanner_mask_height">160dp</dimen>
 
 	<item name="address_scalex" type="dimen">1.0</item>
 
