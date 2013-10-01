@@ -9,3 +9,7 @@ target/
 # IDEA files
 *iml
 .idea/
+out/
+
+# local properties should not be checked in as it will be specific to each dev environment
+local.properties
